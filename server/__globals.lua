@@ -1,4 +1,4 @@
--- auto export by lua-tags 194 symbols
+-- auto export by lua-tags 196 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -33,6 +33,7 @@ return {
 "EMPTY", -- src/modules/system/define.lua
 "ET", -- src/modules/entity/entity_header.lua
 "EV", -- src/modules/event/event_header.lua
+"EV", -- engine/__ev.lua
 "Engine", -- engine/__engine.lua
 "EntityCmd", -- src/modules/entity/entity_cmd.lua
 "EntityMgr", -- src/modules/entity/entity_mgr.lua
@@ -129,6 +130,7 @@ return {
 "WorkerData", -- src/worker/worker.lua
 "WorkerHash", -- src/worker/worker.lua
 "WorkerNameType", -- src/worker/worker.lua
+"WorkerThread", -- engine/__workerthread.lua
 "__G_C_TRACKBACK", -- src/global/global.lua
 "__G_DUMP_STACK", -- src/global/global.lua
 "__assert", -- src/engine/startup.lua

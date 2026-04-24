@@ -7,9 +7,11 @@ ListAoi = {}
 function ListAoi:valid_dump(dump)
 end
 
+--- 是否使用y轴，仅十字链表可用
 function ListAoi:use_y()
 end
 
+--- 设置索引参数，仅跳表可用
 function ListAoi:set_index()
 end
 

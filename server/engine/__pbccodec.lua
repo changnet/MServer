@@ -2,19 +2,30 @@
 
 -- 导出类: PbcCodec
 PbcCodec = {}
+--- 重置全局pbc env
 function PbcCodec:reset()
 end
 
+--- 加载单个pb文件
 function PbcCodec:load()
 end
 
+--- 更新全局pbc env到当前线程
 function PbcCodec:update()
 end
 
-function PbcCodec:encode()
+--- 编码数据包
+---@param schema protobuf的message名
+---@param  pkt 待编码的数据，lua table格式
+---@return 二进制string
+function PbcCodec:encode(schema, pkt)
 end
 
-function PbcCodec:decode()
+--- 解码数据包
+---@param  schema protobuf的message名
+---@param buffer 二进制string
+---@return 包含解析出来数据的lua table
+function PbcCodec:decode(schema, buffer)
 end
 
 --- 从二进制buffer指针解码数据包

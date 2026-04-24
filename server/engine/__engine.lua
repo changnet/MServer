@@ -3,9 +3,9 @@
 -- 导出模块: Engine
 Engine = {}
 
----@brief 设置信号的行为
----@param sig 信号id
----@param mask 0按默认行为处理信号 1忽略该信号 其他值则统一回调到脚本处理
+
+---@param sig number
+---@param mask number
 function Engine.signal_mask(sig, mask)
 end
 
@@ -28,13 +28,9 @@ end
 function Engine.get_thread_ctx(addr)
 end
 
---- 获取实时帧时间(进程启动到当前的时间(CLOCK_MONOTONIC))
----@return 进程运行时间（毫秒）
 function Engine.steady_clock()
 end
 
---- 获取实时utc时间
----@return utc时间（毫秒）
 function Engine.system_clock()
 end
 

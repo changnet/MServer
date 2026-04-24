@@ -7,8 +7,8 @@ Buffer = {}
 function Buffer:get()
 end
 
----@param buffer any
----@param size any
+---@param buffer nil
+---@param size number
 function Buffer:set(buffer, size)
 end
 

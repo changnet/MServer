@@ -3,6 +3,7 @@
 -- 导出模块: util
 util = {}
 
+
 --- 递归列出指定目录中的文件，和shell指令ls效果一致
 ---@param path linux下路径 path/to/dir
 ---@return table 指定目录下的文件数组(包括目录，但不包括.和..这两个特殊目录)
@@ -35,6 +36,19 @@ end
 function util.base64(str)
 end
 
+--- 计算字符串的哈希值(使用 FNV-1a 算法)
+--- 算法快速且分布均匀，适合作为一致性哈希、消息路由等场景的计算
+---@param str 需要计算哈希的字符串
+---@return 返回一个正整数哈希值
+function util.hashstr(str)
+end
+
+--- 普通的取余路由（ID % 节点数），并且 ID 是自增的，那直接取余就可以了，因为自增的 ID 取余后本身就很均匀
+--- 整数的快速均匀哈希 (基于 MurmurHash3 的 fmix64)
+--- 用于解决连续ID在一致性哈希中聚集导致热点的问题
+function util.hashint()
+end
+
 --- 计算字符串sha256，即sha2-256
 ---@param upper 可选参数，结果是否转换为大写
 ---@param ... 需要计算的字符串，可以多个，sha256(true, str1, str2, ...)
@@ -56,6 +70,7 @@ end
 function util.getexe()
 end
 
+--- 切换当前工作目录
 function util.chdir()
 end
 

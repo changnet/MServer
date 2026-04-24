@@ -44,6 +44,7 @@ end
 function Socket:accept()
 end
 
+--- 获取当前socket的事件
 function Socket:get_event()
 end
 
@@ -66,6 +67,7 @@ end
 function Socket:set_packet(packet_type)
 end
 
+--- 远端是否已关闭链接
 function Socket:is_remote_close()
 end
 
@@ -81,21 +83,27 @@ end
 function Socket:set_buffer_params(send_max, recv_max, mask)
 end
 
+--- 初始化io
 function Socket:io_init_accept()
 end
 
+--- 初始化io
 function Socket:io_init_connect()
 end
 
+--- 发送原始数据
 function Socket:send_pkt()
 end
 
+--- 打包前端发往后端的数据
 function Socket:send_clt()
 end
 
+--- 打包后端发往前端的数据
 function Socket:send_srv()
 end
 
+--- 发送控制帧
 function Socket:send_ctrl()
 end
 
@@ -108,9 +116,11 @@ end
 function Socket:get_http_header()
 end
 
+--- 在socket关闭时解析剩下的数据，仅http适用
 function Socket:unpack_on_closed()
 end
 
+--- 获取当前的错误码
 function Socket:get_errno()
 end
 

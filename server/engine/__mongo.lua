@@ -8,6 +8,7 @@ Mongo = {}
 function Mongo:uriconnect(uri)
 end
 
+--- 断开连接
 function Mongo:disconnect()
 end
 
