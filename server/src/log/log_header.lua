@@ -8,4 +8,5 @@ LOG = {
     ADD_MAIL = 6, -- 新邮件
     DEL_MAIL = 7, -- 删除邮件
     ADD_OFF_MAIL = 8, -- 新离线邮件
+    ADD_SYS_MAIL = 9, -- 新全服邮件
 }

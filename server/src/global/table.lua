@@ -157,14 +157,14 @@ end
 -- 将一个table指定为数组array或对象object
 -- 这与该table的解析有关（如转换为json、mongodb存库、转换为bson）
 -- @param tbl 需要设置的table
--- @param opt 设置数组、对象转换参数
+-- @param opt 设置数组、对象转换参数 0对象 1数组，其他值则按照稀松程度判断
 -- @param sparse 稀松数组阀值
 function table.set_array(tbl, opt, sparse)
-    -- opt 浮点型
-    -- 整数部分表示数组下标最大值，小于等于此值总是作为数组
-    -- 小数部分表示数组填充率，大于等于此值总是作为数组
-    -- 如 opt = 8.6，当table中的key为整数且小于等于8则当作数组
-    -- 当整个table中， 所有元素的数量/最大key 的值 大于等于0.6，则当作数组
+    -- opt参数说明：
+    -- 0对象 1数组，其他值则按照稀松程度判断（整数部分为最大key，小数部分为稀松程度）
+
+    -- 如 opt = 8.6，当table中的key为整数且小于等于8并且 所有元素的数量/最大key>=0.6则为数组
+    -- 即元素数量 >= 60% 算数组
 
     local mt = getmetatable(tbl)
     if not mt then
@@ -352,4 +352,15 @@ function rpairs(tbl)
         local v = t[i]
         if v then return i, v end
     end, tbl, #tbl + 1
+end
+
+-- 按指定的key把一个数组构建成一个map
+-- @param list 需要构建的数组
+function table.to_map(list, key)
+    local map = {}
+    for _, v in ipairs(list) do
+        local k = v[key]
+        map[k] = v
+    end
+    return map
 end

@@ -20,7 +20,20 @@ end
 -- @param mail_obj MailObj 邮件对象，包含以下字段
 -- @return MailObj
 function MailInternal.init(mail_obj)
-    -- 注意，一定要在到达目的线程才可初始化，以保证id的自增性
+    --[[
+    注意，一定要在到达目的线程才可初始化id，以保证id的自增性
+    这个id不是线程安全的，不同线程可能生成同样id。如果在id里加入addr，就不具备自增性了
+
+    对于个人邮件，id唯一就行，是否自增就无所谓
+    但系统邮件是要对比的，因此要保证id的自增性
+
+    或者换种思路
+        邮件id用basen.lua的算法生成，就是全局唯一
+        而自增只用于系统邮件，在系统邮件里多维护一个seq_id即可
+
+        问题就是邮件id变成字符串了，没有数字高效。但json安全的数字只有53位，没法构建线程安全的id
+    ]]
+
     mail_obj.id = MailInternal.next_id()
     -- mail_obj.read = 0
     -- mail_obj.att_stat = 0

@@ -79,10 +79,13 @@ end
 -- 发送全服邮件
 -- @param mail_obj MailObj 邮件对象（已create过）
 function MailSys.send(mail_obj)
+    MailInternal.init(mail_obj)
+
     local list = this.list
     table.insert(list, mail_obj)
 
     this.modify = true
+    MailInternal.log(0, LOG.ADD_SYS_MAIL, mail_obj)
 
     -- 通知所有在线玩家领取
     -- TODO 理论上可以只检测当前这封邮件是否能被领取，但fetch_player_mails检测所有邮件更稳

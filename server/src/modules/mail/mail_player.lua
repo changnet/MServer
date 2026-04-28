@@ -35,18 +35,24 @@ end
 -- 检查并清理超过最大值的邮件
 local function check_mail_limit(player)
     local stg = get_storage(player)
-    local list = stg.list
-    if #list <= MAX_MAIL_COUNT then return end
+    local list_map = stg.list
+    local count = 0
+    for _, _ in pairs(list_map) do count = count + 1 end
+    if count <= MAX_MAIL_COUNT then return end
 
-    table.sort(list, function(a, b)
+    local arr = {}
+    for _, m in pairs(list_map) do table.insert(arr, m) end
+
+    table.sort(arr, function(a, b)
         local wa = get_weight(a)
         local wb = get_weight(b)
         if wa ~= wb then return wa < wb end
         return a.time < b.time
     end)
 
-    while #list > MAX_MAIL_COUNT do
-        local m = table.remove(list, 1)
+    while #arr > MAX_MAIL_COUNT do
+        local m = table.remove(arr, 1)
+        list_map[m.id] = nil
         MailInternal.log(player.pid, LOG.DEL_MAIL, m)
     end
     save_player_mail(player)
@@ -62,12 +68,16 @@ local function on_load_mail(player)
         return false
     end
 
+    local list
     local stg = get_storage(player)
-    if #rows > 0 then
-        stg.list = rows[1].list or {}
+    if #rows > 0 and rows[1].list then
+        list = table.to_map(rows[1].list)
     else
-        stg.list = {}
+        list = {}
     end
+
+    stg.list = list
+    table.set_array(list, 1)
 
     return true
 end
@@ -76,8 +86,11 @@ end
 local function on_login(player)
     local stg = get_storage(player)
 
-    -- 下发邮件列表
-    NetMsg.send(player, M.MailInfo, {mails = stg.list})
+    -- 下发邮件列表 (convert map to array)
+    local mails = {}
+    for _, m in pairs(stg.list) do table.insert(mails, m) end
+    table.sort(mails, function(a, b) return a.time > b.time end)
+    NetMsg.send(player, M.MailInfo, {mails = mails})
 end
 
 local function send_new(player, mail_obj)
@@ -87,8 +100,10 @@ end
 
 -- 收到个人邮件（玩家在线时，由game线程转发来）
 function MailPlayer.receive(player, mail_obj)
+    MailInternal.init(mail_obj)
+
     local stg = get_storage(player)
-    table.insert(stg.list, mail_obj)
+    stg.list[mail_obj.id] = mail_obj
     MailInternal.log(player.pid, LOG.ADD_MAIL, mail_obj)
 
     check_mail_limit(player)
@@ -100,7 +115,8 @@ end
 function MailPlayer.receive_list(player, list)
     local stg = get_storage(player)
     for _, mail_obj in ipairs(list) do
-        table.insert(stg.list, mail_obj)
+        MailInternal.init(mail_obj)
+        stg.list[mail_obj.id] = mail_obj
         MailInternal.log(player.pid, LOG.ADD_MAIL, mail_obj)
 
         send_new(player, mail_obj)
@@ -114,15 +130,14 @@ end
 local function c_mail_read(player, pkt)
     local stg = get_storage(player)
     local target_id = pkt.id
-    for _, m in ipairs(stg.list) do
-        if m.id == target_id then
-            if m.read == 0 then
-                m.read = 1
-                save_player_mail(player)
-            end
-            NetMsg.send(player, M.MailRead, {id = target_id})
-            return
+    local m = stg.list[target_id]
+    if m then
+        if m.read == 0 then
+            m.read = 1
+            save_player_mail(player)
         end
+        NetMsg.send(player, M.MailRead, {id = target_id})
+        return
     end
 end
 
@@ -130,22 +145,17 @@ end
 local function c_mail_del(player, pkt)
     local stg = get_storage(player)
     local target_ids = pkt.id
-    local ids_map = {}
-    for _, tid in ipairs(target_ids) do ids_map[tid] = true end
-
-    local left = {}
     local changed = false
-    for _, m in ipairs(stg.list) do
-        if ids_map[m.id] then
+    for _, tid in ipairs(target_ids) do
+        local m = stg.list[tid]
+        if m then
             MailInternal.log(player.pid, LOG.DEL_MAIL, m)
+            stg.list[tid] = nil
             changed = true
-        else
-            table.insert(left, m)
         end
     end
 
     if changed then
-        stg.list = left
         save_player_mail(player)
         NetMsg.send(player, M.MailDel, {id = target_ids})
     end
@@ -155,21 +165,19 @@ end
 local function c_mail_claim(player, pkt)
     local stg = get_storage(player)
     local target_id = pkt.id
-    for _, m in ipairs(stg.list) do
-        if m.id == target_id then
-            if m.atts and #m.atts > 0 and m.att_stat == 0 then
-                m.att_stat = 1
-                m.read = 1
-                save_player_mail(player)
+    local m = stg.list[target_id]
+    if m then
+        if m.atts and #m.atts > 0 and m.att_stat == 0 then
+            m.att_stat = 1
+            m.read = 1
+            save_player_mail(player)
 
-                Res.add(player, m.atts, LOG.MAILATTACH)
-                MailInternal.log(player.pid, LOG.MAILATTACH, m)
+            Res.add(player, m.atts, LOG.MAILATTACH)
+            MailInternal.log(player.pid, LOG.MAILATTACH, m)
 
-                NetMsg.send(player, M.MailClaim,
-                    {id = target_id, atts = m.atts})
-            end
-            return
+            NetMsg.send(player, M.MailClaim, {id = target_id, atts = m.atts})
         end
+        return
     end
 end
 
@@ -179,13 +187,13 @@ local function c_mail_claim_all(player, pkt)
     local changed = false
     local claimed_ids = {}
 
-    for _, m in ipairs(stg.list) do
+    for id, m in pairs(stg.list) do
         if m.atts and #m.atts > 0 and m.att_stat == 0 then
             m.att_stat = 1
             m.read = 1
             Res.add(player, m.atts, LOG.MAILATTACH)
             MailInternal.log(player.pid, LOG.MAILATTACH, m)
-            table.insert(claimed_ids, m.id)
+            table.insert(claimed_ids, id)
             changed = true
         end
     end
@@ -199,23 +207,17 @@ end
 -- 一键删除所有已读邮件
 local function c_mail_del_read(player, pkt)
     local stg = get_storage(player)
-    local left = {}
     local del_ids = {}
-
-    for _, m in ipairs(stg.list) do
-        -- 已读且无未领附件的才可删（有未领附件不删）
-        local has_unclaimed = m.atts and #m.atts > 0
-            and m.att_stat == 0
+    for id, m in pairs(stg.list) do
+        local has_unclaimed = m.atts and #m.atts > 0 and m.att_stat == 0
         if m.read == 1 and not has_unclaimed then
             MailInternal.log(player.pid, LOG.DEL_MAIL, m)
-            table.insert(del_ids, m.id)
-        else
-            table.insert(left, m)
+            table.insert(del_ids, id)
         end
     end
 
     if #del_ids > 0 then
-        stg.list = left
+        for _, id in ipairs(del_ids) do stg.list[id] = nil end
         save_player_mail(player)
         NetMsg.send(player, M.MailDelRead, {ids = del_ids})
     end

@@ -60,10 +60,12 @@ static int32_t check_type(lua_State *L, int32_t index, lua_Integer *max_index,
         lua_pop(L, 1); /* pop metafield value */
     }
 
-    // encode as object, using opt
+    // 0表示强制编码为object
+    // 1表示强制编码为array,但为了保证顺序，仍需要遍历整个table
+    // 其他则是自动判断：8.6则表示max_key <= 8且 key数量/max_key > 0.6才编码为array
     if (0. == opt) return 0;
 
-    if (opt > 1) percent_opt = modf(opt, &index_opt);
+    if (opt > 1.) percent_opt = modf(opt, &index_opt);
 
     // try to find out the max key
     lua_pushnil(L);
@@ -321,7 +323,6 @@ static int32_t encode_table(lua_State *L, int32_t index, bson_t *parent,
     }
     else
     {
-
         bson_append_array_begin(parent, key, key_len, &b);
         ok = max_index > 0
                  ? encode_array(&b, L, index, (int32_t)max_index, e, opt)

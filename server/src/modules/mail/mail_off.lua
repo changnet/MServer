@@ -39,7 +39,7 @@ local function on_login(player)
     fetch_list = MailSys.fetch_player_mails(player, fetch_list)
     if not fetch_list then return end
 
-    PlayerDurable[player.paddr].MailPlayer.receive(pid, fetch_list)
+    PlayerDurable[player.paddr].MailPlayer.receive_list(pid, fetch_list)
 end
 
 Event.register(EV.LOGIN, on_login)
