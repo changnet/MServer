@@ -3,7 +3,7 @@ MailInternal = {}
 
 local TimeId = require "modules.system.time_id"
 
-assert = assert
+local assert = assert
 local LOCAL_TYPE = LOCAL_TYPE
 
 local this = memory("MailInternal")
@@ -16,14 +16,14 @@ function MailInternal.next_id()
     return this.time_id:next_id()
 end
 
--- 创建一个邮件对象
+-- 初始化一个邮件对象
 -- @param mail_obj MailObj 邮件对象，包含以下字段
 -- @return MailObj
-function MailInternal.create(mail_obj)
+function MailInternal.init(mail_obj)
+    -- 注意，一定要在到达目的线程才可初始化，以保证id的自增性
     mail_obj.id = MailInternal.next_id()
-    mail_obj.read = 0
-    mail_obj.att_stat = 0
-    mail_obj.time = mail_obj.time or time.game_time()
+    -- mail_obj.read = 0
+    -- mail_obj.att_stat = 0
 
     return mail_obj
 end
@@ -35,7 +35,8 @@ end
 function MailInternal.log(pid, op, mail_obj)
     -- 使用Log.misc把标题、内容、附件、配置id等字段记录到日志里，方便分析邮件相关问题
     local log_str = string.format("mail_id:%f, cid:%s, title:%s, text:%s",
-        math.floor(mail_obj.id), tostring(mail_obj.cid), tostring(mail_obj.title), tostring(mail_obj.text))
+        math.floor(mail_obj.id), tostring(mail_obj.cid),
+        tostring(mail_obj.title), tostring(mail_obj.text))
 
     local att_str = ""
     if mail_obj.atts then
@@ -45,28 +46,6 @@ function MailInternal.log(pid, op, mail_obj)
     end
 
     Log.misc(pid, op, log_str, att_str)
-end
-
-
--- 玩家登录时，获取离线邮件 + 符合条件的全服邮件
--- @param pid number 玩家pid
--- @return list table 邮件列表（合并后）
-function MailInternal.get_login_mails(pid)
-    local list = {}
-
-    -- 1. 获取离线邮件（pop后自动清除内存和数据库记录）
-    local off_list = MailOff.pop(pid)
-    for _, m in ipairs(off_list) do
-        table.insert(list, m)
-    end
-
-    -- 2. 获取符合条件的全服邮件
-    local sys_list = MailSys.get_mails_for(pid)
-    for _, m in ipairs(sys_list) do
-        table.insert(list, m)
-    end
-
-    return list
 end
 
 -- 转发个人邮件到玩家
@@ -88,50 +67,4 @@ function MailInternal.forward_player_mail(pid, mail_obj)
     -- 但在宕机情况下，Durable虽然可以保证数据不丢，但player对象可能就不存在了
     -- 用PlayerDurable可以同时处理这两种情况
     PlayerDurable[GAME_ADDR].MailPlayer.receive(pid, mail_obj)
-end
-
--- player线程則管玩家不在本线程，请求game线程小署离线邮件
--- @param pid number
--- @param mail_obj MailObj
-function MailInternal.push_offline(pid, mail_obj)
-    MailOff.push(pid, mail_obj)
-end
-
--- player线程通知game线程发送全服邮件
--- @param mail_obj MailObj
-function MailInternal.send_sys(mail_obj)
-    MailSys.send(mail_obj)
-end
-
--- player线程通知：全服邮件通知广播
--- game线程广播到所有player线程时会调用此函数（作为RPC接收端）
--- @param mail_obj MailObj
-function MailInternal.on_sys_mail_notify(mail_obj)
-    -- 这个函数运行在 player 线程
-    -- 遍历本线程所有在线玩家，拉取符合条件的全服邮件
-    local players = PlayerMgr.get_all_player()
-    for _, player in pairs(players) do
-        local pid = player.pid
-        -- RPC Call game线程获取符合条件的邮件（仅sys mail部分）
-        local e, list = Call[GAME_ADDR].MailInternal.get_sys_mails_for(pid)
-        if e == 0 and list and #list > 0 then
-            for _, m in ipairs(list) do
-                MailPlayer.receive(player, m)
-            end
-        end
-    end
-end
-
--- 获取符合条件的全服邮件（供player线程查询，仅sys mail）
--- @param pid number
--- @return list table
-function MailInternal.get_sys_mails_for(pid)
-    return MailSys.get_mails_for(pid)
-end
-
--- player线程通知game线程：玩家已领取某封全服邮件的附件
--- @param pid number
--- @param mail_id number
-function MailInternal.mark_sys_claimed(pid, mail_id)
-    MailSys.mark_claimed(pid, mail_id)
 end

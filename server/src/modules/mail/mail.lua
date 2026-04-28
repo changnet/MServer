@@ -26,12 +26,26 @@ local LOCAL_TYPE = LOCAL_TYPE
 ---@field op number 日志操作，用于跟踪附件资源产出。参考log_header
 ---@field log_str string 日志字符串，记录一些额外信息，方便日志分析
 
+local function prepare_mail_obj(mail_obj)
+    if not mail_obj.cid then
+        error("mail_obj.cid is required")
+    end
+    if not mail_obj.time then
+        mail_obj.time = time.game_time()
+    end
+
+    -- 有附件需要标记日志来源
+    if mail_obj.atts and not mail_obj.op then
+        error("mail_obj.op is required when mail_obj.atts exists")
+    end
+end
+
 -- 发送个人邮件（支持离线）
 -- 在game线程或player线程均可调用
 -- @param pid number 玩家pid
 -- @param mail_obj MailObj 邮件对象
 function Mail.send_pid(pid, mail_obj)
-    mail_obj = MailInternal.create(mail_obj)
+    prepare_mail_obj(mail_obj)
     if LOCAL_TYPE == W.PLAYER then
         local player = PlayerMgr and PlayerMgr.get_player(pid)
         if player then
@@ -45,7 +59,7 @@ function Mail.send_pid(pid, mail_obj)
     Durable[addr].MailInternal.forward_player_mail(pid, mail_obj)
 end
 
---- 发送个人邮件（玩家已在当前player线程在线）
+--- 发送个人邮件（玩家在线）
 -- @param player Player 玩家对象
 -- @param mail_obj MailObj 邮件对象
 function Mail.send_player(player, mail_obj)
@@ -53,12 +67,12 @@ function Mail.send_player(player, mail_obj)
     return Mail.send_pid(player.pid, mail_obj)
 end
 
--- 发送全服邮件、帮派邮件（在game线程调用）
--- @param mail_obj MailObj 邮件对象
+-- 发送全服邮件、帮派邮件
+-- @param mail_obj MailObj 邮件对象，如果在跨服中发某个服的邮件，指定sid
 function Mail.send_sys(mail_obj)
     if not mail_obj.type then mail_obj.type = Mail.T_SYS end
 
-    mail_obj = MailInternal.create(mail_obj)
+    prepare_mail_obj(mail_obj)
 
     if LOCAL_TYPE == W.GAME then
         MailSys.send(mail_obj)

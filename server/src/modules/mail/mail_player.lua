@@ -56,16 +56,24 @@ end
 local function on_load_mail(player)
     local e, rows = Call[DATA_ADDR].DataCache.get(
         "player_mail", {"pid", player.pid})
-    local stg = get_storage(player)
-    if e == 0 and rows and #rows > 0 then
-        stg.list = rows[1].list or {}
+
+    if 0 ~= e then
+        perror(player, "load mail failed", e)
+        return false
     end
+
+    local stg = get_storage(player)
+    if #rows > 0 then
+        stg.list = rows[1].list or {}
+    else
+        stg.list = {}
+    end
+
+    return true
 end
 
 -- 登录事件：加载邮件并同步离线/全服邮件
 local function on_login(player)
-    on_load_mail(player)
-
     local stg = get_storage(player)
 
     -- 下发邮件列表
@@ -100,21 +108,6 @@ function MailPlayer.receive_list(player, list)
 
     check_mail_limit(player)
     save_player_mail(player)
-end
-
--- game线程广播全服邮件通知，player线程接收
--- 遍历本线程在线玩家，RPC拉取符合条件的全服邮件
-function MailPlayer.on_sys_mail_notify(mail_obj)
-    local players = PlayerMgr.get_all_player()
-    for _, player in pairs(players) do
-        local pid = player.pid
-        local e, list = Call[GAME_ADDR].MailInternal.get_sys_mails_for(pid)
-        if e == 0 and list and #list > 0 then
-            for _, m in ipairs(list) do
-                MailPlayer.receive(player, m)
-            end
-        end
-    end
 end
 
 -- 客户端读取邮件
@@ -172,11 +165,6 @@ local function c_mail_claim(player, pkt)
                 Res.add(player, m.atts, LOG.MAILATTACH)
                 MailInternal.log(player.pid, LOG.MAILATTACH, m)
 
-                -- 如果是全服邮件，通知game线程记录已领取
-                if m.type == Mail.T_SYS or m.type == Mail.T_GUILD then
-                    Send[GAME_ADDR].MailInternal.mark_sys_claimed(player.pid, m.id)
-                end
-
                 NetMsg.send(player, M.MailClaim,
                     {id = target_id, atts = m.atts})
             end
@@ -199,10 +187,6 @@ local function c_mail_claim_all(player, pkt)
             MailInternal.log(player.pid, LOG.MAILATTACH, m)
             table.insert(claimed_ids, m.id)
             changed = true
-
-            if m.type == Mail.T_SYS or m.type == Mail.T_GUILD then
-                Send[GAME_ADDR].MailInternal.mark_sys_claimed(player.pid, m.id)
-            end
         end
     end
 
@@ -238,6 +222,8 @@ local function c_mail_del_read(player, pkt)
 end
 
 Event.reg(EV.LOGIN, on_login)
+Event.reg(EV.LOADING, on_load_mail)
+
 NetMsg.reg(M.MailRead, c_mail_read)
 NetMsg.reg(M.MailDel, c_mail_del)
 NetMsg.reg(M.MailClaim, c_mail_claim)

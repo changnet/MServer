@@ -34,11 +34,12 @@ end
 -- game线程登录时调用，获取玩家离线邮件和符合条件的全服邮件
 local function on_login(player)
     local pid = player.pid
-    local list = fetch_off_mail(pid)
+    local fetch_list = fetch_off_mail(pid)
 
-    if not list then return end
+    fetch_list = MailSys.fetch_player_mails(player, fetch_list)
+    if not fetch_list then return end
 
-    PlayerDurable[player.paddr].MailPlayer.receive(pid, list)
+    PlayerDurable[player.paddr].MailPlayer.receive(pid, fetch_list)
 end
 
 Event.register(EV.LOGIN, on_login)

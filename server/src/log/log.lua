@@ -166,6 +166,20 @@ function pwarnf(player, fmt, ...)
         string.format(fmt, ...))
 end
 
+-- 打印玩家错误信息
+function perror(player, ...)
+    -- 136 = MASK_C_Y | MASK_S_L，参考C++中的定义
+    return g_async_log:print("error", 129,
+        string.format("%s(%d), ", player.property.name, player.pid), ...)
+end
+
+-- 格式化并打印玩家错误信息
+function perrorf(player, fmt, ...)
+    return g_async_log:print("error", 129,
+        string.format("%s(%d), ", player.property.name, player.pid),
+        string.format(fmt, ...))
+end
+
 --//////////////////////////////////////////////////////////////////////////////
 -- 下面是不常用的LOG基础接口
 

@@ -337,3 +337,19 @@ function table.keys(tbl)
 
     return list
 end
+
+-- 和ipairs相反，逆序遍历一个table，该table必须是数组
+function rpairs(tbl)
+    --[[
+    Lua的 for ... in 迭代协议
+    1. 返回一个迭代器函数、一个状态变量和一个初始值
+    2. 每次迭代调用迭代器函数，传入状态
+
+    下面的例子中，第1次调用传入(tbl, #tbl + 1)，第2次调用传入(tbl, #tbl)
+    ]]
+    return function(t, i)
+        i = i - 1
+        local v = t[i]
+        if v then return i, v end
+    end, tbl, #tbl + 1
+end

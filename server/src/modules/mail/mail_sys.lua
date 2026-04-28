@@ -7,9 +7,6 @@ MailSys = {}
 
 local this = memory("MailSys")
 
--- 玩家领取全服邮件的记录，存库（{[pid] = last_claimed_id}）
-local player_storage = storage("MailPlayer")
-
 local function load_mail()
     local e, rows = Call[DATA_ADDR].DataMgr.load("sys_mail", {})
     if e ~= 0 then
@@ -41,58 +38,42 @@ local function load_mail()
 end
 
 -- 判断玩家是否符合接收该系统邮件的条件
--- @param pid number 玩家pid
 -- @param mail_obj MailObj 邮件对象
 -- @return boolean
-local function is_eligible(pid, mail_obj)
+local function is_eligible(player, mail_obj)
     local tp = mail_obj.type
     if tp == Mail.T_SYS then
-        -- 全服邮件，所有玩家都符合条件
-        return true
+        -- 全服邮件，在发邮件前创号的玩家都符合条件
+        return mail_obj.time <= player.create_time
     elseif tp == Mail.T_GUILD then
         -- 帮派邮件，需要判断帮派id
-        local tparam = mail_obj.tparam
-        if not tparam then return false end
-        -- tparam中包含guild_id，需要判断玩家是否在该帮派
-        -- 这里假设可以通过全局函数查询，具体实现依赖帮派模块
-        -- TODO: 替换为实际的帮派归属查询
-        return false
+        return Player.get_property(player, PP.guild_id) == mail_obj.tparam
     end
     return false
 end
 
 -- 获取符合条件的全服邮件（player线程登录/新邮件时调用）
 -- 根据邮件类型+tparam过滤，排除已领取过的邮件
--- @param pid number 玩家pid
--- @return list table 未领取的符合条件的全服邮件列表
-function MailSys.get_mails_for(pid)
+function MailSys.fetch_player_mails(player, fetch_list)
     local list = this.list
-    if not list then return {} end
+    if not list then return end
 
-    local last_id = player_storage[pid] or 0
-    local result = {}
+    local stg = Player.get_data(player)
+    local last_id = stg.mail_sys or 0
 
-    for _, m in ipairs(list) do
-        -- 根据id大小快速跳过已领取的邮件
-        if m.id > last_id and is_eligible(pid, m) then
-            local rm = table.clone(m)
-            rm.read = 0
-            rm.att_stat = 0
-            table.insert(result, rm)
+    local max_obj = list[#list]
+    if max_obj then stg.mail_sys = max_obj.id end
+
+    -- id是按顺序递增，逆序的话大部分情况下只会遍历少量邮件
+    for _, m in rpairs(list) do
+        if m.id <= last_id then return end
+
+        if is_eligible(player, m) then
+            if not fetch_list then fetch_list = {} end
+            table.insert(fetch_list, m)
         end
     end
-    return result
-end
-
--- 记录玩家已领取某封全服邮件
--- 更新player_storage中玩家的最大已领取邮件id
--- @param pid number
--- @param mail_id number
-function MailSys.mark_claimed(pid, mail_id)
-    local last_id = player_storage[pid] or 0
-    if mail_id > last_id then
-        player_storage[pid] = mail_id
-    end
+    return fetch_list
 end
 
 -- 发送全服邮件
@@ -103,9 +84,15 @@ function MailSys.send(mail_obj)
 
     this.modify = true
 
-    -- 广播到所有player线程，由player线程判断在线玩家是否符合条件
-    Worker.send_other_type(W.PLAYER,
-        MailInternal.on_sys_mail_notify, mail_obj)
+    -- 通知所有在线玩家领取
+    -- TODO 理论上可以只检测当前这封邮件是否能被领取，但fetch_player_mails检测所有邮件更稳
+    local players = PlayerMgr.get_all_player()
+    for _, player in pairs(players) do
+        local fetch_list = MailSys.fetch_player_mails(player)
+        if fetch_list then
+            PlayerDurable[player.paddr].MailPlayer.receive_list(player.pid, fetch_list)
+        end
+    end
 end
 
 -- 起服初始化

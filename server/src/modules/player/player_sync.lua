@@ -43,6 +43,7 @@ function PlayerSync.init(player)
             pid = pid,
             gaddr = gaddr,
             paddr = LOCAL_ADDR,
+            create_time = player.create_time,
         }
     end
 
@@ -80,8 +81,8 @@ function PlayerSync.login(player, is_new)
 end
 
 -- 其他worker收到登录时同步的数据
-function PlayerSync.on_init(data)
-    local pid = data.pid
+function PlayerSync.on_init(player)
+    local pid = player.pid
 
     -- 正常不会有玩家，有就是之前逻辑出错，直接顶掉
     local old = PlayerMgr.get_player(pid)
@@ -90,12 +91,12 @@ function PlayerSync.on_init(data)
     end
 
     -- 加载数据
-    if not PlayerData.load(data) then return false end
+    if not PlayerData.load(player) then return false end
 
     -- 现在还不能设置为在线，因为其他线程模块还可能会加载数据
     -- 如果标记为在线会导致一些模块认为玩家在线从而触发在线逻辑，但取不到数据
     player.status = PlayerStatus.LOGIN
-    PlayerMgr.set_unint(pid, data)
+    PlayerMgr.set_unint(pid, player)
 
     -- 其他worker除了玩家数据还需要存其他数据？后续有需求再说
     -- if not Event.pemit_true(player, EV.LOADING) then

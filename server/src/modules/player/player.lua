@@ -220,6 +220,12 @@ function Player.login(player)
     PlayerSync.login(player)
 
     player.status = PlayerStatus.NORMAL -- 玩家状态，登录完成
+
+    -- 登录完成后，才通知前端登录成功，前端才可以请求协议。避免登录过程中用了协程导致
+    -- 部分模块未初始化完成就收协议了
+
+    -- 未登录成功，uninit_player中的玩家不接受前端协议
+
     return true
 end
 

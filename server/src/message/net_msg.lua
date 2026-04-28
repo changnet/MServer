@@ -8,7 +8,7 @@ local buffer_write_int = Buffer.write_int
 local buffer_write_buffer = Buffer.write_buffer
 
 local callback = {} -- 消息回调
-local local_type = LOCAL_TYPE -- 当前worker的类型
+local LOCAL_TYPE = LOCAL_TYPE -- 当前worker的类型
 local CLT_MSG = ThreadMessage.CLT_MSG
 local DEF_DISPATCH_WTYPE = W.PLAYER -- 默认为玩家所在worker，这个worker用的协议比较多
 local forward_wtype -- [id] = wtype
@@ -19,12 +19,14 @@ local construct_message = g_mthread.construct_message
 local pbc_decode = Pbc.decode
 local pbc_encode = Pbc.encode
 
+local IS_PLAYER = WORKER[LOCAL_TYPE].pobj
+
 -- 注册网络消息回调
 -- @param id 协议id
 -- @param func 回调函数
 function NetMsg.reg(msg, func)
     local wtype = WorkerNameType[msg.w] or DEF_DISPATCH_WTYPE
-    if local_type ~= wtype then return end
+    if LOCAL_TYPE ~= wtype then return end
 
     local id = msg.i
     assert(not callback[id])
@@ -41,7 +43,7 @@ end
 -- @param flag 认证flag，0表示未认证才可发送，1表示认证、未认证都可发送
 function NetMsg.reg_noauth(msg, func, flag)
     local wtype = WorkerNameType[msg.w] or DEF_DISPATCH_WTYPE
-    if local_type ~= wtype then return end
+    if LOCAL_TYPE ~= wtype then return end
 
     local id = msg.i
     assert(not callback[id])
@@ -55,7 +57,7 @@ end
 
 -- 网关加载用于转发的协议数据
 function NetMsg.load_forward_msg()
-    if local_type ~= W.GATEWAY then return end
+    if LOCAL_TYPE ~= W.GATEWAY then return end
 
     -- TODO 这个要优化下，把所有协议放到一个table M中，访问协议时用M.Login
     local path, err = package.searchpath("protocol.protocol", package.path)
@@ -82,9 +84,14 @@ end
 local function clt_msg_callback(func, schema, pid, buffer, size)
     local pkt = pbc_decode(schema, buffer, size)
 
-    if PLAYER == local_type then
+    if IS_PLAYER then
         -- player用玩家对象回调，避免每次处理消息再获取一次
         local player = PlayerMgr.get_player(pid)
+        if not player then
+            -- 未登录成功，uninit_player中的玩家不接受前端协议
+            eprint("clt_msg_callback no player", pid)
+            return
+        end
         return func(player, pkt)
     else
         -- 其他的以pid回调，这些worker没有玩家对象，比如竞技场
@@ -100,7 +107,7 @@ function NetMsg.dispatch(socket, id, buffer, size)
     local auth = socket.auth
     local wtype = forward_wtype[id]
 
-    if local_type == wtype then
+    if LOCAL_TYPE == wtype then
         local cb = callback[id]
         if not cb then
             printf("message dispatch no callback for %d", id)

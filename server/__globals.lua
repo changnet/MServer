@@ -33,7 +33,6 @@ return {
 "EMPTY", -- src/modules/system/define.lua
 "ET", -- src/modules/entity/entity_header.lua
 "EV", -- src/modules/event/event_header.lua
-"EV", -- engine/__ev.lua
 "Engine", -- engine/__engine.lua
 "EntityCmd", -- src/modules/entity/entity_cmd.lua
 "EntityMgr", -- src/modules/entity/entity_mgr.lua
@@ -130,7 +129,6 @@ return {
 "WorkerData", -- src/worker/worker.lua
 "WorkerHash", -- src/worker/worker.lua
 "WorkerNameType", -- src/worker/worker.lua
-"WorkerThread", -- engine/__workerthread.lua
 "__G_C_TRACKBACK", -- src/global/global.lua
 "__G_DUMP_STACK", -- src/global/global.lua
 "__assert", -- src/engine/startup.lua
@@ -152,7 +150,6 @@ return {
 "__test", -- src/global/test.lua
 "__unrequire", -- src/global/require.lua
 "assert", -- src/global/global.lua
-"assert", -- src/modules/mail/mail_internal.lua
 "cluster_message_dispatch", -- src/message/thread_message.lua
 "dprint", -- src/log/log.lua
 "dprintf", -- src/log/log.lua
@@ -174,6 +171,8 @@ return {
 "mongodb_event", -- src/mongodb/mongodb_mgr.lua
 "on_worker_message", -- src/message/thread_message.lua
 "oo", -- src/global/oo.lua
+"perror", -- src/log/log.lua
+"perrorf", -- src/log/log.lua
 "pinfo", -- src/log/log.lua
 "pinfof", -- src/log/log.lua
 "print", -- src/log/log.lua
@@ -184,6 +183,7 @@ return {
 "require_kv_conf", -- src/global/require.lua
 "require_no_update", -- src/global/require.lua
 "require_worker", -- src/global/require.lua
+"rpairs", -- src/global/table.lua
 "scall", -- src/global/global.lua
 "script_loaded", -- src/global/global.lua
 "set_modify_metatable", -- src/global/modi_table.lua
