@@ -198,7 +198,7 @@ function Res.check_dec_one(player, res)
     local res_m = res_func[t]
 
     -- 把res也传过去，有时候某些资源会有特殊属性，如强化、升星...
-    return res_m.get(player,  res) >= res.num
+    return res_m.get(player, res) >= res.num
 end
 
 -- 检测资源是否足够

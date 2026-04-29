@@ -1,4 +1,4 @@
--- auto export by lua-tags 196 symbols
+-- auto export by lua-tags 199 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -11,6 +11,7 @@ return {
 "Alert", -- src/modules/misc/alert.lua
 "Astar", -- engine/__astar.lua
 "Await", -- src/rpc/rpc_proxy.lua
+"BagMgr", -- src/modules/item/bag_mgr.lua
 "Bot", -- src/bot/bot.lua
 "BotMgr", -- src/bot/bot_mgr.lua
 "Buffer", -- engine/__buffer.lua
@@ -46,6 +47,8 @@ return {
 "ICall", -- src/rpc/rpc_proxy.lua
 "IO", -- engine/__io.lua
 "ISend", -- src/rpc/rpc_proxy.lua
+"Item", -- src/modules/item/item.lua
+"ItemConf", -- src/modules/item/item.lua
 "JsonFile", -- src/util/json_file.lua
 "LANG", -- config/lang.lua
 "LOCAL_ADDR", -- src/worker/worker.lua

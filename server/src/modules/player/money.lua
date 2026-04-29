@@ -31,8 +31,14 @@ function Money.send_info(player)
 end
 
 -- 获取玩家当前货币数量
-function Money.get(player, mtype)
+function Money.get_num(player, mtype)
     return player.money[mtype]
+end
+
+local function res_num_factory(mtype)
+    return function(player, res)
+        return player.money[mtype]
+    end
 end
 
 local function log_money(player, mtype, num, op, log_str)
@@ -85,5 +91,5 @@ end
 
 for mtype in pairs(MoneyType) do
     info_pkt[mtype] = {type = mtype, num = 0}
-    Res.reg(mtype, Money.get, Money.add, Money.dec)
+    Res.reg(mtype, res_num_factory(mtype), Money.add, Money.dec)
 end
