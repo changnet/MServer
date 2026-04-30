@@ -22,7 +22,7 @@ local log_tbl = {}
 --@param bid number 背包id
 function ItemStore:__init(pid, bid, max_size)
     self.pid = pid
-    self.bid = bid
+    self.id = bid
     self.size = 0
     self.max_size = max_size
 end
@@ -30,21 +30,60 @@ end
 -- 从数据库加载数据
 --@param is_new boolean 是否新号，新号不从数据库加载数据
 --@return boolean
-function ItemStore:load(is_new)
+function ItemStore:load(player, is_new)
     if is_new then
         self.list = {}
-        self.grid = {}
-        self.list = {}
-        self.ihash = {}
+        if self.is_hash then self.ihash = {} end
         return true
     end
+
+    local e, rows = Call[DATA_ADDR].DataCache.get(
+        "player_item", {"pid", player.pid, "bid", self.id})
+
+    if 0 ~= e then
+        perror(player, "load item failed", e, self.id)
+        return false
+    end
+
+    local size = 0
+    local list = {}
+    if self.is_hash then
+        local ihash = {}
+        for _, obj in pairs(rows[1].list) do
+            size = size + 1
+            list[obj.uid] = obj
+
+            local id = obj.id
+            local hash = ihash[id]
+            if not hash then
+                hash = {}
+                ihash[id] = hash
+            end
+            table.insert(hash, obj)
+        end
+        self.ihash = ihash
+    else
+        for _, obj in pairs(rows[1].list) do
+            size = size + 1
+            list[obj.uid] = obj
+        end
+    end
+
+    self.list = list
+    self.size = size
+    table.set_array(list, 1)
 
     return true
 end
 
 -- 保存数据到数据库
-function ItemStore:save()
+function ItemStore:save(player)
     if not self:modify() then return true end
+
+    Send[DATA_ADDR].DataCache.update("player_item",
+        {"pid", player.pid, "bid", self.id},
+        {pid = player.pid, bid = self.id, list = self.list}
+    )
 
     self:set_modify(false)
     return true
@@ -110,14 +149,68 @@ end
 
 -- 添加某个道具
 function ItemStore:add(item_obj, op, log_ext)
+    if not item_obj.uid then
+        item_obj.uid = BagMgr.next_id()
+    end
+
+    self.list[item_obj.uid] = item_obj
+    self.size = (self.size or 0) + 1
+
+    if self.is_hash then
+        local id = item_obj.id
+        if not self.ihash[id] then self.ihash[id] = {} end
+        table.insert(self.ihash[id], item_obj)
+    end
+
+    self:set_modify(true)
+    self:log(item_obj, item_obj.num, op, log_ext)
+
+    return item_obj.num
 end
 
 -- 删除某个道具
 function ItemStore:dec(item_obj, op, log_ext)
+    local uid = item_obj
+    if not self.list[uid] then
+        eprint("item dec obj not in store", uid, item_obj.id, op)
+        return 0
+    end
+
+    local removed = item_obj.num or 0
+
+    self.list[uid] = nil
+    self.size = self.size - 1
+
+    if self.is_ihash then
+        local id = item_obj.id
+        local arr = self.ihash[id]
+
+        for i, obj in ipairs(arr) do
+            if obj.uid == item_obj.uid then
+                table.remove(arr, i)
+                break
+            end
+        end
+        if #arr == 0 then self.ihash[id] = nil end
+    end
+
+    self:set_modify(true)
+    self:log(item_obj, -removed, op, log_ext)
+
+    return removed
 end
 
 -- 删除某个道具指定的数量
 function ItemStore:dec_count(item_obj, change_num, op, log_ext)
+    if change_num >= item_obj.num then
+        return self:dec(item_obj, op, log_ext)
+    end
+
+    item_obj.num = item_obj.num - change_num
+    self:set_modify(true)
+    self:log(item_obj, -change_num, op, log_ext)
+
+    return change_num
 end
 
 -- 获取某个id的道具对象列表

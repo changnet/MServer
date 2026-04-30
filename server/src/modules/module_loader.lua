@@ -40,6 +40,11 @@ require("account.login", W.GATEWAY)
 require("account.account_mgr", W.ACCOUNT)
 require("misc.alert")
 
+require("item.item")
+require("item.bag_mgr", W.PLAYER)
+require("item.item_use", W.PLAYER)
+require("item.item_equip", W.PLAYER)
+
 require("player.player_sync", W.PLAYER, W.GAME, W.SCENE)
 require("player.property", W.PLAYER, W.GAME, W.SCENE)
 require("player.player", W.PLAYER, W.GAME, W.SCENE)

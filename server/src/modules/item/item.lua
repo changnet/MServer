@@ -2,8 +2,24 @@
 Item = {}
 
 ItemConf = require "config.item_conf"
+local ItemStore = require("item.item_store")
 
+local update_pkt = {}
 local ItemConf = ItemConf
+
+-- 判断两个资源的等级、星级等属性是否一样
+function Item.IsObjAttrSame(item_attr, res)
+    -- TODO item_attr是按id来，但res只能配置 star、level字段，这两个是否要统一
+    -- 统一成字符串好些
+    return true
+end
+
+-- 发送单个道具更新
+function Item.send_update(player, item_obj, bid)
+    update_pkt.bid = bid
+    update_pkt.item = ItemStore.pack_item(nil, item_obj)
+    NetMsg.send(player, M.ItemUpdate, update_pkt)
+end
 
 local function get(player, res)
     local id = res.id
