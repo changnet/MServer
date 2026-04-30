@@ -1,4 +1,4 @@
--- auto export by lua-tags 199 symbols
+-- auto export by lua-tags 200 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -49,6 +49,7 @@ return {
 "ISend", -- src/rpc/rpc_proxy.lua
 "Item", -- src/modules/item/item.lua
 "ItemConf", -- src/modules/item/item.lua
+"ItemUse", -- src/modules/item/item_use.lua
 "JsonFile", -- src/util/json_file.lua
 "LANG", -- config/lang.lua
 "LOCAL_ADDR", -- src/worker/worker.lua

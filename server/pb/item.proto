@@ -1,0 +1,63 @@
+//聊天模块 协议定义
+
+syntax = "proto3";
+package bag;
+
+// 道具属性
+message Attr {
+    int32 k = 1; // 属性id
+    int32 v = 2; // 属性值
+}
+
+// 道具结构
+message Item
+{
+    // 所有道具通用字段
+    string uid = 1; // 唯一id
+    int32 id    = 2; // 道具id
+    int32 num   = 3; // 数量
+    int32 grid  = 4; // 所在格子索引
+
+    repeated Attr attr = 5; // 附加属性
+}
+
+/* 背包数据
+ * 注：单个道具变动时，也是发此协议。只是数组长度为1.如果count = 0，则表示删除
+ */
+message SBagInfo
+{
+    int32 bid = 1; // 背包id
+    repeated Item items = 2; // 道具列表
+}
+
+// 更新单个道具
+message SItemUpdate {
+    int32 bid = 1; // 背包id
+    Item item = 2; // 更新的道具
+}
+
+// 更新单个道具属性信息
+message SItemAttrUpdate {
+    int32 bid = 1; // 背包id
+    string uid = 2; // 唯一id
+    Attr attr = 3; // 更新的道具
+}
+
+// 使用道具
+message ItemUse {
+    int32 bid = 1; // 背包id
+    string uid = 2; // 唯一id
+    int32 num = 3; // 使用的数量
+}
+
+// 穿戴装备
+message CTakeOn {
+    int32 bid = 1; // 背包id
+    string uid = 2; // 唯一id
+}
+
+// 脱下装备
+message CTakeOff {
+    int32 bid = 1; // 背包id
+    string uid = 2; // 唯一id
+}

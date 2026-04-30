@@ -78,12 +78,32 @@ M = {
         c = "misc.CWelcomeGet", i = 13
     },
 
-    -- 14 背包模块
+    -- 14 背包数据
     BagInfo = {
-        s = "bag.SBagInfo", i = 14
+        s = "item.SBagInfo", i = 14
+    },
+    -- 31 更新单个道具信息
+    ItemUpdate = {
+        s = "item.SItemUpdate", i = 31
+    },
+    -- 32 更新单个道具属性
+    ItemAttrUpdate = {
+        s = "item.SItemAttrUpdate", i = 32
+    },
+    -- 33 使用道具
+    ItemUse = {
+        s = "item.ItemUse", c = "item.ItemUse", i = 33
+    },
+    -- 34 穿戴装备
+    EquipOn = {
+        c = "item.CTakeOn", i = 34
+    },
+    -- 35 卸下装备
+    EquipOff = {
+        c = "item.CTakeOff", i = 35
     },
 
-    -- 15 邮件模块
+    -- 15 邮件数据
     MailInfo = {
         s = "mail.SMailInfo", i = 15
     },
