@@ -1,7 +1,7 @@
 -- 邮件内部通用接口
 MailInternal = {}
 
-local TimeId = require "modules.system.time_id"
+local TimeId = require "idgen.time_id"
 
 local assert = assert
 local LOCAL_TYPE = LOCAL_TYPE

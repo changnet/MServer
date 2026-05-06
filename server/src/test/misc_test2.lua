@@ -4,7 +4,7 @@
 
 Test.describe("basen tests", function()
     local max_int64 = 0x7FFFFFFFFFFFFFFF
-    local BaseN = require("util.BaseN")
+    local BaseN = require("idgen.basen")
 
     Test.it("basic test", function()
         Test.equal(BaseN.sequence62(0), "10")

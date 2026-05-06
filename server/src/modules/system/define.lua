@@ -28,7 +28,7 @@ W = {
     -- 帐号管理及登录
     ACCOUNT = {type = 8,   sequ = 2, pobj = 0, paddr = 0, name = "account"},
     -- 日志写入
-    LOG     = {type = 10,  sequ = 0, pobj = 0, paddr = 0, name = "log"},
+    LOG     = {type = 9,  sequ = 0, pobj = 0, paddr = 0, name = "log"},
     -- 单元测试
     TEST    = {type = 200, sequ = 0, pobj = 0, paddr = 0, name = "test"},
     -- 机器人测试
@@ -65,7 +65,7 @@ DB_WARN_SIZE = 12 * 1024 * 1024 -- MongoDB最大16M，达到12M时发出警告
 SRV_ALIVE_TIMES = 5
 SRV_ALIVE_INTERVAL = 5
 
-PID_SRV_BIT = 25 -- 创角服务器占的位数
+SRV_BIT = 20 -- 服务器id最大占多少位（涉及到各种id的生成）
 
 UNIQUEID = {
     PLAYER = 1 -- 玩家pid

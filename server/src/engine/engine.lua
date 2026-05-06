@@ -6,7 +6,7 @@ local SERVER_ID = g_setting.server
 -- @param wtype worker type，worker类型，如WORKER_ACCOUNT
 -- @param main 是否为主线程
 function Engine.make_address(wtype, index, main)
-    -- index|type|main，返回的地址最大为int32
+    -- index|type|main，返回的地址最大为int32(现在使用23位，其他预留)
     -- wType最大为8位，最多只能有255个类型的worker
     -- index最大为14位，同一个类型的worker最多只能有16384个
     -- 0是个特殊的地址，表示当前worker

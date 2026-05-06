@@ -10,8 +10,8 @@ local ONE_HOUR = ONE_MINUTE * ONE_MINUTE
 local ONE_DAY = ONE_HOUR * 24
 -- local ONE_WEEK = ONE_DAY*7
 
--- utc减去一个固定值，保证时间戳在32位以内（1577808000 = 2020-01-01）
-local OFFSET = 1577808000
+-- utc减去一个固定值，保证时间戳在32位以内（1735660800 = 2025-01-01）
+local OFFSET = 1735660800
 
 local engine_time = Engine.time
 

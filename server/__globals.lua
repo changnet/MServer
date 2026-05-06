@@ -28,6 +28,7 @@ return {
 "DEFINE_END", -- src/global/require.lua
 "DataCache", -- src/data/data_cache.lua
 "DataMgr", -- src/data/data_mgr.lua
+"DistId", -- src/idgen/dist_id.lua
 "Durable", -- src/rpc/durable.lua
 "E", -- src/modules/module_loader.lua
 "E", -- src/modules/system/error.lua
@@ -81,7 +82,6 @@ return {
 "MySql", -- engine/__mysql.lua
 "NetMsg", -- src/message/net_msg.lua
 "PCall", -- src/rpc/rpc_proxy.lua
-"PID_SRV_BIT", -- src/modules/system/define.lua
 "PP", -- src/modules/player/property.lua
 "PP_DEF", -- src/modules/player/property.lua
 "PP_INT_LIST", -- src/modules/player/property.lua
@@ -110,6 +110,7 @@ return {
 "Rtti", -- src/global/rtti.lua
 "SRV_ALIVE_INTERVAL", -- src/modules/system/define.lua
 "SRV_ALIVE_TIMES", -- src/modules/system/define.lua
+"SRV_BIT", -- src/modules/system/define.lua
 "SRV_KEY", -- src/modules/system/define.lua
 "SRV_TYPE", -- src/modules/system/define.lua
 "Send", -- src/rpc/rpc.lua
@@ -172,7 +173,6 @@ return {
 "lua_rapidxml", -- engine/__lua_rapidxml.lua
 "main_message_dispatch", -- src/message/thread_message.lua
 "memory", -- src/data/global_data.lua
-"mongodb_event", -- src/mongodb/mongodb_mgr.lua
 "on_worker_message", -- src/message/thread_message.lua
 "oo", -- src/global/oo.lua
 "perror", -- src/log/log.lua

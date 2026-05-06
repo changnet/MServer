@@ -175,7 +175,7 @@ function AccountMgr.create_role(session_id, account, pfid, sid, pkt)
     local seed = assert(row.value.seed)
     local real_sid = Engine.get_server_id()
     -- 如果希望这个值比较小，可以采用protobuf的压缩机制来压缩下
-    local pid = (seed << PID_SRV_BIT) | real_sid
+    local pid = (seed << SRV_BIT) | real_sid
     local role = {
         account = account,
         create_pfid = pfid,
