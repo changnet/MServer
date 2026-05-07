@@ -2,6 +2,32 @@
 -- xzc
 -- 2016-03-06
 
+Test.describe("dist id tests", function()
+    local DistId = require("idgen.dist_id")
+
+    Test.it("dist id test", function()
+        local now = 42463523 -- time.game_time()
+        local addr = Engine.make_address(W.PLAYER, 2, 0)
+        local d = DistId(1, addr, now)
+
+        Test.equal(d:next_id(), "10OauFK85")
+
+        d = DistId(2^SRV_BIT - 1, 0x7FFFFFFF, 0x7FFFFFFF)
+        Test.equal(d:next_id(), "10u___________3W3")
+
+        local seen = {}
+        for _ = 1, 100000 do
+            local id = d:next_id()
+
+            Test.assert(#id <= 22, "id length should be <=22")
+            if seen[id] then
+                Test.assert(false, "duplicate id: " .. id)
+            end
+            seen[id] = true
+        end
+    end)
+end)
+
 Test.describe("basen tests", function()
     local max_int64 = 0x7FFFFFFFFFFFFFFF
     local BaseN = require("idgen.basen")

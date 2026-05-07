@@ -3,8 +3,8 @@ local Engine = require "Engine" -- C++ engine api
 local SERVER_ID = g_setting.server
 
 -- 给每个线程生成一个独立的地址
--- @param wtype worker type，worker类型，如WORKER_ACCOUNT
--- @param main 是否为主线程
+-- @param wtype number worker类型(worker type)，如WORKER_ACCOUNT
+-- @param main number 是否为主线程
 function Engine.make_address(wtype, index, main)
     -- index|type|main，返回的地址最大为int32(现在使用23位，其他预留)
     -- wType最大为8位，最多只能有255个类型的worker
@@ -20,7 +20,7 @@ end
 -- 解码一个地址
 -- @return worker类型，第几个worker,是否主线程
 function Engine.unmake_address(addr)
-    local main = 1 == (addr & 0x01)
+    local main = addr & 0x01
     addr = addr >> 1
 
     local wtype = addr & 255

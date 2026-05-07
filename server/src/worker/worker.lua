@@ -390,7 +390,7 @@ function Worker.addr_name(addr)
     local wtype, index, main = Engine.unmake_address(addr)
 
     local name = Worker.type_name(wtype)
-    if main then
+    if 1 == main then
         return string.format("%s_%d", name, index)
     else
         return string.format("%s%d", name, index)
