@@ -58,7 +58,8 @@ local function load_one(key)
     print("loading data:", key, "...")
 
     query_keys[6] = key
-    local e, rows = Call[DATA_ADDR].DataMgr.load("global_data", query_keys)
+    local e, rows = Call[DATA_ADDR].DataMgr.load(
+        "global_data", query_keys, nil, {ikey = {"data"}})
     if e ~= 0 then
         eprint("load global_data error", e, key)
         return
@@ -109,7 +110,7 @@ local function save_one(key)
     })
     if 0 ~= e then
         eprint("save global data error", key)
-        JsonFile.save(string.format("%s_%s", LOCAL_NAME, key), data)
+        Json.save(string.format("%s_%s", LOCAL_NAME, key), data)
     end
 
     -- Call调用里嵌套了协程，可能会不准，但仍能大概反馈到问题

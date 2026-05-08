@@ -51,6 +51,7 @@ return {
 "Item", -- src/modules/item/item.lua
 "ItemConf", -- src/modules/item/item.lua
 "ItemUse", -- src/modules/item/item_use.lua
+"Json", -- src/util/json.lua
 "JsonFile", -- src/util/json_file.lua
 "LANG", -- config/lang.lua
 "LOCAL_ADDR", -- src/worker/worker.lua
@@ -190,7 +191,6 @@ return {
 "rpairs", -- src/global/table.lua
 "scall", -- src/global/global.lua
 "script_loaded", -- src/global/global.lua
-"set_modify_metatable", -- src/global/modi_table.lua
 "storage", -- src/data/global_data.lua
 "str_split3", -- src/test/misc_test.lua
 "sys", -- src/global/sys.lua

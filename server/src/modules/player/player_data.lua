@@ -13,15 +13,19 @@ PlayerData = {}
 __player_memory  = __player_memory or {} -- 玩家内存数据，不存库
 __player_storage  = __player_storage or {} -- 玩家存储数据，定时自动存库，按玩家区分
 
+local assert = assert
 local wname = Worker.type_name(LOCAL_TYPE)
-local STORAGE_KEYS = {"_id", 0, "name", wname}
+
+local vals = {}
+local opts = {ikey = "data"}
+local keys = {"_id", 0, "name", wname}
 
 -- 加载玩家通用数据
 function PlayerData.load(player)
     local pid = player.pid
-    STORAGE_KEYS[2] = pid
+    keys[2] = pid
 
-    local e, rows = Call[DATA_ADDR].DataCache.get("player_data", STORAGE_KEYS)
+    local e, rows = Call[DATA_ADDR].DataCache.get("player_data", keys, nil, opts)
     if 0 ~= e then
         eprint("player data storage load error", pid, e)
         return false
@@ -32,7 +36,7 @@ function PlayerData.load(player)
         assert(Player.is_new())
         s = {}
     else
-        s = rows[1]
+        s = assert(rows[1].data)
     end
 
     __player_storage[pid] = s
@@ -44,10 +48,14 @@ end
 -- 保存玩家通用数据
 function PlayerData.save(player)
     local pid = player.pid
-    STORAGE_KEYS[2] = pid
+    keys[2] = pid
 
-    local s = __player_storage[pid]
-    Send[DATA_ADDR].DataCache.update("player_data", STORAGE_KEYS, s)
+    vals._id = pid
+    vals.name = wname
+    vals.data = __player_storage[pid]
+
+    Send[DATA_ADDR].DataCache.update("player_data", keys, vals)
+    vals.data = nil
 
     local size = Rpc.last_codec_size()
     if size > 12 * 1024 * 1024 then

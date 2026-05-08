@@ -27,8 +27,8 @@ local this = memory("DataCache", {
     last_expire = 0, -- 上次检测过期的时间戳
 })
 
-local function load_from_db(tbl_name, keys, fields)
-    local e, data = DataMgr.load(tbl_name, keys, fields)
+local function load_from_db(tbl_name, keys, fields, opts)
+    local e, data = DataMgr.load(tbl_name, keys, fields, opts)
     if 0 == e then
         local tbl_cache = DataCache.set(tbl_name, keys, data)
         tbl_cache.fields = fields
@@ -55,10 +55,11 @@ end
 --- @param tbl_name 表名
 --- @param keys 数据唯一标识的键值对，这个要做缓存key，必须按顺序。比如{"pid", 999, "type", 1}
 --- @param fields 需要读取的字段列表，如{"name", "level"}，nil表示读取全部字段
-function DataCache.get(tbl_name, keys, fields)
+--- @param opts DataOpts 可选项，支持ikey字段指定需要还原数字键的字段列表，例如{"data", "vars"}
+function DataCache.get(tbl_name, keys, fields, opts)
     local tbl_cache = this.cache[tbl_name]
     if not tbl_cache then
-        return load_from_db(tbl_name, keys, fields)
+        return load_from_db(tbl_name, keys, fields, opts)
     end
 
     local keys_len = #keys

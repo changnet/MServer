@@ -364,3 +364,15 @@ function table.to_map(list, key)
     end
     return map
 end
+
+-- 把table转换成一个数组，忽略原有key
+function table.to_array(tbl)
+    local list = {}
+
+    local idx = 1
+    for _, v in pairs(tbl) do
+        list[idx] = v
+        idx = idx + 1
+    end
+    return list
+end

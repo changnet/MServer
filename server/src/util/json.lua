@@ -1,14 +1,20 @@
--- 加载、保存数据为json文件，默认在runtime目录下
-JsonFile = {}
+-- -- 对C库的json封装，并提供其他常用接口
+Json = {}
 
 local json = require "engine.lua_parson"
 
 -- 文件默认都存runtime目录下
 local BASE_DIR = "runtime" .. sys.separator
 
+-- 把lua table编码为json字符串
+Json.encode = json.encode
+
+-- 把json字符串转换为lua table
+Json.decode = json.decode
+
 -- 从指定json文件加载数据
 -- @param name string 文件名，不包含runtime路径
-function JsonFile.load(name)
+function Json.load(name)
     local path = BASE_DIR .. name
 
     local f = io.open(path, "rb")
@@ -29,7 +35,7 @@ end
 -- 从指定json文件加载数据
 -- @param name string 文件名，不包含runtime路径
 -- @param data table 要保存的数据
-function JsonFile.save(name, data)
+function Json.save(name, data)
     local path = BASE_DIR .. name
 
     local f = io.open(path, "rb")
@@ -43,3 +49,5 @@ function JsonFile.save(name, data)
 
     return true
 end
+
+return Json

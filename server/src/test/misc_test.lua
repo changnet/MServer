@@ -442,7 +442,7 @@ end)
 
 -- 测试modi table和原生table相比效率有多慢（一般慢10倍）
 Test.describe("modi table test", function()
-    require "global.modi_table"
+    require "util.modi_table"
     Test.it("modi table base test", function()
         local expect = {
             i = 123456789,

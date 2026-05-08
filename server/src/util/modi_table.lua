@@ -5,21 +5,28 @@
 local type = type
 local setmetatable = setmetatable
 
-local set_modify_metatable
+local function set_modify_metatable(tbl, root, data, shadow)
+    shadow = shadow or {}
 
--- 如果v里包含子table，也需要嵌套设置元表
-local function set_sub_metatable(tbl, root, data)
-    local shadow = {}
+    local function set_sub_metatable(tbl_sub, root_sub, data_sub)
+        local shadow_sub = {}
+        for k1, v1 in pairs(data_sub) do
+            if type(v1) == "table" then
+                shadow_sub[k1] = set_sub_metatable({}, root_sub, v1)
+            end
+        end
+        return set_modify_metatable(tbl_sub, root_sub, data_sub, shadow_sub)
+    end
 
-    for k1, v1 in pairs(data) do
-        if type(v1) == "table" then
-            shadow[k1] = set_sub_metatable({}, root, v1)
+    -- initialize nested shadows when none provided
+    if not next(shadow) then
+        for k1, v1 in pairs(data) do
+            if type(v1) == "table" then
+                shadow[k1] = set_sub_metatable({}, root, v1)
+            end
         end
     end
-    return set_modify_metatable(tbl, root, data, shadow)
-end
 
-function set_modify_metatable(tbl, root, data, shadow)
     local mt = {
         __newindex = function(t, k, v)
             if type(v) == "table" and data[k] ~= v then
@@ -44,9 +51,8 @@ function table.new_modi(v)
         data = v or {}, -- 原始的数据集合
         modify = false, -- 是否修改过
     }
-
     if v then
-        return set_sub_metatable(tbl, tbl, tbl.data)
+        return set_modify_metatable(tbl, tbl, tbl.data)
     else
         return set_modify_metatable(tbl, tbl, tbl.data, {})
     end

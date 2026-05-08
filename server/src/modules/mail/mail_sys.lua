@@ -122,7 +122,7 @@ local function save_mail_sys()
     })
     if 0 ~= e then
         eprint("save mail sys error", e)
-        JsonFile.save("mail_sys", this.list)
+        Json.save("mail_sys", this.list)
     end
 
     -- Call调用里嵌套了协程，可能会不准，但仍能大概反馈到问题

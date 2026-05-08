@@ -71,7 +71,6 @@ function ItemStore:load(player, is_new)
 
     self.list = list
     self.size = size
-    table.set_array(list, 1)
 
     return true
 end
@@ -80,9 +79,10 @@ end
 function ItemStore:save(player)
     if not self:modify() then return true end
 
+    local list = table.to_array(self.list)
     Send[DATA_ADDR].DataCache.update("player_item",
         {"pid", player.pid, "bid", self.id},
-        {pid = player.pid, bid = self.id, list = self.list}
+        {pid = player.pid, bid = self.id, list = list}
     )
 
     self:set_modify(false)

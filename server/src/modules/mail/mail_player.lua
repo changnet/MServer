@@ -19,7 +19,7 @@ local function save_player_mail(player)
     local stg = get_storage(player)
     Send[DATA_ADDR].DataCache.update("player_mail",
         {"pid", player.pid},
-        {pid = player.pid, list = stg.list})
+        {pid = player.pid, list = table.to_array(stg.list)})
 end
 
 -- 邮件权重计算（越小越容易被删除）
@@ -77,7 +77,6 @@ local function on_load_mail(player)
     end
 
     stg.list = list
-    table.set_array(list, 1)
 
     return true
 end
@@ -86,11 +85,7 @@ end
 local function on_login(player)
     local stg = get_storage(player)
 
-    -- 下发邮件列表 (convert map to array)
-    local mails = {}
-    for _, m in pairs(stg.list) do table.insert(mails, m) end
-    table.sort(mails, function(a, b) return a.time > b.time end)
-    NetMsg.send(player, M.MailInfo, {mails = mails})
+    NetMsg.send(player, M.MailInfo, {mails = stg.list})
 end
 
 local function send_new(player, mail_obj)
