@@ -80,7 +80,6 @@ function Login.do_create_result(session_id, account, pfid, info, e)
         return
     end
 
-    vd(info)
     assert(socket.login.account == account)
 
     socket.role = info

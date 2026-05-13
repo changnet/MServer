@@ -1,4 +1,4 @@
--- auto export by lua-tags 200 symbols
+-- auto export by lua-tags 199 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -185,7 +185,6 @@ return {
 "pwarn", -- src/log/log.lua
 "pwarnf", -- src/log/log.lua
 "require", -- src/global/require.lua
-"require_kv_conf", -- src/global/require.lua
 "require_no_update", -- src/global/require.lua
 "require_worker", -- src/global/require.lua
 "rpairs", -- src/global/table.lua

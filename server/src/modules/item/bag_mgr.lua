@@ -51,7 +51,7 @@ local function on_loading(player, is_new)
     for _, mod in ipairs(mods) do
         local id = mod.id
         local obj = mod.type(pid, id, mod.size)
-        if not obj:load(is_new) then
+        if not obj:load(player, is_new) then
             perror(player, "load item fail", id)
             return false
         end

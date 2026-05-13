@@ -111,8 +111,8 @@ function AccountMgr.login(addr, session_id, account, pfid, sid)
     info.loaded = Engine.time()
     local e, rows = Call[db_addr].MongoDB.find("player", {
         account = account,
-        pfid = pfid,
-        sid = sid
+        create_pfid = pfid,
+        create_sid = sid
     }, ROLE_FILTER)
     if 0 == e then
         for _, row in pairs(rows) do
@@ -181,6 +181,7 @@ function AccountMgr.create_role(session_id, account, pfid, sid, pkt)
         create_pfid = pfid,
         create_sid = sid,
         _id = pid,
+        pid = pid,
         pp = {name = pkt.name}, -- property
         create_time = time,
     }
@@ -206,7 +207,7 @@ local function assign_player_worker()
     local lowest
     for _, v in pairs(player_list) do
         local count = v.count or 0
-        if not lowest or count < lowest.count then
+        if not lowest or count < (lowest.count or 0) then
             lowest = v
         end
     end

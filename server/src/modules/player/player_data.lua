@@ -33,7 +33,7 @@ function PlayerData.load(player)
 
     local s
     if 0 == #rows then
-        assert(Player.is_new())
+        assert(Player.is_new(player))
         s = {}
     else
         s = assert(rows[1].data)

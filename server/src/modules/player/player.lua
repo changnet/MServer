@@ -136,7 +136,8 @@ local function load_base_data(player)
     player.create_pfid = data.create_pfid
     player.create_sid = data.create_sid
     player.create_time = data.create_time
-    player.login_time = data.login_time or 0 -- 上一次退出时间
+    player.logout_time = data.logout_time or 0 -- 上一次退出时间
+    player.login_time = Engine.time() -- 本次登录时间
 
     return true
 end
@@ -229,7 +230,7 @@ function Player.login(player)
     return true
 end
 
-local function save_base_data(player)
+local function save_base_data(player, is_logout)
     local e, rows = Call[DATA_ADDR].DataCache.get("player", PLAYER_KEYS)
     if 0 ~= e or 1 ~= #rows then
         eprint("player db data error", player.pid, e)
@@ -254,12 +255,18 @@ local function save_base_data(player)
     data.create_pfid = player.create_pfid
     data.create_sid = player.create_sid
     data.create_time = player.create_time
+    data.login_time = player.login_time
+    if is_logout then
+        data.logout_time = Engine.time()
+    else
+        data.logout_time = player.login_time
+    end
 
     Send[DATA_ADDR].DataCache.update("player", PLAYER_KEYS, data)
 end
 
-local function save_db_data(player)
-    save_base_data(player)
+local function save_db_data(player, is_logout)
+    save_base_data(player, is_logout)
     PlayerData.save(player)
 
     Event.pemit(player, EV.SAVE)
@@ -271,7 +278,7 @@ function Player.logout(player, why)
     local pid = player.pid
 
     Event.pemit(player, EV.LOGOUT)
-    save_db_data(player)
+    save_db_data(player, true)
 
     __player_memory[pid] = nil
     __player_storage[pid] = nil

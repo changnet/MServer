@@ -61,7 +61,7 @@ function Loginout.on_connected(socket)
     }
     pkt.sign = util.sha1(LOGIN_KEY, pkt.time, pkt.account)
 
-    return entity:send_pkt(PLAYER.LOGIN, pkt)
+    return entity:send_pkt(M.PlayerLogin, pkt)
 end
 
 local function do_disconnect(socket)
@@ -93,7 +93,7 @@ local function s_login(entity, pkt)
         local _pkt = {name = string.format("bot_%d", entity.id)}
 
         printf("bot_%d send create role", entity.id)
-        entity:send_pkt(PLAYER.CREATE, _pkt)
+        entity:send_pkt(M.PlayerCreate, _pkt)
 
         return
     end
@@ -130,7 +130,7 @@ end
 -- 请求进入游戏
 function Loginout.enter_world(entity)
     printf("bot_%d enter game,pid = %d", entity.id, entity.pid)
-    entity:send_pkt(PLAYER.ENTER, {pid = entity.pid})
+    entity:send_pkt(M.PlayerEnter, {pid = entity.pid})
 end
 
 -- 确认进入游戏完成
@@ -147,7 +147,7 @@ local function s_enter_world(entity, pkt)
 end
 
 -- 初始化场景属性
-local function s_init_property(entity, pkt)
+local function s_init_base(entity, pkt)
     -- 切换进程时，这里的数据会重新下发
 
     entity.handle = pkt.handle
@@ -184,11 +184,11 @@ end
 -- ************************************************************************** --
 
 Event.reg(EV.SCRIPT_LOADED, function()
-    BotMgr.reg(PLAYER.LOGIN, s_login)
-    BotMgr.reg(PLAYER.CREATE, s_create_role)
-    BotMgr.reg(PLAYER.ENTER, s_enter_world)
-    BotMgr.reg(PLAYER.KICK, s_kick)
-    BotMgr.reg(ENTITY.PROPERTY, s_init_property)
+    BotMgr.reg(M.PlayerLogin, s_login)
+    BotMgr.reg(M.PlayerCreate, s_create_role)
+    BotMgr.reg(M.PlayerEnter, s_enter_world)
+    BotMgr.reg(M.PlayerKick, s_kick)
+    BotMgr.reg(M.PlayerBase, s_init_base)
 end)
 
 return Loginout

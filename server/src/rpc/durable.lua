@@ -163,8 +163,10 @@ local function on_ready()
     this.epoch = time.game_time()
     this.counter = 0
 
-    printf("durable ready, epoch = %d, pending = %d",
-        this.epoch, table.size(this.send))
+    local size = table.size(this.send)
+    if size > 0 then
+        printf("durable ready, epoch = %d, pending = %d", this.epoch, size)
+    end
 
     for addr, data in pairs(WorkerData) do
         if data.status == Worker.READY then

@@ -427,6 +427,7 @@ local function init()
         local wname = w.name
         WorkerNameType[wname] = wtype
     end
+
     Rtti.name_func("Worker.do_worker_timer", do_worker_timer)
 end
 

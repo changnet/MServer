@@ -13,6 +13,8 @@ require "global.debug"
 require "global.sys"
 require "util.json"
 
+require "global.rtti" -- 这个必须放前面，否则其他模块注册时会有问题
+
 require "data.global_data"
 require "engine.engine"
 require "worker.worker"
@@ -29,7 +31,6 @@ require "engine.co_pool"
 require "message.thread_message"
 require "engine.signal"
 require "engine.shutdown"
-require "global.rtti"
 require "rpc.rpc"
 require "timer.timer"
 require "network.socket_mgr"
