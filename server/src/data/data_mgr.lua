@@ -37,9 +37,7 @@ local function try_number_keys(e, rows, opts)
     for _, row in ipairs(rows) do
         for _, field in ipairs(opts.ikey) do
             local val = row[field]
-            if val then
-                row[field] = sys.restore_json(val)
-            end
+            if val then sys.restore_table(val) end
         end
     end
 end
@@ -75,6 +73,7 @@ local function mongodb_load(tbl_name, keys, fields, opts)
     end
 
     local e, rows = Call[addr].MongoDB.find(tbl_name, query, db_opts)
+
     try_number_keys(e, rows, opts)
     return e, rows
 end

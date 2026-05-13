@@ -168,7 +168,11 @@ local function start_next_module()
 
     local all_ready = true
     for _, func in ipairs(list) do
-        if not func() then
+        local ok, ret = scall(func)
+        if not ok then
+            Timer.stop(startup_modules.timer)
+            return false
+        elseif not ret then
             all_ready = false
             startup_modules.wait[func] = true
         end

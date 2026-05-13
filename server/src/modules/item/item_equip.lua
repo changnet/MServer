@@ -8,4 +8,4 @@ end
 
 
 NetMsg.reg(M.EquipOn, c_equip_on)
-NetMsg.reg(M.EquipOn, c_equip_off)
+NetMsg.reg(M.EquipOff, c_equip_off)

@@ -8,7 +8,7 @@
 -- @field sequ number 启动顺序(equence)，越小越先启动，越晚关闭
 -- @field pobj boolean 是否创建玩家对象
 -- @field paddr boolean 是否同步玩家地址路由信息
--- @field storage boolean 是否使用storage存储数据
+-- @field storage boolean 是否使用global_data存储数据
 
 W = {
     -- 网关

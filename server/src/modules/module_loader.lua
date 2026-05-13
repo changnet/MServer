@@ -40,6 +40,7 @@ require("account.login", W.GATEWAY)
 require("account.account_mgr", W.ACCOUNT)
 require("misc.alert")
 
+require("res.res")
 require("item.item")
 require("item.bag_mgr", W.PLAYER)
 require("item.item_use", W.PLAYER)

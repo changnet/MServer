@@ -59,7 +59,7 @@ local function scall_ret(success, ...)
 end
 
 -- safe_call，类似xpcall，但自动捕获错误堆栈并打印错误日志
---@return boolean 成功返回true，原函数返回的值。失败返回false
+--@return boolean 成功返回true，原函数返回的值。失败返回false，错误堆栈打印到日志
 function scall(func, ...)
     return scall_ret(xpcall(func, __G_DUMP_STACK, ...))
 end

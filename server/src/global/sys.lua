@@ -42,3 +42,5 @@ function sys.restore_json(str)
     sys.restore_table(tbl)
     return tbl
 end
+
+return sys

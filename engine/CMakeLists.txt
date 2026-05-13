@@ -68,6 +68,8 @@ elseif(LINUX)
     add_compile_options(-pipe -Wall -Wodr -flto=auto -pedantic)
     # -fsanitize=address -static-libasan -g
     # 这个选项会导致linux下占用20G VIRT内存 https://github.com/google/sanitizers/issues/704
+	# 真实内存也会占用更多(开启100M关闭50M，因为每次分配内存会预留空间作为元数据)
+	# 线上发布或者执行valgrind时，不建议启用这个。但平时开发调试C++建议启用以及时发现内存问题
     add_compile_options($<$<CONFIG:DEBUG>:-fsanitize=address>)
     add_link_options($<$<CONFIG:DEBUG>:-fsanitize=address>)
 endif()

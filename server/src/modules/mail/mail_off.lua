@@ -42,6 +42,6 @@ local function on_login(player)
     PlayerDurable[player.paddr].MailPlayer.receive_list(pid, fetch_list)
 end
 
-Event.register(EV.LOGIN, on_login)
+Event.reg(EV.LOGIN, on_login)
 
 return MailOff
