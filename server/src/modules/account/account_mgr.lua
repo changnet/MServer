@@ -182,7 +182,7 @@ function AccountMgr.create_role(session_id, account, pfid, sid, pkt)
         create_sid = sid,
         _id = pid,
         pid = pid,
-        pp = {name = pkt.name}, -- property
+        property = {name = pkt.name},
         create_time = time,
     }
 

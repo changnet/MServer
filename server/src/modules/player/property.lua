@@ -33,28 +33,49 @@ local PP_WORKER_LIST = {} -- [key] = {wtype}需要同步到各个worker的属性
 local pairs = pairs
 local ipairs = ipairs
 
--- PP转为字符串方便Player.get_property(player, PP.name)这样调用，原始数据放到PP_DEF
-for k, p in pairs(PP) do
-    PP_DEF[k] = p
-    PP[k] = k
+local function init()
+    -- PP转为字符串方便Player.get_property(player, PP.name)这样调用，原始数据放到PP_DEF
+    for k, p in pairs(PP) do
+        PP_DEF[k] = p
+        PP[k] = k
 
-    if p.t == I then
-        table.insert(PP_INT_LIST, k)
-    else
-        table.insert(PP_STR_LIST, k)
+        if p.t == I then
+            table.insert(PP_INT_LIST, k)
+        else
+            table.insert(PP_STR_LIST, k)
+        end
+        if p.s then table.insert(PP_SAVE_LIST, k) end
+
+        local w = p.w
+        if w then PP_WORKER_LIST[k] = w end
     end
-    if p.s then table.insert(PP_SAVE_LIST, k) end
 
-    local w = p.w
-    if w then PP_WORKER_LIST[k] = w end
+    -- 特殊地，需要创建玩家对象的，名字必定同步（用于打印日志等）
+    local name_wlist = PP_WORKER_LIST.name
+    if not name_wlist then
+        name_wlist = {}
+        PP_WORKER_LIST.name = name_wlist
+    end
+
+    for _, w in pairs(WORKER) do
+        if 1 == w.pobj then
+            local exist = false
+            for _, wtype in ipairs(name_wlist) do
+                if w.type == wtype then exist = true break end
+            end
+            if not exist then table.insert(name_wlist, w.type) end
+        end
+    end
 end
 
 local function comp_property(a, b)
     return PP_DEF[a].i < PP_DEF[b].i
 end
 
+-- 登录时同步玩家属性到其他worker
 local function login_sync(player, data)
     local property = player.property
+
     for k, wlist in pairs(PP_WORKER_LIST) do
         local v = property[k]
         for _, wtype in ipairs(wlist) do
@@ -79,6 +100,7 @@ function Property.update(player, k, v)
     end
 end
 
+init()
 table.sort(PP_INT_LIST, comp_property)
 table.sort(PP_STR_LIST, comp_property)
 

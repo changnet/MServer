@@ -45,11 +45,19 @@ function ItemStore:load(player, is_new)
         return false
     end
 
+    local data_list
+    if 0 == #rows then
+        data_list = {}
+    else
+        assert(#rows == 1, "player_item data error")
+        data_list = rows[1].list
+    end
     local size = 0
     local list = {}
     if self.is_hash then
+        -- 构建按配置id索引的缓存
         local ihash = {}
-        for _, obj in pairs(rows[1].list) do
+        for _, obj in pairs(data_list) do
             size = size + 1
             list[obj.uid] = obj
 
@@ -63,7 +71,7 @@ function ItemStore:load(player, is_new)
         end
         self.ihash = ihash
     else
-        for _, obj in pairs(rows[1].list) do
+        for _, obj in pairs(data_list) do
             size = size + 1
             list[obj.uid] = obj
         end
