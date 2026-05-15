@@ -10,6 +10,7 @@
 #include "lmap.hpp"
 #include "lutil.hpp"
 #include "llist_aoi.hpp"
+#include "system/dict_tree.hpp"
 
 #include "net/socket.hpp"
 #include "net/io/tls_ctx.hpp"
@@ -367,6 +368,17 @@ static void luaopen_stdin_reader(lua_State *L)
     lc.def<&StdinReader::read>("read");
 }
 
+static void luaopen_dict_tree(lua_State *L)
+{
+    lcpp::Class<DictTree> lc(L, "engine.DictTree");
+    lc.constructor<>();
+    lc.def<&DictTree::add_word>("add_word");
+    lc.def<&DictTree::load_from_file>("load_from_file");
+    lc.def<&DictTree::contain>("contain");
+    lc.def<&DictTree::replace>("replace");
+    lc.def<&DictTree::set_ignore_chars>("set_ignore_chars");
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace llib
@@ -432,6 +444,7 @@ void open_cpp(lua_State *L)
     luaopen_list_aoi(L);
     luaopen_buffer(L);
     luaopen_stdin_reader(L);
+    luaopen_dict_tree(L);
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
 
     /* when debug,make sure lua stack clean after init */

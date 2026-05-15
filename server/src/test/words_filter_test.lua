@@ -1,5 +1,4 @@
 -- 屏蔽字过滤测试
-local Acism = require "engine.Acism"
 
 local words_path = "../config/banned_words.txt" -- 字库文件
 
@@ -27,6 +26,7 @@ local function make_perf_words()
 end
 
 Test.describe("acism words filter test", function()
+    local Acism = require "engine.Acism"
     local acism = Acism()
     make_perf_words()
 
@@ -60,5 +60,39 @@ Test.describe("acism words filter test", function()
     Test.it(string.format("acism replace perf test: %d words", #PERF_WORDS),
          function()
         for _, words in pairs(PERF_WORDS) do acism:replace(words, "*") end
+    end)
+end)
+
+Test.describe("dicttree words filter test", function()
+    Test.it("dicttree base test", function()
+        local filter = engine.DictTree()
+
+        -- 逻辑添加关键字
+        filter:add_word("傻逼")
+        filter:add_word("SB")
+        filter:add_word("赌博")
+        filter:add_word("代练")
+        filter:add_word("fucK")
+
+        -- 测试忽略字符
+        filter:set_ignore_chars("- *")
+
+        assert(filter:contain("你真是个傻逼"), "contain failed: 你真是个傻逼")
+        assert(filter:contain("你真是个sb"), "case insensitive contain failed")
+        assert(filter:contain("fUcK you"), "case insensitive contain failed")
+        assert(filter:contain("代--练"), "ignore chars contain failed")
+        assert(not filter:contain("正常聊天"), "false positive contain failed")
+
+        local replaced1 = filter:replace("你真是个傻逼啊", string.byte("*"))
+        assert(not string.find(replaced1, "傻逼"), "replace failed: 傻逼")
+
+        local replaced2 = filter:replace("你真是个s-b啊", string.byte("*"))
+        assert(not string.find(string.lower(replaced2), "sb"), "replace failed: s-b")
+    end)
+    Test.it(string.format("acism scan perf test: %d words", #PERF_WORDS),
+         function()
+        local filter = engine.DictTree()
+        filter:load_from_file(words_path)
+        -- for _, words in pairs(PERF_WORDS) do acism:scan(words) end
     end)
 end)
