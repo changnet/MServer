@@ -50,7 +50,11 @@ require("player.player_sync", W.PLAYER, W.GAME, W.SCENE)
 require("player.property", W.PLAYER, W.GAME, W.SCENE)
 require("player.player", W.PLAYER, W.GAME, W.SCENE)
 require("player.player_mgr", W.PLAYER, W.GAME, W.SCENE)
+
 require("misc.welcome", W.PLAYER)
+require("player.money", W.PLAYER)
+
+require("player.player_off", W.GAME)
 
 -- 邮件模块
 require("mail.mail_internal")

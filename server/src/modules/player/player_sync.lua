@@ -52,10 +52,13 @@ function PlayerSync.init(player)
         func(player, data)
     end
 
-    vd(data)
     for _, wtype in ipairs(SYNC_WORKER) do
         -- 如果一个worker需要分配节点(比如玩家登录回到上次的场景)，必须在这个函数之前分配
         local addr = Router.find_player_addr(pid, wtype)
+        if not addr then
+            eprint("player sync init no addr found", pid, wtype)
+            return false
+        end
         local ok = Call[addr].PlayerSync.on_init(data[wtype])
         if not ok then
             eprint("player sync init fail", pid, wtype)

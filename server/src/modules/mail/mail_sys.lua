@@ -58,7 +58,7 @@ function MailSys.fetch_player_mails(player, fetch_list)
     local list = this.list
     if not list then return end
 
-    local stg = Player.get_data(player)
+    local stg = Player.get_misc_stg(player)
     local last_id = stg.mail_sys or 0
 
     local max_obj = list[#list]

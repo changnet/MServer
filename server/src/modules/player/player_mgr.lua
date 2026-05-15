@@ -106,7 +106,7 @@ function PlayerMgr.exit_completed(pid, session_id)
     this.uninit_player[pid] = nil
 
     local addr = Router.find_worker_addr(W.ACCOUNT, "pid", pid)
-    Send[addr].Account.logout_completed(pid, session_id)
+    Send[addr].AccountMgr.logout_completed(pid, session_id)
 end
 
 return PlayerMgr

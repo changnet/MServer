@@ -122,7 +122,7 @@ function PlayerDurable.on_invoke(pid, index, name, ...)
     -- 如果下面的逻辑出错，也不能重发，那样会造成奖励重复发放
     Send[GAME_ADDR].PlayerDurable.on_ack(pid, index)
 
-    local s = Player.get_data(player)
+    local s = Player.get_misc_stg(player)
 
     local old = s.durable_idx
     if not is_newer(index, old) then

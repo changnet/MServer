@@ -11,27 +11,27 @@ end
 
 -- 发送数据
 local function send_info(player, pkt)
-    return player:send_pkt(M.WelcomeGet, pkt)
+    return NetMsg.send(player, M.WelcomeGet, pkt)
 end
 
 -- 登录事件
 local function on_login(player)
-    local sg = get_storage(player)
+    local stg = get_storage(player)
 
-    return send_info(player, sg)
+    return send_info(player, stg)
 end
 
 -- 处理前端领取奖励
 local function c_get_award(player, pkt)
-    local sg = get_storage(player)
-    if sg.status then return end -- 已经领取过
+    local stg = get_storage(player)
+    if stg.status then return end -- 已经领取过
 
-    sg.status = 1
+    stg.status = 1
     Res.add(player, WelcomConf.resources, LOG.WELCOME)
 
     -- TODO: 还要发封邮件
 
-    send_info(player, sg)
+    send_info(player, stg)
 end
 
 Event.reg(EV.LOGIN, on_login)

@@ -20,7 +20,7 @@ W = {
     -- 玩家个人逻辑
     PLAYER  = {type = 4,   sequ = 3, pobj = 0, paddr = 1, name = "player"},
     -- 场景
-    SCENE   = {type = 5,   sequ = 3, pobj = 1, paddr = 1, name = "scene"},
+    -- SCENE   = {type = 5,   sequ = 3, pobj = 1, paddr = 1, name = "scene"},
     -- mysql数据库读写
     MYSQL   = {type = 6,   sequ = 0, pobj = 0, paddr = 0, name = "mysql"},
     -- mongodb数据库读写
@@ -35,6 +35,8 @@ W = {
     BOT     = {type = 201, sequ = 0, pobj = 0, paddr = 0, name = "bot"},
     -- 主线程，这个不能用来启动，则W.TEST | W.MAIN
     MAIN    = {type = 256, sequ = 0, pobj = 0, paddr = 0, name = "main"},
+
+    -- 这里的定义如果不用了，要么注释掉，要么把pobj、paddr等字段设置为0，否则有些逻辑会触发
 }
 
 -- @type table<number, WorkerDef> 原始的worker定义信息

@@ -30,7 +30,7 @@ end
 function __G_DUMP_STACK(msg, co)
     local msg_list = {}
     -- 在co_pool中co_return要level=2才会打印逻辑所在的函数调用堆栈
-    debug.tracestack(co, msg_list, 2)
+    debug.tracestack(co, msg_list, 1)
 
     local stack_trace = debug.traceback(co)
 

@@ -46,9 +46,14 @@ function Player.get_storage(player, key)
     return __player_storage[player.pid][key]
 end
 
--- 一些零碎不需要独立key的数据放这里
-function Player.get_data(player)
-    return Player.get_storage(player, "data")
+-- 一些零碎不需要独立key的数据放这里(miscellaneous storage)
+function Player.get_misc_stg(player)
+    local stg = Player.get_storage(player, "misc")
+    if not stg then
+        stg = {}
+        Player.set_storage(player, "misc", stg)
+    end
+    return stg
 end
 
 -- 如果存在内存数据的存储则返回
@@ -131,12 +136,19 @@ local function load_base_data(player)
 
     assert(player.pid == data._id)
 
+    -- 新号，要初始化一些数据
+    local logout_time = data.logout_time
+    if not logout_time then
+        logout_time = 0
+        data.money = {}
+    end
+
     player.property = data.property
     player.money = data.money
     player.create_pfid = data.create_pfid
     player.create_sid = data.create_sid
     player.create_time = data.create_time
-    player.logout_time = data.logout_time or 0 -- 上一次退出时间
+    player.logout_time = logout_time -- 上一次退出时间
     player.login_time = Engine.time() -- 本次登录时间
 
     return true
