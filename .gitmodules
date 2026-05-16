@@ -1,9 +1,6 @@
 [submodule "master/deps/lua_rapidxml"]
 	path = engine/deps/lua_rapidxml
 	url = https://github.com/changnet/lua_rapidxml.git
-[submodule "master/deps/aho-corasick"]
-	path = engine/deps/aho-corasick
-	url = https://github.com/changnet/aho-corasick.git
 [submodule "master/deps/pbc"]
 	path = engine/deps/pbc
 	url = https://github.com/changnet/pbc.git

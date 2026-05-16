@@ -3,7 +3,6 @@
 
 #include "llib.hpp"
 
-#include "lacism.hpp"
 #include "lgrid_aoi.hpp"
 #include "lastar.hpp"
 #include "llog.hpp"
@@ -281,15 +280,6 @@ static void luaopen_log(lua_State *L)
     lc.def<&LLog::del_device>("del_device");
 }
 
-static void luaopen_acism(lua_State *L)
-{
-    lcpp::Class<LAcism> lc(L, "engine.Acism");
-
-    lc.def<&LAcism::scan>("scan");
-    lc.def<&LAcism::replace>("replace");
-    lc.def<&LAcism::load_from_file>("load_from_file");
-}
-
 static void luaopen_grid_aoi(lua_State *L)
 {
     lcpp::Class<LGridAoi> lc(L, "engine.GridAoi");
@@ -438,7 +428,6 @@ void open_cpp(lua_State *L)
     luaopen_log(L);
     luaopen_map(L);
     luaopen_astar(L);
-    luaopen_acism(L);
     luaopen_mongo(L);
     luaopen_grid_aoi(L);
     luaopen_list_aoi(L);

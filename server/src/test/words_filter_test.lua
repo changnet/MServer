@@ -2,8 +2,10 @@
 
 local words_path = "../config/banned_words.txt" -- 字库文件
 
-local PERF_WORDS = {}
+local PERF_WORDS = nil
 local function make_perf_words()
+    if PERF_WORDS then return PERF_WORDS end
+    PERF_WORDS = {}
     local str =
         "这里是一些很随意的单词组合，字库里大多是英文，几乎所有的字母都有，" ..
             "因此只要包含英文，命中率还是会很高的。尽量产生一些随机的字符吧" ..
@@ -23,9 +25,11 @@ local function make_perf_words()
         end
         table.insert(PERF_WORDS, table.concat(words, ""))
     end
+
+    return PERF_WORDS
 end
 
-
+--[[
 Test.describe("acism words filter test", function()
     local Acism = require "engine.Acism"
     local acism = Acism()
@@ -45,6 +49,7 @@ Test.describe("acism words filter test", function()
         Test.print(string.format("scan %d words %d ms", #PERF_WORDS, t1 - t0))
     end)
 end)
+]]
 
 Test.describe("dicttree words filter test", function()
     Test.it("dicttree base test", function()
@@ -73,8 +78,9 @@ Test.describe("dicttree words filter test", function()
         local replaced2 = filter:replace("你真是个s-b啊", "*")
         Test.equal(replaced2, "你真是个***啊")
     end)
-    Test.it(string.format("dicttree perf test: %d words", #PERF_WORDS),
-         function()
+    Test.it("dicttree perf test", function()
+        make_perf_words()
+
         local DictTree = require "engine.DictTree"
         local filter = DictTree()
         local t0 = Engine.steady_clock()
@@ -85,9 +91,11 @@ Test.describe("dicttree words filter test", function()
 
         -- DEBUG:load 479830 words 559 ms, contain 89 ms
         -- RELEASE:load 479830 words 145 ms, contain 17 ms
+        -- 加载这些单词需要约18M内存
+
         -- 作为对比：https://github.com/changnet/aho-corasick这个AC自动机只需要2ms,差距巨大
         -- 但执行5000次扫描，字典树只需要17ms也够用了，并且比较方便地做ignore_chars
-        -- AC自动机做这个需要复制一遍字符串去掉ignore_chars或者改掉算法中的源码
+        -- AC自动机做这个需要去改这个第三方库不好维护
         Test.print(string.format(
             "load %d words %d ms, contain %d ms", size, t1 - t0, t2 - t1))
     end)
