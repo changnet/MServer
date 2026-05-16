@@ -20,14 +20,14 @@ class LAcism
 {
 public:
     ~LAcism();
-    explicit LAcism(lua_State *L);
+    LAcism();
 
     /**
      * 搜索字符串中是否包含关键字
      * @param text 需要扫描的字符串
      * @return 首次出现关键字的位置，未扫描到则返回0
      */
-    int32_t scan(lua_State *L);
+    int32_t scan(const char *str);
 
     /**
      * 搜索字符串中是否包含关键字并替换出现的关键字
@@ -43,7 +43,7 @@ public:
      * @param ci case_sensitive，是否区分大小写
      * @return 加载的关键字数量
      */
-    int32_t load_from_file(lua_State *L);
+    int32_t load_from_file(const char *path, bool case_sensitive);
 
 private:
     ACISM *psp_;             /// AC自动机的数据结构

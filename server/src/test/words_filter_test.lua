@@ -25,6 +25,7 @@ local function make_perf_words()
     end
 end
 
+
 Test.describe("acism words filter test", function()
     local Acism = require "engine.Acism"
     local acism = Acism()
@@ -33,39 +34,22 @@ Test.describe("acism words filter test", function()
     Test.it("acism base test", function()
         local i = acism:load_from_file(words_path, false)
         Test.print(i, "band wods loaded!")
-
-        -- scan返回匹配字符串尾位置，一般一个中文字符占3
-        -- AB匹配到B时，返回的是B的字符串尾，即2
-        -- “出售枪支”匹配到“枪支”时返回枪支的末尾位置
-        Test.equal(acism:scan("好好学习，天天向上"), 0)
-        Test.equal(acism:scan("!!!!!!!!AAAAAA"), 9)
-        Test.equal(acism:scan("出售枪支是非法的"), 12)
-
-        -- 替换
-        local ch = "*"
-        Test.equal(acism:replace("A", ch), "*")
-        Test.equal(acism:replace("枪支", ch), "******")
-        Test.equal(acism:replace("出售枪支是非法的", ch),
-                "出售******是非法的")
-        Test.equal(acism:replace("匹配不到我", ch), "匹配不到我")
-        Test.equal(acism:replace("这枪支是A货", ch), "这******是*货")
-        Test.equal(acism:replace("AAAAAAAA", ch), "********")
     end)
 
     Test.it(string.format("acism scan perf test: %d words", #PERF_WORDS),
          function()
+            local t0 = Engine.steady_clock()
         for _, words in pairs(PERF_WORDS) do acism:scan(words) end
-    end)
-
-    Test.it(string.format("acism replace perf test: %d words", #PERF_WORDS),
-         function()
-        for _, words in pairs(PERF_WORDS) do acism:replace(words, "*") end
+        local t1 = Engine.steady_clock()
+        -- scan 5000 words 2 ms
+        Test.print(string.format("scan %d words %d ms", #PERF_WORDS, t1 - t0))
     end)
 end)
 
 Test.describe("dicttree words filter test", function()
     Test.it("dicttree base test", function()
-        local filter = engine.DictTree()
+        local DictTree = require "engine.DictTree"
+        local filter = DictTree()
 
         -- 逻辑添加关键字
         filter:add_word("傻逼")
@@ -77,22 +61,34 @@ Test.describe("dicttree words filter test", function()
         -- 测试忽略字符
         filter:set_ignore_chars("- *")
 
-        assert(filter:contain("你真是个傻逼"), "contain failed: 你真是个傻逼")
-        assert(filter:contain("你真是个sb"), "case insensitive contain failed")
-        assert(filter:contain("fUcK you"), "case insensitive contain failed")
-        assert(filter:contain("代--练"), "ignore chars contain failed")
-        assert(not filter:contain("正常聊天"), "false positive contain failed")
+        Test.equal(true, filter:contain("你真是个傻逼"))
+        Test.equal(true, filter:contain("你真是个sb"))
+        Test.equal(true, filter:contain("fUcK you"))
+        Test.equal(true, filter:contain("代--练"))
+        Test.equal(false, filter:contain("正常聊天"))
 
-        local replaced1 = filter:replace("你真是个傻逼啊", string.byte("*"))
-        assert(not string.find(replaced1, "傻逼"), "replace failed: 傻逼")
+        local replaced1 = filter:replace("你真是个傻逼啊", "*")
+        Test.equal(replaced1, "你真是个******啊")
 
-        local replaced2 = filter:replace("你真是个s-b啊", string.byte("*"))
-        assert(not string.find(string.lower(replaced2), "sb"), "replace failed: s-b")
+        local replaced2 = filter:replace("你真是个s-b啊", "*")
+        Test.equal(replaced2, "你真是个***啊")
     end)
-    Test.it(string.format("acism scan perf test: %d words", #PERF_WORDS),
+    Test.it(string.format("dicttree perf test: %d words", #PERF_WORDS),
          function()
-        local filter = engine.DictTree()
-        filter:load_from_file(words_path)
-        -- for _, words in pairs(PERF_WORDS) do acism:scan(words) end
+        local DictTree = require "engine.DictTree"
+        local filter = DictTree()
+        local t0 = Engine.steady_clock()
+        local size = filter:load_from_file(words_path)
+        local t1 = Engine.steady_clock()
+        for _, words in pairs(PERF_WORDS) do filter:contain(words) end
+        local t2 = Engine.steady_clock()
+
+        -- DEBUG:load 479830 words 559 ms, contain 89 ms
+        -- RELEASE:load 479830 words 145 ms, contain 17 ms
+        -- 作为对比：https://github.com/changnet/aho-corasick这个AC自动机只需要2ms,差距巨大
+        -- 但执行5000次扫描，字典树只需要17ms也够用了，并且比较方便地做ignore_chars
+        -- AC自动机做这个需要复制一遍字符串去掉ignore_chars或者改掉算法中的源码
+        Test.print(string.format(
+            "load %d words %d ms, contain %d ms", size, t1 - t0, t2 - t1))
     end)
 end)

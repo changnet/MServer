@@ -9,7 +9,7 @@ static inline int isspace_ex(int c)
                 : 0);
 }
 
-LAcism::LAcism(lua_State *L)
+LAcism::LAcism()
 {
     psp_            = nullptr;
     pattv_          = nullptr;
@@ -17,8 +17,6 @@ LAcism::LAcism(lua_State *L)
 
     patt_.ptr = nullptr;
     patt_.len = 0;
-
-    UNUSED(L);
 }
 
 LAcism::~LAcism()
@@ -45,15 +43,16 @@ LAcism::~LAcism()
 }
 
 /* 扫描关键字,扫描到其中一个即中止 */
-int32_t LAcism::scan(lua_State *L)
+int32_t LAcism::scan(const char *str)
 {
     if (!psp_)
     {
-        return luaL_error(L, "no pattern load yet");
+        return -1;
     }
 
     MEMREF text;
-    text.ptr = luaL_checklstring(L, 1, &(text.len));
+    text.ptr = str;
+    text.len = std::strlen(str);
 
     int32_t pos = acism_scan(
         psp_, text,
@@ -66,8 +65,7 @@ int32_t LAcism::scan(lua_State *L)
         },
         nullptr, case_sensitive_);
 
-    lua_pushinteger(L, pos);
-    return 1;
+    return pos;
 }
 
 /* 替换关键字 */
@@ -150,18 +148,14 @@ int32_t LAcism::replace(lua_State *L)
     return 1;
 }
 
-int32_t LAcism::load_from_file(lua_State *L)
+int32_t LAcism::load_from_file(const char *path, bool case_sensitive)
 {
-    const char *path = luaL_checkstring(L, 1);
-    if (lua_isboolean(L, 2))
-    {
-        case_sensitive_ = lua_toboolean(L, 2);
-    }
+    case_sensitive_  = case_sensitive;
 
     patt_ = slurp(path);
     if (!patt_.ptr)
     {
-        return luaL_error(L, "can't read file[%s]:", path, strerror(errno));
+        return -1;
     }
 
     // 去掉文件尾的空格
@@ -185,6 +179,5 @@ int32_t LAcism::load_from_file(lua_State *L)
     pattv_         = refsplit(patt_.ptr, '\n', &npatts);
     psp_           = acism_create(pattv_, npatts);
 
-    lua_pushinteger(L, npatts);
-    return 1;
+    return npatts;
 }
