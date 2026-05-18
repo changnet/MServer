@@ -9,6 +9,14 @@ DataCache = {}
 
 2. 数据库可能用MongoDB也可能用MySQL或者其他数据库，所以缓存只实现简单地存取，
 一些涉及排序之类的数据库操作不应该会放到缓存，那样缓存查询、落地很难兼容多种数据库
+
+3. 从数据库的角度来说，查询或者插入、更新都是可以操作多条记录的(rows)，但对于缓存keys对应
+的数据是唯一的(row)，所以缓存的接口是针对单条数据的。比如查询时，如果数据库返回多条记录，
+那就说明数据有问题。
+
+比如一个背包有多条道具记录，如果是一个道具一条记录，无论是MongoDB还是MySQL都没有提供批量更新的接口
+如果一定要这样的接口，需要用像ikey那样在opts增加一个multi选项，然后自己用for循环处理
+但这边更建议一个背包一条记录，所有道具放在一个字段里，所以没有实现这个接口
 ]]
 
 -- 假设一个玩家有10条缓存，每秒最大保存256条，即25个玩家
@@ -28,12 +36,19 @@ local this = memory("DataCache", {
 })
 
 local function load_from_db(tbl_name, keys, fields, opts)
-    local e, data = DataMgr.load(tbl_name, keys, fields, opts)
-    if 0 == e then
-        local tbl_cache = DataCache.set(tbl_name, keys, data)
-        tbl_cache.fields = fields
-        tbl_cache.save_time = Engine.time()
+    local e, rows = DataMgr.load(tbl_name, keys, fields, opts)
+    if 0 ~= e then return e end
+
+    if 1 < #rows then
+        eprint("data error, more than 1 row", tbl_name, table.dump(keys))
+        return -1
     end
+
+    local data = rows[1] or {}
+    local tbl_cache = DataCache.set(tbl_name, keys, data)
+    tbl_cache.fields = fields
+    tbl_cache.save_time = Engine.time()
+
     return e, data
 end
 

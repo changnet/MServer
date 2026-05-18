@@ -156,6 +156,8 @@ function PlayerSync.on_logout(pid)
 
     PlayerMgr.set(pid)
 
+     -- 其他worker除了玩家数据还需要存其他数据？后续有需求再说
+
     return true
 end
 

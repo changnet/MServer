@@ -60,7 +60,7 @@ end
 
 -- 从缓存加载玩家邮件
 local function on_load_mail(player)
-    local e, rows = Call[DATA_ADDR].DataCache.get(
+    local e, row = Call[DATA_ADDR].DataCache.get(
         "player_mail", {"pid", player.pid})
 
     if 0 ~= e then
@@ -69,13 +69,14 @@ local function on_load_mail(player)
     end
 
     local list
-    local stg = get_storage(player)
-    if #rows > 0 and rows[1].list then
-        list = table.to_map(rows[1].list)
+    local row_list = row.list
+    if row_list then
+        list = table.to_map(row_list)
     else
-        list = {}
+        list = {} -- 新号
     end
 
+    local stg = get_storage(player)
     stg.list = list
 
     return true

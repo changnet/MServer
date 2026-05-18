@@ -123,31 +123,27 @@ end
 -- 加载玩家基础数据
 local function load_base_data(player)
     PLAYER_KEYS[2] = player.pid
-    local e, rows = Call[DATA_ADDR].DataCache.get("player", PLAYER_KEYS)
-    if 0 ~= e or 1 ~= #rows then
+    local e, row = Call[DATA_ADDR].DataCache.get("player", PLAYER_KEYS)
+    if 0 ~= e then
         eprint("player db data error", player.pid, e)
         return false
     end
-    --[[
-    pp = {name = 1, level = 2, ...}
-    money = {},
-    ]]
-    local data = rows[1]
 
-    assert(player.pid == data._id)
+    -- 缓存没有_id，从数据库加载才有
+    if row._id then assert(player.pid == row._id) end
 
     -- 新号，要初始化一些数据
-    local logout_time = data.logout_time
+    local logout_time = row.logout_time
     if not logout_time then
         logout_time = 0
-        data.money = {}
+        row.money = {}
     end
 
-    player.property = data.property
-    player.money = data.money
-    player.create_pfid = data.create_pfid
-    player.create_sid = data.create_sid
-    player.create_time = data.create_time
+    player.property = row.property
+    player.money = row.money
+    player.create_pfid = row.create_pfid
+    player.create_sid = row.create_sid
+    player.create_time = row.create_time
     player.logout_time = logout_time -- 上一次退出时间
     player.login_time = Engine.time() -- 本次登录时间
 
@@ -243,12 +239,6 @@ function Player.login(player)
 end
 
 local function save_base_data(player, is_logout)
-    local e, rows = Call[DATA_ADDR].DataCache.get("player", PLAYER_KEYS)
-    if 0 ~= e or 1 ~= #rows then
-        eprint("player db data error", player.pid, e)
-        return false
-    end
-
     local property = {}
     local pp = player.property
     for _, key in ipairs(PP_SAVE_LIST) do
@@ -291,6 +281,8 @@ function Player.logout(player, why)
 
     Event.pemit(player, EV.LOGOUT)
     save_db_data(player, true)
+
+    PlayerSync.logout(player)
 
     __player_memory[pid] = nil
     __player_storage[pid] = nil

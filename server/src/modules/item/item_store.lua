@@ -37,7 +37,7 @@ function ItemStore:load(player, is_new)
         return true
     end
 
-    local e, rows = Call[DATA_ADDR].DataCache.get(
+    local e, row = Call[DATA_ADDR].DataCache.get(
         "player_item", {"pid", player.pid, "bid", self.id})
 
     if 0 ~= e then
@@ -45,13 +45,8 @@ function ItemStore:load(player, is_new)
         return false
     end
 
-    local data_list
-    if 0 == #rows then
-        data_list = {}
-    else
-        assert(#rows == 1, "player_item data error")
-        data_list = rows[1].list
-    end
+    local data_list = row.list or {}
+
     local size = 0
     local list = {}
     if self.is_hash then

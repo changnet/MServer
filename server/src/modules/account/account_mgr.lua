@@ -36,6 +36,8 @@ local ROLE_FILTER = '{"projection":{"pid":1,"name":1,"sid":1}}'
 local ROLE_ID_FILTER = string.format('{"_id":%d}', UNIQUEID.PLAYER)
 local ROLE_ID_OPTS = '{"$inc":{"seed":1}}'
 
+local ERR_TIMEOUT = 180 -- 容错超时，单位秒
+
 local function return_login_result(info, account, pfid, e)
     local session_id = info.session_id
     if not session_id then return end -- 数据加载完成时，可能已断开
@@ -96,14 +98,19 @@ function AccountMgr.login(addr, session_id, account, pfid, sid)
     info.gaddr = addr
     info.session_id = session_id
 
-    print("要检测info.create，防止上一次创角无返回导致重复创角")
-
     local loaded = info.loaded
-    if -1 == loaded then
+    local time = Engine.time()
+    if loaded and time - loaded < ERR_TIMEOUT then
+        -- 加载中，不要重复加载，用时间做个超时机制，防止加载逻辑出错就永远登录不上
+        warn("account login loading", account, pfid, sid)
+        return
+    elseif info.created and time - info.created < ERR_TIMEOUT then
+        -- 创角中，不要重复创建。后续创建成功会取info中最新的session_id返回结果
+        warn("account login creating role", account, pfid, sid)
+        return
+    elseif -1 == loaded then
         -- 数据已加载完成，直接返回结果
         return return_login_result(info, account, pfid, 0)
-    elseif loaded and Engine.time() - loaded < 180 then
-        return -- 加载中，不要重复加载，用时间做个超时机制，防止加载逻辑出错就永远登录不上
     end
 
     -- -- 未创角按pid=0取路由，保证路由一致性即可
@@ -129,11 +136,15 @@ function AccountMgr.login(addr, session_id, account, pfid, sid)
     return_login_result(info, account, pfid, e)
 end
 
-local function return_create_role_result(info, account, pfid, e)
+-- 返回创角结果
+-- @param info 账号信息
+-- @param pid 创角成功的角色id
+-- @param e 错误码
+local function return_create_role_result(info, pid, e)
     local session_id = info.session_id
     if not session_id then return end -- 数据加载时，已断开
 
-    Send[info.gaddr].Login.do_create_result(session_id, account, pfid, info, e)
+    Send[info.gaddr].Login.do_create_result(session_id, info, pid, e)
 end
 
 -- 创角
@@ -152,8 +163,8 @@ function AccountMgr.create_role(session_id, account, pfid, sid, pkt)
     end
 
     local time = Engine.time()
-    -- 创角中，不要重复创建
-    if info.created and time - info.created < 300 then return end
+    -- 创角中，不要重复创建。后续创建成功会取info中最新的session_id返回结果
+    if info.created and time - info.created < ERR_TIMEOUT then return end
 
     info.created = time
     -- 未创角按pid=0取路由，保证路由一致性即可
@@ -168,7 +179,7 @@ function AccountMgr.create_role(session_id, account, pfid, sid, pkt)
     info.created = nil
     if 0 ~= e or not row or not row.value then
         eprint("uniqueid db load error", e, table.dump(row))
-        return return_create_role_result(info, account, pfid, E.SRV_ERROR)
+        return return_create_role_result(info, 0, E.SRV_ERROR)
     end
 
     time = Engine.time()
@@ -195,10 +206,11 @@ function AccountMgr.create_role(session_id, account, pfid, sid, pkt)
         table.insert(info.list, role)
     else
         eprint("role db insert error", e, msg)
+        pid = 0
         e = E.SRV_ERROR
     end
 
-    return return_create_role_result(info, account, pfid, e)
+    return return_create_role_result(info, pid, e)
 end
 
 -- 根据进入player线程人数的数量，选择一个负载最小的player线程
@@ -277,7 +289,10 @@ end
 -- 退出游戏
 function AccountMgr.logout(session_id)
     local role_info = this.session[session_id]
-    if not role_info then return end
+    if not role_info then
+        warn("account logout no session info", session_id)
+        return
+    end
 
     local paddr = role_info.paddr
     Send[paddr].PlayerMgr.exit_game(role_info.pid, "logout")
@@ -306,16 +321,24 @@ function AccountMgr.logout_completed(pid, session_id)
     assert(info.pid == pid)
     print("account logout completed", info.account, pid, session_id)
 
+    local paddr = info.paddr
     this.session[session_id] = nil
-    if this.wait_enter[info] then
-        this.wait_enter[info] = nil
 
-        -- 顶号，两次的session_id肯定不一样
-        assert(info.session_id ~= session_id)
-        do_enter(info)
+    if info.session_id == session_id then
+        info.gaddr = nil
+        info.paddr = nil
+
+        if this.wait_enter[info] then
+            this.wait_enter[info] = nil
+            -- 顶号，两次的session_id肯定不一样
+            assert(info.session_id ~= session_id)
+            do_enter(info)
+        end
+    else
+        warn("logout completed session not match", pid, session_id, info.session_id)
     end
 
-    unassign_player_worker(info.paddr)
+    unassign_player_worker(paddr)
 end
 
 return AccountMgr

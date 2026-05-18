@@ -263,7 +263,7 @@ end
 -- worker线程收到主线程停止请求
 function Worker.stopping(addr)
     assert(addr == LOCAL_ADDR)
-    printf("worker %s stopping, addr = %d", Worker.addr_name(addr), addr)
+    -- printf("worker %s stopping, addr = %d", Worker.addr_name(addr), addr)
 
     -- 执行关闭流程，依次关闭各个模块
     Shutdown.start()

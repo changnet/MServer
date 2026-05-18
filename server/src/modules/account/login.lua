@@ -72,23 +72,32 @@ local function c_player_login(socket, pkt)
     Send[addr].AccountMgr.login(LOCAL_ADDR, session_id, account, pfid, sid)
 end
 
-function Login.do_create_result(session_id, account, pfid, info, e)
+-- 返回创角结果
+-- @param info table 账号信息
+-- @param pid integer 创角成功的角色id
+-- @param e integer 错误码
+function Login.do_create_result(session_id, info, pid, e)
+    local account = info.account
     local socket = CltMgr.get_by_session_id(session_id)
     -- 用户掉线
     if not socket then
-        print("login create socket not found", account, pfid)
+        print("login create socket not found", account)
         return
     end
 
     assert(socket.login.account == account)
 
     socket.role = info
-    local role = assert(info.list[1])
+    local role = table.find_value(info.list, "pid", pid)
 
     -- 返回角色信息(如果没有角色，则pid和name都为nil)
-    NetMsg.send_socket(socket, M.PlayerCreate, role)
+    NetMsg.send_socket(socket, M.PlayerCreate, {
+        pid = pid,
+        name = role and role.property.name,
+        errno = e
+    })
 
-    printf("client create role success, acc = %s, pid = %d", account, role.pid)
+    printf("client create role success, acc = %s, pid = %d", account, pid)
 end
 
 -- 创角

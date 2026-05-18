@@ -303,6 +303,19 @@ function table.choice(tbl)
     end
 end
 
+-- 在table中查找满足条件的元素，返回第一个满足条件的元素
+-- @param filter_func 用于判断元素是否满足条件的函数，返回true表示满足条件
+function table.find(tbl, filter_func)
+    for _, v in pairs(tbl) do if filter_func(v) then return v end end
+end
+
+-- 在table的子table中查找满足条件的元素，返回第一个满足条件的元素的key
+-- @param key 子table用于判断元素是否满足条件的key
+-- @param value 用于判断元素是否满足条件的value
+function table.find_value(tbl, key, value)
+    for _, v in pairs(tbl) do if v[key] == value then return v end end
+end
+
 -- 传入多层key，获取table中对应的值
 -- @param tbl 需要获取值的table
 -- @param ... 多层key，如a,b,c表示获取tbl[a][b][c]的值

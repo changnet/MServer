@@ -25,18 +25,19 @@ function PlayerData.load(player)
     local pid = player.pid
     keys[2] = pid
 
-    local e, rows = Call[DATA_ADDR].DataCache.get("player_data", keys, nil, opts)
+    local e, row = Call[DATA_ADDR].DataCache.get("player_data", keys, nil, opts)
     if 0 ~= e then
         eprint("player data storage load error", pid, e)
         return false
     end
 
     local s
-    if 0 == #rows then
+    local row_data = row.data
+    if row_data then
+        s = row_data
+    else
         assert(Player.is_new(player))
         s = {}
-    else
-        s = assert(rows[1].data)
     end
 
     __player_storage[pid] = s
