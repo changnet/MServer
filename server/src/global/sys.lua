@@ -20,6 +20,9 @@ function sys.restore_table(tbl)
     local k1 = next(tbl)
     if not k1 then return end
 
+    -- 注意数字为key时，不能是double或者int64，因为即使mongodb支持，json库也不一定支持
+    -- 会丢失精度
+
     -- 一个table中，要么全是数字键，要么全是字符串键，不能混用
     if type(k1) == "string" and tonumber(k1) then
         for k, v in pairs(tbl) do

@@ -55,7 +55,12 @@ end
 local function save_to_db(cache, now)
     cache.modify_time = nil
     cache.save_time = now
-    return DataMgr.save(cache.tbl_name, cache.keys, cache.data)
+
+    local e = DataMgr.save(cache.tbl_name, cache.keys, cache.data)
+    -- TODO 检测错误码，如果是数据库断开则需要重新插入save_list
+    -- 其他的错误则报错，只能手动处理
+
+    return e
 end
 
 -- 如果缓存已经存在，则新读取的数据和缓存的fields应该是一致的
@@ -129,6 +134,7 @@ function DataCache.set(tbl_name, keys, value)
     if not last_cache then
         last_cache = {
             keys = keys,
+            tbl_name = tbl_name,
             -- fields = nil, -- 稍后设置，只在第一次加载时设置
         }
         tbl_cache[last_key] = last_cache
@@ -146,19 +152,19 @@ function DataCache.update(tbl_name, keys, value)
     -- 因此更新缓存时，所有数据都要发过来（包括一些不需要更新的字段）
     local tbl_cache = DataCache.set(tbl_name, keys, value)
 
-    if not tbl_cache.modify_time then
-        local idx = this.save_seed + 1
-        if idx > MAX_CACHE then
-            assert(not this.save_list[1], "save list overflow")
-            idx = 1
-        end
+    if tbl_cache.modify_time then return end
 
-        this.save_seed = idx
-        this.save_list[idx] = tbl_cache
-
-        tbl_cache.save_time = nil
-        tbl_cache.modify_time = Engine.time()
+    local idx = this.save_seed + 1
+    if idx > MAX_CACHE then
+        assert(not this.save_list[1], "save list overflow")
+        idx = 1
     end
+
+    this.save_seed = idx
+    this.save_list[idx] = tbl_cache
+
+    tbl_cache.save_time = nil
+    tbl_cache.modify_time = Engine.time()
 end
 
 local function save_cache_list(now, save_count, max_save, beg_idx, end_idx)
@@ -169,10 +175,10 @@ local function save_cache_list(now, save_count, max_save, beg_idx, end_idx)
         local modify_time = cache.modify_time
         if not modify_time then
             -- 通过GM把某个玩家的缓存清掉
-            beg_idx = i
+            this.save_index = i
             this.save_list[i] = nil
         elseif now - modify_time >= CACHE_SAVE then
-            beg_idx = i
+            this.save_index = i
             this.save_list[i] = nil
             save_to_db(cache, now)
             save_count = save_count + 1
@@ -183,7 +189,6 @@ local function save_cache_list(now, save_count, max_save, beg_idx, end_idx)
         end
     end
 
-    this.save_index = beg_idx
     return save_count
 end
 

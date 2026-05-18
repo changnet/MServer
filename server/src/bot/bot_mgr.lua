@@ -54,6 +54,6 @@ function BotMgr.start()
         local bot = Bot(1 << 32 | LOCAL_ADDR, 1)
         table.insert(bots, bot)
     else
-        warn("unknow bot mode:", b)
+        warn("unknow bot mode:", r)
     end
 end

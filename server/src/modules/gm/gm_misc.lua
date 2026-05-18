@@ -26,4 +26,22 @@ GM.reg("ping", function()
     Ping.start(1)
 end, W.GAME | W.MAIN)
 
+-- 执行测试命令
+GM.reg("test", function(player, cmd, ...)
+    local T = require "test.integrate_test"
+    T.run(player, cmd, ...)
+end)
+
+-- 添加任意资源
+GM.reg("res", function(player, id, num)
+    id = tonumber(id)
+    num = tonumber(num)
+    if not id or not num then
+        eprint("gm invalid param", id, num)
+        return
+    end
+
+    Res.add(player, {{id = id, num = num}}, LOG.GM)
+end)
+
 return GM

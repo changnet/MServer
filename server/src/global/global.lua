@@ -27,10 +27,11 @@ function __G_C_TRACKBACK(msg, co)
 end
 
 -- 用于lua错误信息处理(直接打印错误信息)
-function __G_DUMP_STACK(msg, co)
+function __G_DUMP_STACK(msg, co, level)
     local msg_list = {}
-    -- 在co_pool中co_return要level=2才会打印逻辑所在的函数调用堆栈
-    debug.tracestack(co, msg_list, 1)
+    -- 在co_pool中co_return要level=1才会打印逻辑所在的函数调用堆栈
+    -- 如果是xpcall则level = 2就行，否则会把tracestack的也打印出来
+    debug.tracestack(co, msg_list, level or 1)
 
     local stack_trace = debug.traceback(co)
 
