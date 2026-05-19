@@ -32,11 +32,14 @@ function GameTest.gm(ai)
     -- 只运行一次的gm
     if not ai.once_gm then
         ai.once_gm = 1
-        entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@ghf"})
-        entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@add_gold 9"})
-        entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@add_item 10000 1"})
-        entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@add_item 10001 1"})
-        entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@add_item 20001 1"})
+        entity:send_pkt(M.ChatMsg, {channel = 1, context = "@ghf"})
+        entity:send_pkt(M.ChatMsg, {channel = 1, context = "@res 1 99999"})
+        entity:send_pkt(M.ChatMsg, {channel = 1, context = "@res 2 99999"})
+        entity:send_pkt(M.ChatMsg, {channel = 1, context = "@res 3 99999"})
+        entity:send_pkt(M.ChatMsg, {channel = 1, context = "@res 10000 1"})
+        entity:send_pkt(M.ChatMsg, {channel = 1, context = "@res 10001 1"})
+        entity:send_pkt(M.ChatMsg, {channel = 1, context = "@res 20001 1"})
+        entity:send_pkt(M.ChatMsg, {channel = 1, context = "@mail test"})
     end
 end
 
@@ -49,13 +52,13 @@ function GameTest.ping(ai)
     local str = randomStr(ping_cache, 1024, 60 * 1024)
 
     ai.ping_ts = (ai.ping_ts or 0) + 1
-    ai.ping_time = ev:steady_clock()
+    ai.ping_time = Engine.steady_clock()
     ai.ping_verify = str
 
-    entity:send_pkt(PLAYER.PING, {verify = str})
+    entity:send_pkt(M.PlayerPing, {verify = str})
 end
 
-function GameTest.on_ping(entity, ecode, pkt)
+local function s_ping(entity, ecode, pkt)
     local ai = entity.ai
 
     local beg = ai.ping_time
@@ -66,7 +69,7 @@ function GameTest.on_ping(entity, ecode, pkt)
     end
 
     -- 服务器不忙的情况下，延迟是1~5毫秒左右.60帧则是16ms以下
-    local ms = ev:steady_clock() - beg
+    local ms = Engine.steady_clock() - beg
     print("ping", entity.name, ai.ping_ts, ms, #pkt.verify)
     for _, delay in pairs(pkt.delay) do
         if (delay.time or 0) + ms > 10 then
@@ -89,10 +92,10 @@ function GameTest.chat(ai)
 
     local pkt = {channel = 1, context = str}
     ai.last_chat = pkt
-    ai.entity:send_pkt(CHAT.DOCHAT, pkt)
+    ai.entity:send_pkt(M.ChatMsg, pkt)
 end
 
-function GameTest.on_chat(entity, ecode, pkt)
+local function s_chat_msg(entity, ecode, pkt)
     -- printf("chat: %d say %s", pkt.pid, pkt.context)
 
     if pkt.pid == entity.pid then
@@ -111,7 +114,7 @@ end
 
 -- ************************************************************************** --
 
-AndroidMgr.reg(PLAYER.PING, GameTest.on_ping)
-AndroidMgr.reg(CHAT.DOCHAT, GameTest.on_chat)
+BotMgr.reg(M.PlayerPing, s_ping)
+BotMgr.reg(M.ChatMsg, s_chat_msg)
 
 return GameTest

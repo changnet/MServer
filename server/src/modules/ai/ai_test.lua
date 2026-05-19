@@ -34,7 +34,7 @@ function AiTest:routine(ms_now)
     -- 移动、切换场景
     -- 增加、使用资源
 
-    -- GameTest.gm(self)
+    GameTest.gm(self)
     -- GameTest.chat(self)
     -- GameTest.ping(self)
     -- Move.random_move(self)

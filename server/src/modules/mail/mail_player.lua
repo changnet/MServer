@@ -219,6 +219,23 @@ local function c_mail_del_read(player, pkt)
     end
 end
 
+GM.reg("mail", function(player, p1, p2, p3)
+    if "test" == p1 then
+        Mail.send_player(player, {
+            cid = 1,
+            text = "test test test text",
+            title = "test test test title",
+            atts = {{id = 1, num = 100}, {id = 10000, num = 2}},
+            op = LOG.GM,
+            log_str = "mail test",
+        })
+    else
+        return false
+    end
+
+    return true
+end)
+
 Event.reg(EV.LOGIN, on_login)
 Event.reg(EV.LOADING, on_load_mail)
 

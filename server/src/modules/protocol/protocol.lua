@@ -56,12 +56,12 @@ M = {
     },
 
     -- 9 聊天
-    ChatChatInfo = {
+    ChatInfo = {
         s = "chat.SChatInfo", i = 9
     },
     -- 10
-    ChatDoChat = {
-        s = "chat.SDoChat", c = "chat.CDoChat", i = 10
+    ChatMsg = {
+        s = "chat.SChatMsg", c = "chat.CChatMsg", i = 10
 
     },
 

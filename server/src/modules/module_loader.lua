@@ -55,6 +55,7 @@ require("misc.welcome", W.PLAYER)
 require("player.money", W.PLAYER)
 
 require("player.player_off", W.GAME)
+require("chat.chat", W.GAME)
 
 -- 邮件模块
 require("mail.mail_internal")

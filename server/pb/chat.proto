@@ -3,21 +3,21 @@
 syntax = "proto3";
 package chat;
 
-/* 聊天相关信息 */
+// 登录时下发聊天基础数据
 message SChatInfo
 {
     int32 no_chat = 1; // 禁言
 }
 
-/* 发起聊天 */
-message CDoChat
+// 发送聊天消息
+message CChatMsg
 {
     int32 channel = 1; // 频道
     string context = 2; // 聊天内容
 }
 
-/* 聊天返回 */
-message SDoChat
+// 收到聊天消息
+message SChatMsg
 {
     int32 channel = 1; // 频道
     string context = 2; // 聊天内容

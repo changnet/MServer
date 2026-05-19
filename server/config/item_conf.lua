@@ -7,6 +7,9 @@ item.xlsx item
 
 return
 {
+    [1] = {['desc'] = '金币',['iconId'] = 1,['id'] = 1,['name'] = '金币'},
+    [2] = {['desc'] = '元宝',['iconId'] = 2,['id'] = 2,['name'] = '元宝'},
+    [3] = {['desc'] = '经验',['iconId'] = 3,['id'] = 3,['name'] = '经验'},
     [10000] =
     {
         ['desc'] = '这是一把短剑',
