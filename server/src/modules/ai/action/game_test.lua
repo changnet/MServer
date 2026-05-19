@@ -29,12 +29,15 @@ end
 function GameTest.gm(ai)
     -- gm测试
     local entity = ai.entity
-    -- entity:send_pkt( MISC.WELCOME_GET,{} )
-    entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@ghf"})
-    entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@add_gold 9"})
-    entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@add_item 10000 1"})
-    entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@add_item 10001 1"})
-    entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@add_item 20001 1"})
+    -- 只运行一次的gm
+    if not ai.once_gm then
+        ai.once_gm = 1
+        entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@ghf"})
+        entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@add_gold 9"})
+        entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@add_item 10000 1"})
+        entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@add_item 10001 1"})
+        entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@add_item 20001 1"})
+    end
 end
 
 -- 测试服务器延迟
