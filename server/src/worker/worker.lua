@@ -12,6 +12,11 @@ Worker = {
 
 local WorkerThread = require "engine.WorkerThread"
 
+-- @class WorkerDataObj
+-- @field status 启动状态，如Worker.READY
+-- @field mode worker类型，如Worker.THREAD
+-- @field src_addr
+
 WorkerHash = WorkerHash or {} -- [addr] = worker，包含集群节点，不包含主线程、自己及非当前线程的集群节点
 WorkerData = WorkerData or {} -- [addr] = {}，所有worker的数据，包含集群节点，不包含主线程、自己
 WorkerNameType = {} -- [wname] = wtype worker名字转类型
@@ -21,7 +26,58 @@ LOCAL_TYPE = LOCAL_TYPE or 0 -- 当前worker类型
 LOCAL_NAME = LOCAL_NAME or "" -- 当前worker的名字
 MAIN_ADDR = MAIN_ADDR or 0 -- 当前主线程对应的worker地址
 
+local WorkerKeyAddrList = {} -- [pobj][addr] = wtype -- 按配置分类的线程地址
+local WorkerKeyTypeList = {} -- [pobj][wtype] = 1
+
 local this = memory("Worker")
+
+local function clear_cache_list()
+    if not table.empty(WorkerKeyAddrList) then WorkerKeyAddrList = {} end
+    if not table.empty(WorkerKeyTypeList) then WorkerKeyTypeList = {} end
+end
+
+-- 按key返回当前启动成功的线程地址
+-- @param key string worker定义时的key，比如pobj、paddr等
+function Worker.get_key_addr_list(key)
+    local list = WorkerKeyAddrList[key]
+    if list then return list end
+
+    list = {}
+    WorkerKeyAddrList[key] = list
+
+    for addr, data in pairs(WorkerData) do
+        if Worker.READY == data.status then
+            local wtype = Engine.unmake_address(addr)
+            print("ddddddddddddddddddddddd", addr, wtype)
+            if 1 == WORKER[wtype][key] then
+                list[addr] = wtype
+            end
+        end
+    end
+
+    return list
+end
+
+-- 按key返回当前启动成功的线程wtype列表
+-- @param key string worker定义时的key，比如pobj、paddr等
+function Worker.get_key_type_list(key)
+    local list = WorkerKeyTypeList[key]
+    if list then return list end
+
+    list = {}
+    WorkerKeyTypeList[key] = list
+
+    for addr, data in pairs(WorkerData) do
+        if Worker.READY == data.status then
+            local wtype = Engine.unmake_address(addr)
+            if 1 == WORKER[wtype][key] then
+                list[wtype] = addr -- 注意这个会有多个addr，只记录其中一个
+            end
+        end
+    end
+
+    return list
+end
 
 -- 所有本地启动的worker是否都已启动完成
 -- @return 返回未启动完成的worker地址
@@ -282,6 +338,7 @@ function Worker.set_status(src_addr, addr, mode, status)
     if Worker.STOP == status then
         WorkerHash[addr] = nil
         WorkerData[addr] = nil
+        clear_cache_list()
         Event.semit(EV.WORKER_STOP, addr, mode)
     elseif Worker.STARTING == status then
         local data = Worker.get_data(addr)
@@ -302,6 +359,7 @@ function Worker.set_status(src_addr, addr, mode, status)
             WorkerHash[addr] = w
         end
 
+        clear_cache_list()
         local data = Worker.get_data(addr)
         local old_status = data.status
 

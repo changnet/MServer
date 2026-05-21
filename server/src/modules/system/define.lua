@@ -7,20 +7,20 @@
 -- @field name string worker名字
 -- @field sequ number 启动顺序(equence)，越小越先启动，越晚关闭
 -- @field pobj boolean 是否创建玩家对象
--- @field paddr boolean 是否同步玩家地址路由信息
+-- @field paddr boolean 是否同步玩家地址路由信息，定义了pobj的就不要再定义这个
 -- @field storage boolean 是否使用global_data存储数据
 
 W = {
     -- 网关
-    GATEWAY = {type = 1,   sequ = 9, pobj = 0, paddr = 1, name = "gateway"},
+    GATEWAY = {type = 1,   sequ = 9, pobj = 0, paddr = 0, name = "gateway"},
     -- 游戏公用逻辑
-    GAME    = {type = 2,   sequ = 2, pobj = 1, paddr = 1, storage = 1, name = "game"},
+    GAME    = {type = 2,   sequ = 2, pobj = 1, paddr = 0, storage = 1, name = "game"},
     -- 缓存及db操作
     DATA    = {type = 3,   sequ = 1, pobj = 0, paddr = 0, name = "data"},
     -- 玩家个人逻辑
     PLAYER  = {type = 4,   sequ = 3, pobj = 0, paddr = 1, name = "player"},
     -- 场景
-    -- SCENE   = {type = 5,   sequ = 3, pobj = 1, paddr = 1, name = "scene"},
+    SCENE   = {type = 5,   sequ = 3, pobj = 1, paddr = 0, name = "scene"},
     -- mysql数据库读写
     MYSQL   = {type = 6,   sequ = 0, pobj = 0, paddr = 0, name = "mysql"},
     -- mongodb数据库读写
@@ -35,8 +35,6 @@ W = {
     BOT     = {type = 201, sequ = 0, pobj = 0, paddr = 0, name = "bot"},
     -- 主线程，这个不能用来启动，则W.TEST | W.MAIN
     MAIN    = {type = 256, sequ = 0, pobj = 0, paddr = 0, name = "main"},
-
-    -- 这里的定义如果不用了，要么注释掉，要么把pobj、paddr等字段设置为0，否则有些逻辑会触发
 }
 
 -- @type table<number, WorkerDef> 原始的worker定义信息

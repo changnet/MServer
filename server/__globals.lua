@@ -1,4 +1,4 @@
--- auto export by lua-tags 199 symbols
+-- auto export by lua-tags 198 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -52,7 +52,6 @@ return {
 "ItemConf", -- src/modules/item/item.lua
 "ItemUse", -- src/modules/item/item_use.lua
 "Json", -- src/util/json.lua
-"JsonFile", -- src/util/json_file.lua
 "LANG", -- config/lang.lua
 "LOCAL_ADDR", -- src/worker/worker.lua
 "LOCAL_NAME", -- src/worker/worker.lua

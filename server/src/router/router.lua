@@ -33,13 +33,15 @@ MongoDB.find_and_modify(...) 这样调用，就无法自动分配到特定节点
 
 local this = memory("Router", {
     wpolicy = {}, -- worker类型对应的负载均衡策略
-    pid_map = {}, -- [pid][wtype] = addr 玩家在对应worker类型的地址的映射
+    pid_map = {}, -- [wtype][pid] = addr 玩家在对应worker类型的地址的映射
     windex = {}, -- [wtype] = 上一次分配的worker索引
 })
 
 -- 只开启一个worker的类型，直接返回这个worker地址，不需要负载均衡了
 local only_one_worker_hash
 
+local PLAYER = W.PLAYER
+local GATEWAY = W.GATEWAY
 local is_game_srv = g_sharedata:get("server_type") == SRV_TYPE.GAME
 
 local function init_worker_list()
@@ -112,10 +114,9 @@ end
 function Router.find_player_addr(pid, wtype)
     if is_game_srv then
         -- player scene等多个线程的，需要根据pid找到对应线程地址
-        local map = this.pid_map[pid]
-        if map then
-            return map[wtype]
-        end
+        local map = this.pid_map[wtype]
+        if map then return map[pid] end
+
         -- game、data等单线程的，直接返回该类型的地址
         return only_one_worker(wtype)
     else
@@ -124,7 +125,19 @@ function Router.find_player_addr(pid, wtype)
 end
 
 -- 更新玩家所在worker地址
-function Router.update_player_addr(pid, addr)
+-- @param pid number 角色id
+-- @param paddr number 玩家所在的player线程地址
+-- @param gaddr number 玩家所在的gateway线程地址
+function Router.update_player_addr(pid, paddr, gaddr)
+    print("update player address", pid, paddr, gaddr)
+    local pid_map = this.pid_map
+    if paddr then
+        table.set_value(pid_map, paddr, PLAYER, pid)
+        table.set_value(pid_map, gaddr, GATEWAY, pid)
+    else
+        table.unset_value(pid_map, PLAYER, pid)
+        table.unset_value(pid_map, GATEWAY, pid)
+    end
 end
 
 -- 根据worker类型，查找一个可用worker地址

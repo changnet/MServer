@@ -19,7 +19,7 @@ local I = 2 -- int
 
 -- 玩家属性定义(PP = player property)
 PP = {
-    name  = {i = 1, t = S, c = true, s = true, f = true}, -- 名字
+    name  = {i = 1, t = S, c = true, s = true, f = true, w = {W.GAME}}, -- 名字，pobj的线程名字必定同步（用于打印日志等）
     level = {i = 2, t = I, c = true, s = true, f = true, w = {W.GAME}}, -- 等级
     vip   = {i = 3, t = I, c = true, s = true, f = true}, -- vip等级
 }
@@ -48,23 +48,6 @@ local function init()
 
         local w = p.w
         if w then PP_WORKER_LIST[k] = w end
-    end
-
-    -- 特殊地，需要创建玩家对象的，名字必定同步（用于打印日志等）
-    local name_wlist = PP_WORKER_LIST.name
-    if not name_wlist then
-        name_wlist = {}
-        PP_WORKER_LIST.name = name_wlist
-    end
-
-    for _, w in pairs(WORKER) do
-        if 1 == w.pobj then
-            local exist = false
-            for _, wtype in ipairs(name_wlist) do
-                if w.type == wtype then exist = true break end
-            end
-            if not exist then table.insert(name_wlist, w.type) end
-        end
     end
 end
 

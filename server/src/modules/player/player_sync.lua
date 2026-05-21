@@ -18,11 +18,6 @@ local LOCAL_ADDR = LOCAL_ADDR
 
 local funcs = {}
 
-local SYNC_WORKER = {}
-for _, w in pairs(WORKER) do
-    if 1 == w.pobj then table.insert(SYNC_WORKER, w.type) end
-end
-
 -- 注册其他模块的同步回调函数
 function PlayerSync.reg(func)
     table.insert(funcs, func)
@@ -30,7 +25,8 @@ end
 
 -- 登录时同步到其他worker
 function PlayerSync.init(player)
-    if 0 == #SYNC_WORKER then return true end
+    local sync_wtypes = Worker.get_key_type_list("pobj")
+    if table.empty(sync_wtypes) then return true end
 
     local pid = player.pid
     local gaddr = player.gaddr
@@ -38,7 +34,7 @@ function PlayerSync.init(player)
     -- 先把所有要同步的数据构建到一个table中，再统一同步
     -- 因为有些模块的数据会同时同步到多个worker，不用一个个模块地回调多次
     local data = {}
-    for _, wtype in ipairs(SYNC_WORKER) do
+    for wtype in pairs(sync_wtypes) do
         data[wtype] = {
             pid = pid,
             gaddr = gaddr,
@@ -52,7 +48,7 @@ function PlayerSync.init(player)
         func(player, data)
     end
 
-    for _, wtype in ipairs(SYNC_WORKER) do
+    for wtype in pairs(sync_wtypes) do
         -- 如果一个worker需要分配节点(比如玩家登录回到上次的场景)，必须在这个函数之前分配
         local addr = Router.find_player_addr(pid, wtype)
         if not addr then
@@ -71,10 +67,11 @@ end
 
 -- 登录时同步到其他worker
 function PlayerSync.login(player, is_new)
-    if 0 == #SYNC_WORKER then return true end
+    local sync_wtypes = Worker.get_key_type_list("pobj")
+    if table.empty(sync_wtypes) then return true end
 
     local pid = player.pid
-    for _, wtype in ipairs(SYNC_WORKER) do
+    for wtype in pairs(sync_wtypes) do
         -- 如果一个worker需要分配节点(比如玩家登录回到上次的场景)，必须在这个函数之前分配
         local addr = Router.find_player_addr(pid, wtype)
         local ok = Call[addr].PlayerSync.on_login(pid, is_new)
@@ -119,6 +116,7 @@ function PlayerSync.on_login(pid, is_new)
         return false
     end
 
+    Router.update_player_addr(pid, player.paddr, player.gaddr)
     Event.pemit(player, EV.LOGIN, is_new)
 
     player.status = PlayerStatus.NORMAL
@@ -130,8 +128,9 @@ end
 -- 下线时，其他worker对象也要同步下线
 function PlayerSync.logout(player)
     local pid = player.pid
+    local sync_wtypes = Worker.get_key_type_list("pobj")
 
-    for _, wtype in ipairs(SYNC_WORKER) do
+    for wtype in pairs(sync_wtypes) do
         local addr = Router.find_player_addr(pid, wtype)
         local ok = Call[addr].PlayerSync.on_logout(pid)
         if not ok then
@@ -155,6 +154,7 @@ function PlayerSync.on_logout(pid)
     PlayerData.save(player)
 
     PlayerMgr.set(pid)
+    Router.update_player_addr(pid)
 
      -- 其他worker除了玩家数据还需要存其他数据？后续有需求再说
 

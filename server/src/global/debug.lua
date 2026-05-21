@@ -19,9 +19,27 @@ end
 -- @param 变量全部存放到var_list中
 -- @param level 从哪一级stack开始获取
 function debug.tracestack(co, var_list, level)
-    if not level then level = 2 end
+    --[[
+    当不传co或者在同一个协程内时：
+    which means the function running at level f of the call stack of the given
+    thread: level 0 is the current function (getinfo itself); level 1 is the
+    function that called getinfo (except for tail calls, which do not count in
+    the stack); and so on.
 
-    if not co then co = coroutine.running() end
+    所以level=2时表示不打印下面这几个堆栈的信息
+     0 debug.getinfo
+     1 debug.tracestack
+     2 __G_DUMP_STACK
+
+    当传co时，co通常是一个协程，协程报错后变为dead状态并退出，此时获取它的堆栈就没有上
+    面的那几个堆栈，直接从0获取即可。
+    ]]
+    if not co then
+        co = coroutine.running()
+        if not level then level = 2 end
+    else
+        if not level then level = 0 end
+    end
 
     -- 各层调用堆栈上的local变量
     for lv = level, 16 do

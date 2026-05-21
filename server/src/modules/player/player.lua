@@ -71,36 +71,6 @@ function Player.get_memory(player, key)
     return __player_memory[player.pid][key]
 end
 
--- 如果存在某个模块的存储则返回
---- @param player 玩家对象
---- @param key 模块存储key
---- @param value 模块存储值
-function Player.iset_storage(pid, key, value)
-    __player_storage[pid][key] = value
-end
-
--- 获取玩家模块存储
---- @param player 玩家对象
---- @param key 模块存储key
-function Player.iget_storage(pid, key)
-    return __player_storage[pid][key]
-end
-
--- 如果存在内存数据的存储则返回
---- @param player 玩家对象
---- @param key 模块存储key
---- @param value 模块存储值
-function Player.iset_memory(pid, key, value)
-    __player_memory[pid][key] = value
-end
-
--- 获取玩家内存数据
---- @param player 玩家对象
---- @param key 模块存储key
-function Player.iget_memory(pid, key)
-    return __player_memory[pid][key]
-end
-
 -- 设置玩家属性
 -- @param player 玩家对象
 -- @param key 属性key
@@ -202,9 +172,29 @@ local function send_base_data(player)
     Money.send_info(player)
 end
 
+-- 更新其他线程记录的玩家地址
+local function update_addr(player, is_logout)
+    local paddr
+    local gaddr
+    if not is_logout then
+        paddr = player.paddr
+        gaddr = player.gaddr
+    end
+
+    -- 这里用call而不是send，否则后续login事件中其他线程再调用另一个线程，然后获取玩家地址就会取不到
+
+    local pid = player.pid
+    local list = Worker.get_key_addr_list("paddr")
+    for addr in pairs(list) do
+        Call[addr].Router.update_player_addr(pid, paddr, gaddr)
+    end
+end
+
 -- 登录
 function Player.login(player)
     local pid = player.pid
+
+    player.paddr = LOCAL_ADDR
     player.status = PlayerStatus.LOGIN -- 玩家状态，默认登录中
 
     -- 加载玩家基础数据
@@ -220,6 +210,8 @@ function Player.login(player)
     end
 
     init_data(player)
+
+    update_addr(player) -- login事件要发协议，必须在此之前设置好addr
 
     send_base_data(player)
 
@@ -274,7 +266,6 @@ local function save_db_data(player, is_logout)
     Event.pemit(player, EV.SAVE)
 end
 
-
 -- 退出
 function Player.logout(player, why)
     local pid = player.pid
@@ -287,6 +278,7 @@ function Player.logout(player, why)
     __player_memory[pid] = nil
     __player_storage[pid] = nil
 
+    update_addr(player, true)
     PlayerMgr.exit_completed(pid, player.session_id)
 end
 

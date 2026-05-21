@@ -345,6 +345,18 @@ function table.set_value(tbl, value, ...)
     tbl[key] = value
 end
 
+-- 传入多层key，移除对应的值
+function table.unset_value(tbl, ...)
+        local len = select("#", ...)
+    for i = 1, len - 1 do
+        local key = select(i, ...)
+        if not tbl[key] then return end
+        tbl = tbl[key]
+    end
+    local key = select(len, ...)
+    tbl[key] = nil
+end
+
 -- 获取所有key，作为一个数组返回
 function table.keys(tbl)
     local list = {}
