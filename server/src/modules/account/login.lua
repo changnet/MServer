@@ -66,6 +66,7 @@ local function c_player_login(socket, pkt)
         return NetMsg.send_socket(socket, M.PlayerLogin, {errno = E.UNDEFINE})
     end
     socket.login = pkt
+    socket.account = account -- 复制一份，日志用
 
     -- 网关有多个，需要统一到帐号管理那边获取角色数据，处理顶号
     local addr = Router.find_worker_addr(W.ACCOUNT, "account", account)
@@ -163,6 +164,41 @@ local function c_enter_game(socket, pkt)
     local addr = Router.find_worker_addr(W.ACCOUNT, "account", account)
     Send[addr].AccountMgr.enter(
         session_id, account, login_info.pfid, login_info.sid, pid, ip)
+end
+
+-- enter_game完成
+function Login.enter_game_completed(pid, session_id)
+    --[[
+    这里有一点问题：
+    1. player线程登录
+    2. 线程1初始化并发送协议1
+    3. player线程登录成功，通知前端enter_game成功
+
+    虽然player线程保证线程1已经发出协议后再执行登录成功逻辑
+    但线程1可能是一个远程节点，它发送的协议1还没发到网关，没有转发到客户端时
+    而player线程更快，已经通知网关把enter_game发给客户端，这就导致客户端收到
+    enter_game成功时，并没有收到所有数据
+
+    解决的办法：
+        1. 服务端弄一套机制，所有必要的线程初始化完都通知网关，网关负责记录，直到所有线程
+    完成后再发登录成功给客户端。
+        2. 客户端只把登录成功当成可以下发协议的开关，不保证数据完全到达
+        3. 特殊处理：某个协议前端一定要拿到的，后端用call解决，一般也不多
+        4. 如果是单进程部署，根本就不存在这个问题
+    ]]
+
+    local socket = CltMgr.get_by_pid(pid)
+    if not socket then
+        print("enter_game_completed player disconnect", pid, session_id)
+        return
+    end
+    if socket.session_id ~= session_id then
+        print("enter_game_completed session no match", pid, session_id)
+        return
+    end
+
+    socket:authorized()
+    return NetMsg.send_socket(socket, M.PlayerEnter, EMPTY)
 end
 
 NetMsg.reg_noauth(M.PlayerLogin, c_player_login)

@@ -2,9 +2,10 @@
 Shutdown = {}
 
 -- 需要按优先级关闭的模块
-local this = memory("Shutdown")
+-- local this = memory("Shutdown")
 
 g_shuttingdown = nil -- 是否开启关服
+local shutdown_modules
 
 -- 终止程序(不走数据保存、清理流程)
 function Shutdown.terminate()
@@ -28,19 +29,19 @@ end
 -- 按注册的优先级关闭模块
 function Shutdown.start()
     g_shuttingdown = true
-    if not this.shutdown_modules then
+    if not shutdown_modules then
         shutdown_complete()
         return
     end
 
     -- 关闭函数不允许失败，不能用异步回调，可以用协程异步，但最终必须成功
-    local list = this.shutdown_modules:next()
+    local list = shutdown_modules:next()
     while list do
         for _, mod in ipairs(list) do
             mod.func()
         end
 
-        list = this.shutdown_modules:next()
+        list = shutdown_modules:next()
     end
 
     shutdown_complete()
@@ -57,19 +58,19 @@ function Shutdown.reg(mod, priority)
     很多模块（比如cluster）虽然会引用，但需要启动才需要关闭，所以会有重新添加的问题
     mod.name作为唯一标识符，如果存在则覆盖，否则新增
     ]]
-    if not this.shutdown_modules then
+    if not shutdown_modules then
         local PriorityManager = require "util.priority_manager"
-        this.shutdown_modules = PriorityManager()
+        shutdown_modules = PriorityManager()
 
-        this.shutdown_modules.mods = {}
+        shutdown_modules.mods = {}
     end
     mod.priority = priority or 20
 
-    local old = this.shutdown_modules.mods[mod.name]
+    local old = shutdown_modules.mods[mod.name]
     if old then
         if old.priority == mod.priority then return end
-        this.shutdown_modules:remove(old)
+        shutdown_modules:remove(old)
     end
 
-    this.shutdown_modules:push(mod, priority)
+    shutdown_modules:push(mod, priority)
 end

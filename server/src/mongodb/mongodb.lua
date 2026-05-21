@@ -142,6 +142,7 @@ function MongoDB:delegate_with_error(name, ...)
     -- 如果有其他函数的需求，要添加其他接口
 
     local func = self[name]
+    print("mongodb run =========", name)
     return return_with_error(self, func(self, ...))
 end
 

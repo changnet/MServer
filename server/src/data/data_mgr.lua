@@ -81,6 +81,7 @@ end
 local function mongodb_save(tbl_name, keys, data)
     local addr = Router.find_worker_addr(W.MONGODB, keys[1], keys[2] or 0)
     if not addr then
+        eprint("mongodb save no addr found", tbl_name, table.concat(keys, "_"))
         return 1
     end
 

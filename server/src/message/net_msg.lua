@@ -109,6 +109,7 @@ function NetMsg.dispatch(socket, id, buffer, size)
     local auth = socket.auth
     local wtype = forward_wtype[id]
 
+    -- 在当前线程处理
     if LOCAL_TYPE == wtype then
         local cb = callback[id]
         if not cb then
@@ -146,7 +147,7 @@ function NetMsg.dispatch(socket, id, buffer, size)
     local addr = Router.find_player_addr(pid, wtype)
     local worker = WorkerHash[addr]
     if not worker then
-        eprint("player worker not found", socket.account, pid, addr)
+        eprint("player message dispatch worker not found", socket.account, pid, addr)
         return
     end
 
@@ -226,6 +227,7 @@ end
 -- @param cmd table 协议定义，包含i(协议id)和s(schema)
 -- @param pkt table 协议数据
 function NetMsg.send_pid(pid, cmd, pkt)
+    local cmd_id = cmd.i
     local buffer, size = pbc_encode(cmd.s, pkt)
 
     -- 在网关直接发送
@@ -253,7 +255,7 @@ function NetMsg.send_pid(pid, cmd, pkt)
     local m, mbuffer = construct_message(
         g_mthread, LOCAL_ADDR, gaddr, CLT_MSG_C, size + 10)
     buffer_write_int(mbuffer, 8, pid)       -- 玩家id
-    buffer_write_int(mbuffer, 2, cmd.i, 8)  -- 协议id
+    buffer_write_int(mbuffer, 2, cmd_id, 8)  -- 协议id
     buffer_write_buffer(mbuffer, buffer, size, 10) -- pb数据
 
     return worker:push_message(m)
@@ -270,6 +272,7 @@ local function dispatch_to_clt(src, udata, size)
         return
     end
 
+    -- dprint("send clt msg", pid, id, size - 10)
     return socket:send_pkt(id, pb, size - 10)
 end
 

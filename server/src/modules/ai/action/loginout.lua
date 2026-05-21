@@ -151,6 +151,7 @@ local function s_init_base(entity, pkt)
     -- 切换进程时，这里的数据会重新下发
 
     entity.handle = pkt.handle
+    entity.name = pkt.pp_str[1]
 end
 
 -- 被顶号

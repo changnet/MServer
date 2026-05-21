@@ -1,27 +1,24 @@
 -- 机器人管理
 BotMgr = {}
 
-require("protocol.protocol")
-local Bot = require "bot.bot"
-
 
 -- 机器人不考虑热更，随便写
 local bots = {}
-
-local sc_cmd = {}
+local all_cmd = {}
 
 -- 注册指令处理
 function BotMgr.reg(cmd, func)
     cmd.func = func
-    sc_cmd[cmd.i] = cmd
+    all_cmd[cmd.i] = cmd
 end
 
-function BotMgr.on_message(socket, msg_id, buffer, size)
-    local c = sc_cmd[msg_id]
+require("protocol.protocol")
+local Bot = require "bot.bot"
 
+function BotMgr.on_message(socket, msg_id, buffer, size)
+    local c = all_cmd[msg_id]
     if not c then
-        -- android_cmd:dump_pkt( ... )
-        -- eprint("android on cmd no handler found:%d", cmd)
+        eprint("bot message not found", msg_id)
         return
     end
 
@@ -32,7 +29,12 @@ function BotMgr.on_message(socket, msg_id, buffer, size)
         printf("%s(%s) message %d: %s",
             entity.pid, entity.name, msg_id, table.dump(pkt))
     end
-    c.func(socket.entity, pkt)
+
+    -- 未注册该消息回调
+    local func = c.func
+    if not func then return end
+
+    func(socket.entity, pkt)
 end
 
 -- 逻辑循环
@@ -63,3 +65,11 @@ function BotMgr.start()
         warn("unknow bot mode:", r)
     end
 end
+
+local function init()
+    for _, c in pairs(M) do
+        all_cmd[c.i] = c
+    end
+end
+
+init()

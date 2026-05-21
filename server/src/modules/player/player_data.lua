@@ -13,7 +13,6 @@ PlayerData = {}
 __player_memory  = __player_memory or {} -- 玩家内存数据，不存库
 __player_storage  = __player_storage or {} -- 玩家存储数据，定时自动存库，按玩家区分
 
-local assert = assert
 local wname = Worker.type_name(LOCAL_TYPE)
 
 local vals = {}
@@ -36,7 +35,7 @@ function PlayerData.load(player)
     if row_data then
         s = row_data
     else
-        assert(Player.is_new(player))
+        -- assert(Player.is_new(player))
         s = {}
     end
 

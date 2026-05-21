@@ -60,6 +60,7 @@ local function save_to_db(cache, now)
     -- TODO 检测错误码，如果是数据库断开则需要重新插入save_list
     -- 其他的错误则报错，只能手动处理
 
+    print("cache save", cache.tbl_name, table.concat(cache.keys, "_"))
     return e
 end
 
@@ -152,6 +153,7 @@ function DataCache.update(tbl_name, keys, value)
     -- 因此更新缓存时，所有数据都要发过来（包括一些不需要更新的字段）
     local tbl_cache = DataCache.set(tbl_name, keys, value)
 
+    print("cache update", tbl_name, table.concat(keys, "_"))
     if tbl_cache.modify_time then return end
 
     local idx = this.save_seed + 1
@@ -252,8 +254,6 @@ end
 
 -- 退出时把所有缓存存库
 local function on_worker_stop()
-    local now = Engine.time()
-
     local beg_idx = this.save_index
     local end_idx = this.save_seed
 
@@ -263,15 +263,20 @@ local function on_worker_stop()
     else
         num = MAX_CACHE - beg_idx + end_idx
     end
-    print("shutdown save cache", num)
+
+    print("cache shutdown save", num)
     if num == 0 then return end
 
+    local count = 0
+    local now = math.maxinteger
     if end_idx >= beg_idx then
-        save_cache_list(now, 0, num, beg_idx, end_idx)
+        count = count + save_cache_list(now, 0, num, beg_idx, end_idx)
     else
-        save_cache_list(now, 0, num, beg_idx, MAX_CACHE)
-        save_cache_list(now, 0, num, 0, end_idx)
+        count = count + save_cache_list(now, 0, num, beg_idx, MAX_CACHE)
+        count = count + save_cache_list(now, 0, num, 0, end_idx)
     end
+
+    assert(count == num)
 end
 
 Event.reg(EV.SEC_TIMER, do_cache_timer)

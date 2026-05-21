@@ -226,8 +226,8 @@ function Player.login(player)
 
     -- 登录完成后，才通知前端登录成功，前端才可以请求协议。避免登录过程中用了协程导致
     -- 部分模块未初始化完成就收协议了
-
     -- 未登录成功，uninit_player中的玩家不接受前端协议
+    Send[player.gaddr].Login.enter_game_completed(pid, player.session_id)
 
     return true
 end
