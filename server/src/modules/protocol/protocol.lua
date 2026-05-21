@@ -66,16 +66,12 @@ M = {
     },
 
     -- 11 一些零散的功能，不必定义独立的协议，可以都放这里
-    MiscWelcome = {
-        s = "misc.SWelcome", i = 11
+    Welcome = {
+        s = "misc.SWelcome", c = "comm.Empty", i = 11
     },
     -- 12 提示消息
     AlertMsg = {
         s = "misc.AlertMSG", i = 12
-    },
-    -- 13 创角欢迎邮件
-    WelcomeGet = {
-        c = "misc.CWelcomeGet", i = 13
     },
 
     -- 14 背包数据

@@ -48,7 +48,6 @@ function Worker.get_key_addr_list(key)
     for addr, data in pairs(WorkerData) do
         if Worker.READY == data.status then
             local wtype = Engine.unmake_address(addr)
-            print("ddddddddddddddddddddddd", addr, wtype)
             if 1 == WORKER[wtype][key] then
                 list[addr] = wtype
             end

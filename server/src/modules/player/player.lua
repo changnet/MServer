@@ -37,6 +37,8 @@ end
 --- @param value 模块存储值
 function Player.set_storage(player, key, value)
     __player_storage[player.pid][key] = value
+
+    return value
 end
 
 -- 获取玩家模块存储

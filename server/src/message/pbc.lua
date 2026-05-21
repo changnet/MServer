@@ -67,6 +67,5 @@ function Pbc.decode(schema, buffer, size)
 end
 
 function Pbc.encode(schema, pkt)
-    -- 这个应该只是给bot用的，直接返回buffer和size
     return pbc_encode(g_pbc, schema, pkt)
 end

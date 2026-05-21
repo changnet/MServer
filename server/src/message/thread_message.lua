@@ -6,7 +6,8 @@ ThreadMessage = {
     SOCKET  = 3, -- 网络socket数据
     RPC_REQ = 4, -- rpc请求
     RPC_RES = 5, -- rpc返回
-    CLT_MSG = 6, -- 客户端消息
+    CLT_MSG_S = 6, -- 客户端发到服务端消息
+    CLT_MSG_C = 7, -- 服务端发到客户端消息
 }
 
 local LOCAL_ADDR = LOCAL_ADDR

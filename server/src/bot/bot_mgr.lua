@@ -27,6 +27,11 @@ function BotMgr.on_message(socket, msg_id, buffer, size)
 
     local pkt = Pbc.decode(c.s, buffer, size)
 
+    local entity = socket.entity
+    if entity.msg_dbg then
+        printf("%s(%s) message %d: %s",
+            entity.pid, entity.name, msg_id, table.dump(pkt))
+    end
     c.func(socket.entity, pkt)
 end
 
@@ -53,6 +58,7 @@ function BotMgr.start()
         -- 单元调试使用ai策略1
         local bot = Bot(1 << 32 | LOCAL_ADDR, 1)
         table.insert(bots, bot)
+        bot.msg_dbg = 1
     else
         warn("unknow bot mode:", r)
     end

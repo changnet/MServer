@@ -1,7 +1,7 @@
 //聊天模块 协议定义
 
 syntax = "proto3";
-package bag;
+package item;
 
 // 道具属性
 message Attr {

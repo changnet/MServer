@@ -9,11 +9,6 @@ message SWelcome
     int32 status = 1; // 奖励状态 0未领取，1已领取
 }
 
-/* 领取角色欢迎奖励 */
-message CWelcomeGet
-{
-}
-
 // 提示语
 message AlertMSG
 {

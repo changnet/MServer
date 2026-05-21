@@ -9,7 +9,8 @@ local buffer_write_buffer = Buffer.write_buffer
 
 local callback = {} -- 消息回调
 local LOCAL_TYPE = LOCAL_TYPE -- 当前worker的类型
-local CLT_MSG = ThreadMessage.CLT_MSG
+local CLT_MSG_S = ThreadMessage.CLT_MSG_S
+local CLT_MSG_C = ThreadMessage.CLT_MSG_C
 local DEF_DISPATCH_WTYPE = W.PLAYER -- 默认为玩家所在worker，这个worker用的协议比较多
 local forward_wtype -- [id] = wtype
 
@@ -20,6 +21,7 @@ local pbc_decode = Pbc.decode
 local pbc_encode = Pbc.encode
 
 local IS_PLAYER = WORKER[LOCAL_TYPE].pobj
+local IS_GATEWAY = LOCAL_TYPE == W.GATEWAY
 
 -- 注册网络消息回调
 -- @param id 协议id
@@ -157,7 +159,7 @@ function NetMsg.dispatch(socket, id, buffer, size)
     ]]
 
     local m, mbuffer = construct_message(
-        g_mthread, LOCAL_ADDR, addr, CLT_MSG, size + 10)
+        g_mthread, LOCAL_ADDR, addr, CLT_MSG_S, size + 10)
     buffer_write_int(mbuffer, 8, pid) -- 玩家id
     buffer_write_int(mbuffer, 2, id, 8) -- 协议id
     buffer_write_buffer(mbuffer, buffer, size, 10) -- protobuf数据
@@ -179,7 +181,38 @@ local function dispatch_clt_message(src, udata, size)
 end
 
 -- 以player对象发送消息到客户端
+-- @param player table 玩家对象
+-- @param cmd table 协议定义，包含i(协议id)和s(schema)
+-- @param pkt table 协议数据
 function NetMsg.send(player, cmd, pkt)
+    local cmd_id = cmd.i
+    local pid = player.pid
+    local buffer, size = pbc_encode(cmd.s, pkt)
+
+    -- 在网关直接发送，不需要走消息队列（网关现在没有player对象）
+    -- if IS_GATEWAY then
+    --     local socket = CltMgr.get_by_pid(pid)
+    --     if not socket then
+    --         eprint("NetMsg.send no socket", pid)
+    --         return
+    --     end
+    --     return socket:send_pkt(cmd.i, buffer, size)
+    -- end
+
+    local gaddr = player.gaddr
+    local worker = WorkerHash[gaddr]
+    if not worker then
+        eprint("NetMsg.send no gateway", pid, gaddr)
+        return
+    end
+
+    local m, mbuffer = construct_message(
+        g_mthread, LOCAL_ADDR, gaddr, CLT_MSG_C, size + 10)
+    buffer_write_int(mbuffer, 8, pid)       -- 玩家id
+    buffer_write_int(mbuffer, 2, cmd_id, 8)  -- 协议id
+    buffer_write_buffer(mbuffer, buffer, size, 10) -- pb数据
+
+    return worker:push_message(m)
 end
 
 -- 以socket对象发送消息到客户端，仅在网关可用
@@ -189,9 +222,60 @@ function NetMsg.send_socket(socket, cmd, pkt)
 end
 
 -- 以pid发送消息到客户端
+-- @param pid number 玩家id
+-- @param cmd table 协议定义，包含i(协议id)和s(schema)
+-- @param pkt table 协议数据
 function NetMsg.send_pid(pid, cmd, pkt)
+    local buffer, size = pbc_encode(cmd.s, pkt)
+
+    -- 在网关直接发送
+    if IS_GATEWAY then
+        local socket = CltMgr.get_by_pid(pid)
+        if not socket then
+            eprint("NetMsg.send_pid no socket", pid)
+            return
+        end
+        return socket:send_pkt(cmd.i, buffer, size)
+    end
+
+    local gaddr = Router.find_player_addr(pid, W.GATEWAY)
+    if not gaddr then
+        eprint("NetMsg.send_pid no gateway addr", pid)
+        return
+    end
+
+    local worker = WorkerHash[gaddr]
+    if not worker then
+        eprint("NetMsg.send_pid no gateway", pid, gaddr)
+        return
+    end
+
+    local m, mbuffer = construct_message(
+        g_mthread, LOCAL_ADDR, gaddr, CLT_MSG_C, size + 10)
+    buffer_write_int(mbuffer, 8, pid)       -- 玩家id
+    buffer_write_int(mbuffer, 2, cmd.i, 8)  -- 协议id
+    buffer_write_buffer(mbuffer, buffer, size, 10) -- pb数据
+
+    return worker:push_message(m)
 end
 
-ThreadMessage.reg(CLT_MSG, dispatch_clt_message)
+-- 网关收到其他worker发来的需要转发给客户端的消息
+local function dispatch_to_clt(src, udata, size)
+    local pid = buffer_read_int(udata, 8)
+    local id, pb = buffer_read_int(udata, 2, 8)
+
+    local socket = CltMgr.get_by_pid(pid)
+    if not socket then
+        eprint("dispatch_to_clt no socket", pid)
+        return
+    end
+
+    return socket:send_pkt(id, pb, size - 10)
+end
+
+ThreadMessage.reg(CLT_MSG_S, dispatch_clt_message)
+if IS_GATEWAY then
+    ThreadMessage.reg(CLT_MSG_C, dispatch_to_clt)
+end
 
 return NetMsg

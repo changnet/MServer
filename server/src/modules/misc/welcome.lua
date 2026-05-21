@@ -6,12 +6,17 @@
 local WelcomConf = require "config.player.welcome_conf"
 
 local function get_storage(player)
-    return Player.get_storage(player, "welcome")
+    local stg = Player.get_storage(player, "welcome")
+    if not stg then
+        stg = Player.set_storage(player, "welcome", {})
+    end
+
+    return stg
 end
 
 -- 发送数据
 local function send_info(player, pkt)
-    return NetMsg.send(player, M.WelcomeGet, pkt)
+    return NetMsg.send(player, M.Welcome, pkt)
 end
 
 -- 登录事件
@@ -35,4 +40,4 @@ local function c_get_award(player, pkt)
 end
 
 Event.reg(EV.LOGIN, on_login)
-NetMsg.reg(M.WelcomeGet, c_get_award)
+NetMsg.reg(M.Welcome, c_get_award)
