@@ -87,9 +87,12 @@ local function mongodb_save(tbl_name, keys, data)
 
     local query = keys_to_query(keys)
     -- upsert：存在则更新，不存在则插入
-    local e = Call[addr].MongoDB.update(tbl_name,
+    local e, msg = Call[addr].MongoDB.update(tbl_name,
         MongoDB.UPDATE_UPSERT, query, {["$set"] = data})
-    return e
+    if 0 ~= e then
+        eprint("mongodb save error", e, msg)
+    end
+    return e, msg
 end
 
 -- mysql operations ---------------------------------------------------------

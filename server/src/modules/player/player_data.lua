@@ -17,7 +17,7 @@ local wname = Worker.type_name(LOCAL_TYPE)
 
 local vals = {}
 local opts = {ikey = "data"}
-local keys = {"_id", 0, "name", wname}
+local keys = {"pid", 0, "name", wname}
 
 -- 加载玩家通用数据
 function PlayerData.load(player)
@@ -35,7 +35,7 @@ function PlayerData.load(player)
     if row_data then
         s = row_data
     else
-        -- assert(Player.is_new(player))
+        assert(Player.is_new(player))
         s = {}
     end
 
@@ -50,7 +50,7 @@ function PlayerData.save(player)
     local pid = player.pid
     keys[2] = pid
 
-    vals._id = pid
+    vals.pid = pid
     vals.name = wname
     vals.data = __player_storage[pid]
 

@@ -123,13 +123,13 @@ local function start_listen(retry)
     this.listen_socket = socket
     printf("listen client at %s:%d", gateway.host, gateway.port)
 
-    Shutdown.reg({
-        name = "clt_mgr",
-        func = shutdown,
-    })
     return true
 end
 
 Startup.reg(start_listen, 0xFFFFFFFF)
+Shutdown.reg({
+    name = "clt_mgr",
+    func = shutdown,
+})
 
 return CltMgr

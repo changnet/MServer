@@ -265,6 +265,7 @@ function Startup.process_init(loader)
     Engine.add_thread_ctx(LOCAL_ADDR, g_mthread:toludata())
 
     require "data.global_data"
+    require "engine.shutdown"
     require "worker.worker"
     require "engine.preloader"
 
@@ -333,10 +334,10 @@ function Startup.worker_init(addr, loader)
     LOCAL_TYPE = wtype
 
     require "data.global_data"
+    require "engine.shutdown"
     require "worker.worker"
+
     local name = Worker.type_name(wtype)
-
-
     LOCAL_NAME = string.format("%s%d", name, index)
 
     MAIN_ADDR = g_sharedata:get("MAIN_ADDR")

@@ -207,10 +207,6 @@ function Worker.start_later(settings)
     this.start_list = sort_start_sequence(settings)
     Startup.reg(function(retry)
         if not retry then
-            Shutdown.reg({
-                name = "worker",
-                func = shutdown,
-            }, 64)
             this.start_index = 0
             start_next_sequence_worker()
         end
@@ -483,6 +479,13 @@ local function init()
         local wtype = w.type
         local wname = w.name
         WorkerNameType[wname] = wtype
+    end
+
+    if LOCAL_ADDR == MAIN_ADDR then
+        Shutdown.reg({
+            name = "worker",
+            func = shutdown,
+        }, 64)
     end
 
     Rtti.name_func("Worker.do_worker_timer", do_worker_timer)

@@ -58,9 +58,12 @@ local function save_to_db(cache, now)
 
     local e = DataMgr.save(cache.tbl_name, cache.keys, cache.data)
     -- TODO 检测错误码，如果是数据库断开则需要重新插入save_list
-    -- 其他的错误则报错，只能手动处理
+    -- 其他的错误则报错，只能手动处理。如有必要可出错后把内容存文件
+    if 0 ~= e then
+        eprint("cache save error", e, cache.tbl_name, table.concat(cache.keys, "_"))
+    end
 
-    print("cache save", cache.tbl_name, table.concat(cache.keys, "_"))
+    dprint("cache save", cache.tbl_name, table.concat(cache.keys, "_"))
     return e
 end
 
