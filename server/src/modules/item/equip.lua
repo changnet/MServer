@@ -1,7 +1,7 @@
 local ItemStore = require("item.item_store")
 
 -- 通用装备类
-local Equip = oo.class("Bag", ItemStore)
+local Equip = oo.class("Equip", ItemStore)
 
 -- 计算属性
 function Equip:calc_attr(player)

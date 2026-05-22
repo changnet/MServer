@@ -37,101 +37,147 @@ template <typename... Args> void bson_destory_list(bson_t *b, Args... args)
 }
 
 /**
- * check a lua table is object or array
- * @return object = 0
- *         array = 1, max_index is max array index
+ * 检查lua table应编码为bson object还是array
+ *
+ * opt参数说明：
+ *  -1  自动判断，key必须为1..n连续才编码为array，否则为object
+ *   0  强制编码为object
+ *   1  强制编码为array（仍需遍历整个table以确定顺序）
+ *  >1  阈值自动判断，例如 8.6 表示：
+ *       max_key <= 8 时无条件编码为array
+ *       max_key > 8 时需要 key_count/max_key > 0.6 才编码为array
+ *
+ * @param L lua虚拟机
+ * @param index table在栈中的索引
+ * @param max_index [out] 输出最大数组索引
+ * @param opt 编码选项
+ * @return 0=object, 1=array
  */
-static int32_t check_type(lua_State *L, int32_t index, lua_Integer *max_index,
-                          double opt)
+/**
+ * 处理 opt == -1 时的严格数组判断：
+ * key 必须为 1..n 连续整数，否则返回 object
+ */
+static int32_t check_type_strict_array(lua_State *L, int32_t index,
+                                       lua_Integer *max_index)
 {
-    lua_Integer key     = 0;
-    int32_t key_count   = 0;
-    double index_opt    = 0.;
-    double percent_opt  = 0.;
-    lua_Integer max_key = 0;
-#if LUA_VERSION_NUM < 503
-    double num_key = 0.;
-#endif
+    lua_Integer seq_len = (lua_Integer)lua_rawlen(L, index);
+    // 空 table 默认作为 object 编码
+    if (seq_len == 0) return 0;
 
-    if (luaL_getmetafield(L, index, ARRAY_OPT))
-    {
-        if (LUA_TNUMBER == lua_type(L, -1)) opt = lua_tonumber(L, -1);
-
-        lua_pop(L, 1); /* pop metafield value */
-    }
-
-    // 0表示强制编码为object
-    // 1表示强制编码为array,但为了保证顺序，仍需要遍历整个table
-    // 其他则是自动判断：8.6则表示max_key <= 8且 key数量/max_key > 0.6才编码为array
-    if (0. == opt) return 0;
-
-    if (opt > 1.) percent_opt = modf(opt, &index_opt);
-
-    // try to find out the max key
     lua_pushnil(L);
     while (lua_next(L, index) != 0)
     {
-        /* stack status:table, key, value */
-#if LUA_VERSION_NUM >= 503 // lua 5.3 has int64
+        // 发现非整数 key，立即判断为 object
         if (!lua_isinteger(L, -2))
         {
-            goto NO_MAX_KEY;
+            lua_pop(L, 2);
+            return 0;
         }
-        key = lua_tointeger(L, -2);
-        if (key < 1)
-        {
-            goto NO_MAX_KEY;
-        }
-#else
-        if (lua_type(L, -2) != LUA_TNUMBER)
-        {
-            goto NO_MAX_KEY;
-        }
-        num_key = lua_tonumber(L, -2);
-        key     = floor(num_key);
-        /* array index must be interger and >= 1 */
-        if (key < 1 || key != num_key)
-        {
-            goto NO_MAX_KEY;
-        }
-#endif
-        key_count++;
-        if (key > max_key) max_key = key;
 
+        lua_Integer key = lua_tointeger(L, -2);
+        // 只要发现一个 key 小于 1，或者大于序列总长度，说明不仅不是连续1..n，甚至超出了界限
+        if (key < 1 || key > seq_len)
+        {
+            lua_pop(L, 2);
+            return 0;
+        }
         lua_pop(L, 1);
     }
 
-    if (opt != 1.0)
-    {
-        // empty table encode as object
-        if (0 == max_key) return 0;
+    *max_index = seq_len;
+    return 1;
+}
 
-        // max_key larger than opt integer part and then item count fail
-        // to fill the percent of opt fractional part, encode as object
-        if (opt > 0. && max_key > (lua_Integer)index_opt
-            && ((double)key_count) / (double)max_key < percent_opt)
+static int32_t check_type(lua_State *L, int32_t index, lua_Integer *max_index,
+                          double opt)
+{
+    // 优先从metatable获取__opt覆盖外部传入的opt
+    if (luaL_getmetafield(L, index, ARRAY_OPT))
+    {
+        if (LUA_TNUMBER == lua_type(L, -1)) opt = lua_tonumber(L, -1);
+        lua_pop(L, 1);
+    }
+
+    // opt == 0: 强制编码为object
+    if (0. == opt) return 0;
+
+    // opt == -1: 自动判断，独立分支提高效率
+    if (opt < 0.) return check_type_strict_array(L, index, max_index);
+
+    lua_Integer max_key = 0;
+    int32_t key_count   = 0;
+
+    lua_pushnil(L);
+    while (lua_next(L, index) != 0)
+    {
+        // key不是整数，立即退出循环
+        if (!lua_isinteger(L, -2))
         {
-            *max_index = 1;
+            lua_pop(L, 2);
+            if (1. == opt)
+            {
+                *max_index = -1;
+                return 1;
+            }
             return 0;
         }
+
+        lua_Integer key = lua_tointeger(L, -2);
+
+        // key < 1，不可能是合法数组key，立即退出
+        if (key < 1)
+        {
+            lua_pop(L, 2);
+            if (1. == opt)
+            {
+                *max_index = -1;
+                return 1;
+            }
+            return 0;
+        }
+
+        key_count++;
+        if (key > max_key) max_key = key;
+        lua_pop(L, 1); // pop value, keep key
     }
 
-    *max_index = max_key;
-    return 1;
-
-NO_MAX_KEY:
-    lua_pop(L, 2);
-    if (1. == opt)
+    // 空table编码为object（opt==1时返回array）
+    if (0 == max_key)
     {
-        // force encode as array, no max key found
-        *max_index = -1;
-        return 1;
-    }
-    else
-    {
-        // none integer key found, encode as object
+        if (1. == opt)
+        {
+            *max_index = -1;
+            return 1;
+        }
         return 0;
     }
+
+    // opt == 1: 强制编码为array
+    if (1. == opt)
+    {
+        *max_index = max_key;
+        return 1;
+    }
+
+    // opt > 1: 阈值自动判断，如 8.6
+    double index_opt   = 0.;
+    double percent_opt = modf(opt, &index_opt);
+
+    // max_key <= 阈值整数部分，无条件编码为array
+    if (max_key <= (lua_Integer)index_opt)
+    {
+        *max_index = max_key;
+        return 1;
+    }
+
+    // max_key > 阈值整数部分，检查密度是否达标
+    if (((double)key_count) / (double)max_key > percent_opt)
+    {
+        *max_index = max_key;
+        return 1;
+    }
+
+    return 0; // 密度不够，编码为object
 }
 
 /**
@@ -637,8 +683,8 @@ static int decode_value(lua_State *L, bson_iter_t *iter, bson_error_t *e,
 /// @brief 解析bson对象到lua table
 /// @param type 指定bson的类型，如 BSON_TYPE_ARRAY
 /// @param opt 是否启用数组自动转换,-1表示不启用
-static int decode(lua_State *L, const bson_t *b, bson_error_t *e, bson_type_t type,
-                  double opt)
+static int decode(lua_State *L, const bson_t *b, bson_error_t *e,
+                  bson_type_t type, double opt)
 {
     bson_iter_t iter;
     if (!bson_iter_init(&iter, b))

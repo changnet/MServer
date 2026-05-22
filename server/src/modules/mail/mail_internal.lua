@@ -54,7 +54,7 @@ function MailInternal.log(pid, op, mail_obj)
     local att_str = ""
     if mail_obj.atts then
         for _, att in ipairs(mail_obj.atts) do
-            att_str = att_str .. string.format("%d:%d|", att.type, att.val)
+            att_str = att_str .. string.format("%d:%d|", att.id, att.num)
         end
     end
 

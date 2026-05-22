@@ -56,7 +56,6 @@ local function on_loading(player, is_new)
             return false
         end
 
-        print("loadddddddddddddddddddddddddddddddddddddd", obj.load, obj.save, obj.add_to_obj, obj.add_to_exist)
         bags[id] = obj
     end
 

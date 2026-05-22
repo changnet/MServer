@@ -71,7 +71,7 @@ local function on_load_mail(player)
     local list
     local row_list = row.list
     if row_list then
-        list = table.to_map(row_list)
+        list = table.to_map(row_list, "id")
     else
         list = {} -- 新号
     end
