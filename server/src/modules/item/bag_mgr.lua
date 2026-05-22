@@ -41,12 +41,12 @@ local mods = {
 
 -- 根据背包id获取背包对象
 function BagMgr.get_store(player, id)
-    return player.items[id]
+    return player.bags[id]
 end
 
 -- 加载道具数据
 local function on_loading(player, is_new)
-    local items = {}
+    local bags = {}
     local pid = player.pid
     for _, mod in ipairs(mods) do
         local id = mod.id
@@ -56,23 +56,24 @@ local function on_loading(player, is_new)
             return false
         end
 
-        items[id] = obj
+        print("loadddddddddddddddddddddddddddddddddddddd", obj.load, obj.save, obj.add_to_obj, obj.add_to_exist)
+        bags[id] = obj
     end
 
-    player.items = items
+    player.bags = bags
     return true
 end
 
 -- 登录下发数据
 local function on_login(player)
-    for _, obj in pairs(player.items) do
+    for _, obj in pairs(player.bags) do
         obj:send_info(player)
     end
 end
 
 -- 定时存数据
 local function on_save(player)
-    for id, obj in pairs(player.items) do
+    for id, obj in pairs(player.bags) do
         if not obj:save(player) then
             perror(player, "save item fail", id)
         end

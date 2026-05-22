@@ -8,6 +8,7 @@
 GM.reg("reload", function()
     __unrequire()
     Startup.load(true)
+    return true
     -- -1在gm那边会广播到所有线程执行
 end, -1)
 
@@ -20,6 +21,7 @@ GM.reg("debug", function(pid, p1)
         Log.enable_debug(false)
         print("disable debug log")
     end
+    return true
 end, -1)
 
 -- ping一下服务器间的延迟，看卡不卡
@@ -31,18 +33,25 @@ end, W.GAME | W.MAIN)
 GM.reg("test", function(player, cmd, ...)
     local T = require "test.integrate_test"
     T.run(player, cmd, ...)
+    return true
 end)
 
 -- 添加任意资源
 GM.reg("res", function(player, id, num)
     id = tonumber(id)
     num = tonumber(num)
-    if not id or not num then
+    if not id or not num or 0 == num then
         eprint("gm invalid param", id, num)
         return
     end
 
-    Res.add(player, {{id = id, num = num}}, LOG.GM)
+    if num > 0 then
+        Res.add(player, {{id = id, num = num}}, LOG.GM)
+    else
+        Res.dec(player, {{id = id, num = num}}, LOG.GM)
+    end
+
+    return true
 end)
 
 return GM

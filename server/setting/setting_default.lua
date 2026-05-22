@@ -25,7 +25,7 @@ return
     debug = 1, -- 是否启用调试日志
     daemon = false, -- 是否以守护进程方式运行
     source = "../", -- 默认在var目录的上一级，即server目录
-    gm = true, -- 是否启用gm
+    gm = 10, -- 全服所有玩家启用gm等级
     cli = true, -- 是否启用命令行输入
     lang = "zh", -- 简体中文
     server = 1, -- 当前服务器id

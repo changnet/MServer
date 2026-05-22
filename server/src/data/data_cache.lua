@@ -61,6 +61,7 @@ local function save_to_db(cache, now)
     -- 其他的错误则报错，只能手动处理。如有必要可出错后把内容存文件
     if 0 ~= e then
         eprint("cache save error", e, cache.tbl_name, table.concat(cache.keys, "_"))
+        vd(cache.data)
     end
 
     dprint("cache save", cache.tbl_name, table.concat(cache.keys, "_"))

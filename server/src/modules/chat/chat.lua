@@ -10,6 +10,14 @@ local Chat = {
 
 local K = "chat"
 
+local function get_storage(player)
+    local var = Player.get_storage(player, K)
+    if not var then
+        var = Player.set_storage(player, K, {})
+    end
+
+    return var
+end
 
 local function make_msg(player, pkt)
     pkt.pid = player.pid
@@ -39,13 +47,13 @@ end
 
 -- 处理聊天
 local function c_chat_msg(player, pkt)
-    local var = player:storage(K)
+    local var = get_storage(player)
     if var.no_chat then -- 被禁言
         return print("do chat while no_chat", player.pid)
     end
 
     -- 聊天中带gm
-    if GM.chat_gm(player, pkt.context) then return end
+    if GM.run_player_gm(player, pkt.context) then return end
 
     local channel = pkt.channel
     if Chat.WORLD == channel then

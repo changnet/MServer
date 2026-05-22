@@ -18,12 +18,12 @@ local is_query = false -- 是否已向其他节点查询
 
 -- 注册gm指令
 -- @param wtype 执行该gm的worker类型，默认为player，-1表示广播指定主线程执行：W.GAME | W.MAIN
--- @param level 执行此gm需要的权限等级，默认为256，数值越大权限越高
+-- @param level 执行此gm需要的权限等级，默认为10，数值越大权限越高
 function GM.reg(cmd, func, wtype, level)
     gm_data[cmd] = {
         func = func,
         wtype = wtype or W.PLAYER,
-        level = level or 256,
+        level = level or 10,
     }
 end
 
@@ -97,7 +97,7 @@ function GM.run_player_gm(player, str)
     -- string.byte("@") == 64
     if string.byte(str, 1) ~= 64 then return false end
 
-    local gm_lv = player.gm_level or 0
+    local gm_lv = player.gm_level or g_setting.gm or 0
     if gm_lv <= 0 then return false end
 
     local data, msg = find_gm(str)
@@ -107,14 +107,14 @@ function GM.run_player_gm(player, str)
     end
 
     if gm_lv < data.level then
-        print("GM error", "no enough gm level")
+        print("GM error", "no enough gm level", data.level)
         return
     end
 
     local args = split_str(str)
     local ok, msg1 = GM.dispatch("player", player.pid, data, args)
     if not ok then
-        eprint("GM error", msg1)
+        eprint("GM dispatch fail", table.concat(args, "_"), msg1)
         -- 仍然返回true表示已执行gm
     end
 
@@ -149,20 +149,22 @@ function GM.run(source, pid, args)
     -- 这个player是给玩家gm用的，如果是后台gm需要针对某个玩家操作，一般pid在args里
     local player
     if W.PLAYER == LOCAL_TYPE and pid > 0 then
-        player = PlayerMgr.get(pid)
+        player = PlayerMgr.get_player(pid)
         if not player then
             eprint("gm no such player", pid)
             return
         end
     end
 
-    data.func(player or pid, table.unpack(args, 2))
+    local ok = data.func(player or pid, table.unpack(args, 2))
+    if not ok then
+        eprint("GM return fail", table.concat(args, "_"))
+    end
 end
 
 -- 派发gm到指定节点执行
 -- @param pid 玩家id，后台gm或者控制台可以发0
 function GM.dispatch(source, pid, data, args)
-    assert(LOCAL_ADDR == MASTER_ADDR)
     -- 查询gm所在节点
     -- 如果是-1，则广播到所有节点执行
     -- 如果是某个类型的节点
@@ -174,24 +176,33 @@ function GM.dispatch(source, pid, data, args)
         for addr in pairs(WorkerData) do
             Send[addr].GM.run(source, pid, args)
         end
-        return
-    end
-
-    if 0 ~= pid then
-        local addr = Worker.get_player_route(pid, wtype)
-        if addr then
-            Send[addr].GM.run(source, pid, args)
-            return
-        end
+        return true
     end
 
     local is_main = 0 ~= (wtype & W.MAIN)
     wtype = wtype & ~W.MAIN
+    if is_main then
+        Send[MAIN_ADDR].GM.run(source, pid, args)
+        return true
+    end
+
+    if 0 ~= pid then
+        local addr = Router.find_player_addr(pid, wtype)
+        if addr then
+            Send[addr].GM.run(source, pid, args)
+            return true
+        end
+    end
+    if LOCAL_TYPE == wtype then
+        GM.run(source, pid, args)
+        return true
+    end
 
     for addr in pairs(WorkerData) do
         local wt, _, main = Engine.unmake_address(addr)
         if wt == wtype and (is_main == main) then
             Send[addr].GM.run(source, pid, args)
+            return true
         end
     end
 

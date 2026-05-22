@@ -128,7 +128,7 @@ end
 -- @param pid number 角色id
 -- @param paddr number 玩家所在的player线程地址
 -- @param gaddr number 玩家所在的gateway线程地址
-function Router.update_player_addr(pid, paddr, gaddr)
+function Router.update_player_comm_addr(pid, paddr, gaddr)
     print("update player address", pid, paddr, gaddr)
     local pid_map = this.pid_map
     if paddr then
@@ -137,6 +137,19 @@ function Router.update_player_addr(pid, paddr, gaddr)
     else
         table.unset_value(pid_map, PLAYER, pid)
         table.unset_value(pid_map, GATEWAY, pid)
+    end
+end
+
+-- 更新玩家所在worker地址
+-- @param pid number 角色id
+-- @param wtype number 线程类型
+-- @param addr number 玩家所在的线程地址
+function Router.update_player_addr(pid, wtype, addr)
+    local pid_map = this.pid_map
+    if addr then
+        table.set_value(pid_map, addr, wtype, pid)
+    else
+        table.unset_value(pid_map, wtype, pid)
     end
 end
 

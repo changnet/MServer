@@ -42,7 +42,8 @@ local function res_num_factory(mtype)
 end
 
 local function log_money(player, mtype, num, op, log_str)
-    Log.info("Money log, pid = %d, mtype = %d, num = %d, op = %d, log_str = %s",
+    -- TODO 要写入数据库
+    printf("Money log, pid = %d, mtype = %d, num = %d, op = %d, log_str = %s",
         player.pid, mtype, num, op, log_str)
 end
 
@@ -65,7 +66,9 @@ function Money.add(player, res, op, log_str, ext)
 
     update_pkt.type = mtype
     update_pkt.num = new_num
-    return NetMsg.send(player, M.MoneyUpdate, update_pkt)
+    NetMsg.send(player, M.MoneyUpdate, update_pkt)
+
+    return num
 end
 
 function Money.dec(player, res, op, log_str, ext)

@@ -32,10 +32,10 @@ function GameTest.gm(ai)
     -- 只运行一次的gm
     if not ai.once_gm then
         ai.once_gm = 1
-        entity:send_pkt(M.ChatMsg, {channel = 1, context = "@ghf"})
+        -- entity:send_pkt(M.ChatMsg, {channel = 1, context = "@reload"})
         entity:send_pkt(M.ChatMsg, {channel = 1, context = "@res 1 99999"})
         entity:send_pkt(M.ChatMsg, {channel = 1, context = "@res 2 99999"})
-        entity:send_pkt(M.ChatMsg, {channel = 1, context = "@res 3 99999"})
+
         entity:send_pkt(M.ChatMsg, {channel = 1, context = "@res 10000 1"})
         entity:send_pkt(M.ChatMsg, {channel = 1, context = "@res 10001 1"})
         entity:send_pkt(M.ChatMsg, {channel = 1, context = "@res 20001 1"})

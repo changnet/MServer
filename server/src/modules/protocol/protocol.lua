@@ -61,7 +61,7 @@ M = {
     },
     -- 10
     ChatMsg = {
-        s = "chat.SChatMsg", c = "chat.CChatMsg", i = 10
+        s = "chat.SChatMsg", c = "chat.CChatMsg", i = 10, w = "game"
 
     },
 

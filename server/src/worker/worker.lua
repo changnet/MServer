@@ -325,7 +325,7 @@ function Worker.stopping(addr)
 end
 
 -- 标记某个worker状态，并同步到其他worker
--- @param src_addr 来源地址。A连接B进程，B包含鑫个节点，则这些节点的src_addr都是B进程地址
+-- @param src_addr 来源地址。A连接B进程，B包含多个节点，则这些节点的src_addr都是B进程地址
 -- @param status 0停止 1启动 2启动完成
 function Worker.set_status(src_addr, addr, mode, status)
     assert(addr ~= LOCAL_ADDR)
@@ -405,16 +405,15 @@ function Worker.get_status_list()
     local status_list = {{
         addr = LOCAL_ADDR,
         status = local_status,
-        mode = Worker.CLUSTER
     }}
     for addr, data in pairs(WorkerData) do
         local mode = data.mode
 
+        -- 只返回本地的
         if mode == Worker.THREAD then
             table.insert(status_list, {
                 addr = addr,
                 status = data.status,
-                mode = Worker.CLUSTER,
             })
         end
     end
@@ -432,7 +431,7 @@ function Worker.sync_status_from_main()
     for _, s in pairs(list) do
         local addr = s.addr
         if addr ~= LOCAL_ADDR and addr ~= MAIN_ADDR then
-            Worker.set_status(MAIN_ADDR, addr, s.mode, s.status)
+            Worker.set_status(MAIN_ADDR, addr, Worker.THREAD, s.status)
         end
     end
 end

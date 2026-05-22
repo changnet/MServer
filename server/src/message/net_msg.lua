@@ -94,10 +94,10 @@ local function clt_msg_callback(func, schema, pid, buffer, size)
             eprint("clt_msg_callback no player", pid)
             return
         end
-        return func(player, pkt)
+        return CoPool.invoke(func, player, pkt)
     else
         -- 其他的以pid回调，这些worker没有玩家对象，比如竞技场
-        return func(pid, pkt)
+        return CoPool.invoke(func, pid, pkt)
     end
 end
 
@@ -137,7 +137,7 @@ function NetMsg.dispatch(socket, id, buffer, size)
     end
 
     -- 登录认证流程必须在网关完成，不能扩散到其他worker
-    -- 出现这个报错，是不是没指定协议的w字段
+    -- 如果指定协议的w字段错了，上面没有拦截，也会出现这个报错
     if not auth then
         eprintf("%s socket not auth for message %d", socket.account, id)
         return
@@ -147,7 +147,8 @@ function NetMsg.dispatch(socket, id, buffer, size)
     local addr = Router.find_player_addr(pid, wtype)
     local worker = WorkerHash[addr]
     if not worker then
-        eprint("player message dispatch worker not found", socket.account, pid, addr)
+        eprint("player message dispatch worker not found",
+            socket.account, pid, wtype, addr)
         return
     end
 
@@ -174,7 +175,7 @@ local function dispatch_clt_message(src, udata, size)
     local id, pb = buffer_read_int(udata, 2, 8)
     local cb = callback[id]
     if not cb then
-        printf("dispatch_clt_message callback for %d", id)
+        printf("dispatch_clt_message no callback for %d", id)
         return
     end
 

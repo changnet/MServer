@@ -173,7 +173,7 @@ function Loginout.check_and_logout(ai)
     ai.login_time = time + math.random(60, param.login_time)
 
     local entity = ai.entity
-    entity.socket:close()
+    entity.s:close()
 
     entity.handle = nil -- 要测试重登录，handle会重置
 

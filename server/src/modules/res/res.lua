@@ -125,15 +125,14 @@ function Res.add(player, res_list, op, log_str, ext)
 
     local mail_items = nil
     for _, res in pairs(res_list) do
-        local num = res[2]
         local add_num = Res.add_one(player, res, op, log_str, ext)
         -- add_num < 0表示出错，这里不再处理，对应的模块必须打印相关日志
-        if add_num > 0 and add_num < num then
+        if add_num > 0 and add_num < res.num then
             assert(Res.is_item()) -- 除了道具有背包大小限制，还有什么东西放不下？
             if not mail_items then mail_items = {} end
 
             local item = table.deep_copy(res)
-            item.num = num - add_num
+            item.num = res.num - add_num
             table.insert(mail_items, item)
         end
     end

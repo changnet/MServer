@@ -116,7 +116,7 @@ function PlayerSync.on_login(pid, is_new)
         return false
     end
 
-    Router.update_player_addr(pid, player.paddr, player.gaddr)
+    Router.update_player_comm_addr(pid, player.paddr, player.gaddr)
     Event.pemit(player, EV.LOGIN, is_new)
 
     player.status = PlayerStatus.NORMAL
@@ -154,7 +154,7 @@ function PlayerSync.on_logout(pid)
     PlayerData.save(player)
 
     PlayerMgr.set(pid)
-    Router.update_player_addr(pid)
+    Router.update_player_comm_addr(pid)
 
      -- 其他worker除了玩家数据还需要存其他数据？后续有需求再说
 

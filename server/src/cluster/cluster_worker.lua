@@ -30,6 +30,9 @@ function ClusterWorker:send_signature(mask)
 
     -- 在主线程发起的连接是公用的，相互通知各自所有worker地址
     local status_list = Worker.get_status_list()
+    for _, s in pairs(status_list) do
+        s.mode = Worker.CLUSTER
+    end
     local ptr, size = g_lcodec:encode_to_buffer(LOCAL_NAME, {
         tm = tm,
         sign = sign,

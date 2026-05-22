@@ -103,8 +103,8 @@ end
 -- 服务器启动完成才开启客户端监听
 local function start_listen(retry)
     -- game那边启动完成，才会启动监听，免得玩家连上时，游戏数据都未初始化
-    local w = WorkerHash[GAME_ADDR]
-    if w and w:is_ready() then
+    local d = WorkerData[GAME_ADDR]
+    if not d or Worker.READY ~= d.status then
         print("client mgr waitting for game worker...")
         return
     end

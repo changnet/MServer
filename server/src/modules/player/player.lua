@@ -188,7 +188,7 @@ local function update_addr(player, is_logout)
     local pid = player.pid
     local list = Worker.get_key_addr_list("paddr")
     for addr in pairs(list) do
-        Call[addr].Router.update_player_addr(pid, paddr, gaddr)
+        Call[addr].Router.update_player_comm_addr(pid, paddr, gaddr)
     end
 end
 
@@ -227,7 +227,7 @@ function Player.login(player)
     -- 登录完成后，才通知前端登录成功，前端才可以请求协议。避免登录过程中用了协程导致
     -- 部分模块未初始化完成就收协议了
     -- 未登录成功，uninit_player中的玩家不接受前端协议
-    Send[player.gaddr].Login.enter_game_completed(pid, player.session_id)
+    Send[player.gaddr].Login.enter_game_completed(pid, player.session_id, LOCAL_ADDR)
 
     return true
 end

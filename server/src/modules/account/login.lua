@@ -167,7 +167,7 @@ local function c_enter_game(socket, pkt)
 end
 
 -- enter_game完成
-function Login.enter_game_completed(pid, session_id)
+function Login.enter_game_completed(pid, session_id, paddr, route_info)
     --[[
     这里有一点问题：
     1. player线程登录
@@ -198,6 +198,13 @@ function Login.enter_game_completed(pid, session_id)
     end
 
     socket:authorized()
+    Router.update_player_comm_addr(pid, paddr, LOCAL_ADDR)
+
+    -- 设置其他路由信息，比如场景线程等
+    for wtype, addr in pairs(route_info or EMPTY) do
+        Router.update_player_addr(pid, wtype, addr)
+    end
+
     return NetMsg.send_socket(socket, M.PlayerEnter, EMPTY)
 end
 
