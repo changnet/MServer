@@ -49,7 +49,7 @@ end
 
 -- 注册按优先级关闭的模块
 -- @param mod 需要关闭的模块，包括starty函数
--- @param priority 启动优先级，越小优先级越高，默认20
+-- @param priority 优先级，越小优先级越高，默认20
 function Shutdown.reg(mod, priority)
     --[[
     和startup不一样，startup在启动过程中不会热更，启动完成后startup就没用了

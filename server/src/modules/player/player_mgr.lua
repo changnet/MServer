@@ -109,4 +109,38 @@ function PlayerMgr.exit_completed(pid, session_id)
     Send[addr].AccountMgr.logout_completed(pid, session_id)
 end
 
+local function on_gateway_shutdown(addr, wtype)
+    if wtype ~= W.GATEWAY then return end
+
+    local count = 0
+    for _, player in pairs(this.player) do
+        count = count + 1
+        Player.logout(player, "shutdown")
+    end
+
+    print("gateway shutdown, force player exit", addr, count)
+end
+
+local function on_shutdown()
+    local count = 0
+    for _, player in pairs(this.player) do
+        count = count + 1
+        Player.logout(player, "shutdown")
+    end
+
+    -- 正常在网关断开时就会退出了，应该跑不到这里
+    if 0 ~= count then
+        print("engine shutdown, force player exit", count)
+    end
+end
+
+if LOCAL_TYPE == W.PLAYER then
+    Shutdown.reg({
+        name = "PlayerMgr",
+        func = on_shutdown
+    }, 0)
+
+    Event.reg(EV.WORKER_STOP, on_gateway_shutdown)
+end
+
 return PlayerMgr

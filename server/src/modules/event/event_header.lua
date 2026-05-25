@@ -24,7 +24,7 @@ EV ={
     WORKER_START         = {i = 1027}, -- [worker地址][worker]worker启动，但尚未初始化完成
     WORKER_OTHER_READY   = {i = 1028}, -- 触发事件的worker启动完成收到事件的worker可能未启动完成
     WORKER_BOTH_READY    = {i = 1029}, -- 触发事件、接受事件的双方都启动完成
-    WORKER_STOP          = {i = 1030}, -- [worker地址][worker]worker停止
+    WORKER_STOP          = {i = 1030}, -- [worker地址][worker类型]worker停止
     SEC_TIMER            = {i = 1031}, -- [当前时间戳]定时器，每秒触发一次
     MIN_TIMER            = {i = 1032}, -- [当前时间戳]定时器，每分钟触发一次，在每分钟0秒时触发
 }

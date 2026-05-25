@@ -334,7 +334,8 @@ function Worker.set_status(src_addr, addr, mode, status)
         WorkerHash[addr] = nil
         WorkerData[addr] = nil
         clear_cache_list()
-        Event.semit(EV.WORKER_STOP, addr, mode)
+        local wtype = Engine.unmake_address(addr)
+        Event.semit(EV.WORKER_STOP, addr, wtype)
     elseif Worker.STARTING == status then
         local data = Worker.get_data(addr)
         local old_status = data.status

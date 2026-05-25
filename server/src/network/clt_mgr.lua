@@ -130,6 +130,6 @@ Startup.reg(start_listen, 0xFFFFFFFF)
 Shutdown.reg({
     name = "clt_mgr",
     func = shutdown,
-})
+}, 0)
 
 return CltMgr

@@ -6,11 +6,10 @@
 
 -- 热更
 GM.reg("reload", function()
-    __unrequire()
-    Startup.load(true)
+    Misc.reload()
     return true
     -- -1在gm那边会广播到所有线程执行
-end, -1)
+end, W.MAIN)
 
 -- 启用调试日志打印
 GM.reg("debug", function(pid, p1)

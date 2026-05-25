@@ -69,7 +69,7 @@ local func_to_name = Rtti.func_to_name
 -- 用parse_name_func而不是name_to_func，避免脚本报错时rtti失效导致rpc也失效了
 local parse_name_func = Rtti.parse_name_func
 
-__rpc_session = __rpc_session or {seed = 1, session = {}}
+__rpc_session = __rpc_session or {seed = 0, session = {}}
 local rpc_session = __rpc_session
 
 local last_codec_size
@@ -167,6 +167,7 @@ local function call_func_factory(name, addr)
     return function(...) return call(name, addr, ...) end
 end
 
+-- 生成一个当前线程唯一的负数id，用于callback
 local function next_id()
     local id = rpc_session.seed - 1
     if id < -0x7fffffff then id = -1 end
@@ -240,7 +241,7 @@ local function do_response(session, ...)
         return
     end
     rpc_session.session[session] = nil
-    return CoPool.invoke(info.func, ...)
+    return CoPool.invoke(info.func, call_return(...))
 end
 
 local function response_dispatch(src, udata, usize)
