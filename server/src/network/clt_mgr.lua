@@ -43,6 +43,11 @@ function CltMgr.get_by_pid(pid)
     return this.pid_socket[pid]
 end
 
+-- 获取所有已认证的客户端连接（供广播使用）
+function CltMgr.get_pid_sockets()
+    return this.pid_socket
+end
+
 -- 根据socket_id获取连接
 function CltMgr.get_by_session_id(session_id)
     return this.session[session_id]
@@ -72,7 +77,11 @@ function CltMgr.del(socket)
     end
 
     local pid = socket.pid
-    if pid then this.pid_socket[pid] = nil end
+    if pid then
+        this.pid_socket[pid] = nil
+        -- 清理玩家的频道数据
+        if Channel then Channel.on_disconnect(pid) end
+    end
 
     this.session[session_id] = nil
 

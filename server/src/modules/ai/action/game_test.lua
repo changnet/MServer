@@ -32,7 +32,7 @@ function GameTest.gm(ai)
     -- 只运行一次的gm
     if not ai.once_gm then
         ai.once_gm = 1
-        -- entity:send_pkt(M.ChatMsg, {channel = 1, context = "@reload"})
+        GameTest.chat(ai)
         entity:send_pkt(M.ChatMsg, {channel = 1, context = "@res 1 99999"})
         entity:send_pkt(M.ChatMsg, {channel = 1, context = "@res 2 99999"})
 
@@ -96,7 +96,7 @@ function GameTest.chat(ai)
     ai.entity:send_pkt(M.ChatMsg, pkt)
 end
 
-local function s_chat_msg(entity, ecode, pkt)
+local function s_chat_msg(entity, pkt)
     -- printf("chat: %d say %s", pkt.pid, pkt.context)
 
     if pkt.pid == entity.pid then

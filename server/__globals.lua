@@ -1,4 +1,4 @@
--- auto export by lua-tags 200 symbols
+-- auto export by lua-tags 201 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -18,6 +18,7 @@ return {
 "CLTCAST", -- src/modules/system/define.lua
 "Call", -- src/rpc/rpc.lua
 "Callback", -- src/rpc/rpc.lua
+"Channel", -- src/message/channel.lua
 "CltMgr", -- src/network/clt_mgr.lua
 "Cluster", -- src/cluster/cluster.lua
 "ClusterProxy", -- src/cluster/cluster_proxy.lua

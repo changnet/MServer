@@ -8,6 +8,7 @@ ThreadMessage = {
     RPC_RES = 5, -- rpc返回
     CLT_MSG_S = 6, -- 客户端发到服务端消息
     CLT_MSG_C = 7, -- 服务端发到客户端消息
+    CLT_CAST  = 8, -- 广播/组播/频道消息
 }
 
 local LOCAL_ADDR = LOCAL_ADDR

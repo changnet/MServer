@@ -11,7 +11,13 @@ local callback = {} -- 消息回调
 local LOCAL_TYPE = LOCAL_TYPE -- 当前worker的类型
 local CLT_MSG_S = ThreadMessage.CLT_MSG_S
 local CLT_MSG_C = ThreadMessage.CLT_MSG_C
+local CLT_CAST  = ThreadMessage.CLT_CAST
 local DEF_DISPATCH_WTYPE = W.PLAYER -- 默认为玩家所在worker，这个worker用的协议比较多
+
+-- 广播子类型
+local CAST_BROADCAST = 0 -- 全服广播
+local CAST_MULTICAST = 1 -- 组播(指定pid列表)
+local CAST_CHANNEL   = 2 -- 频道广播
 local forward_wtype -- [id] = wtype
 
 local g_mthread = g_mthread
@@ -277,9 +283,109 @@ local function dispatch_to_clt(src, udata, size)
     return socket:send_pkt(id, pb, size - 10)
 end
 
+-- 发送CLT_CAST到所有网关
+-- @param total_size number 消息总大小
+-- @param write_fn function(mbuffer) 写入消息内容的回调
+local function send_cast_to_gateways(total_size, write_fn)
+    local gw_list = Router.get_worker_list(W.GATEWAY)
+    if not gw_list then return end
+
+    for _, gw in ipairs(gw_list) do
+        local worker = WorkerHash[gw.addr]
+        if worker then
+            local m, mbuffer = construct_message(
+                g_mthread, LOCAL_ADDR, gw.addr,
+                CLT_CAST, total_size)
+            write_fn(mbuffer)
+            worker:push_message(m)
+        end
+    end
+end
+
+-- 广播到所有进入游戏完成的玩家（在player和game可能成功，但网关未成功，以网关为准）
+-- @param cmd table 协议定义，包含i(协议id)和s(schema)
+-- @param pkt table 协议数据
+function NetMsg.broadcast(cmd, pkt)
+    local cmd_id = cmd.i
+    local buffer, size = pbc_encode(cmd.s, pkt)
+    local total = size + 4 -- 2(type) + 2(cmd_id)
+
+    send_cast_to_gateways(total, function(mbuffer)
+        buffer_write_int(mbuffer, 2, CAST_BROADCAST)
+        buffer_write_int(mbuffer, 2, cmd_id, 2)
+        buffer_write_buffer(mbuffer, buffer, size, 4)
+    end)
+end
+
+-- 组播到指定玩家（在player和game可能成功，但网关未成功，以网关为准）
+-- @param pids integer[] 目标玩家pid列表
+-- @param cmd table 协议定义，包含i(协议id)和s(schema)
+-- @param pkt table 协议数据
+function NetMsg.multicast(pids, cmd, pkt)
+    local cmd_id = cmd.i
+    local buffer, size = pbc_encode(cmd.s, pkt)
+    local pid_count = #pids
+    -- 2(type) + 2(count) + 8*N(pids) + 2(cmd_id)
+    local header = 4 + pid_count * 8 + 2
+    local total = header + size
+
+    send_cast_to_gateways(total, function(mbuffer)
+        buffer_write_int(mbuffer, 2, CAST_MULTICAST)
+        buffer_write_int(mbuffer, 2, pid_count, 2)
+        local offset = 4
+        for i = 1, pid_count do
+            buffer_write_int(mbuffer, 8, pids[i], offset)
+            offset = offset + 8
+        end
+        buffer_write_int(mbuffer, 2, cmd_id, offset)
+        buffer_write_buffer(
+            mbuffer, buffer, size, offset + 2)
+    end)
+end
+
+-- 网关收到CLT_CAST广播/组播/频道消息
+local function dispatch_cast(src, udata, size)
+    local cast_type = buffer_read_int(udata, 2)
+
+    if cast_type == CAST_BROADCAST then
+        -- 全服广播：遍历所有已认证连接
+        local cmd_id, pb = buffer_read_int(udata, 2, 2)
+        local pb_size = size - 4
+        local sockets = CltMgr.get_pid_sockets()
+        for _, socket in pairs(sockets) do
+            if socket.auth then
+                socket:send_pkt(cmd_id, pb, pb_size)
+            end
+        end
+    elseif cast_type == CAST_MULTICAST then
+        -- 组播：遍历pid列表
+        local pid_count = buffer_read_int(udata, 2, 2)
+        local offset = 4
+        local cmd_offset = offset + pid_count * 8
+        local cmd_id, pb = buffer_read_int(
+            udata, 2, cmd_offset)
+        local pb_size = size - cmd_offset - 2
+        for _ = 1, pid_count do
+            local pid = buffer_read_int(
+                udata, 8, offset)
+            offset = offset + 8
+            local socket = CltMgr.get_by_pid(pid)
+            if socket and socket.auth then
+                socket:send_pkt(cmd_id, pb, pb_size)
+            end
+        end
+    elseif cast_type == CAST_CHANNEL then
+        -- 频道广播：委托给Channel模块
+        Channel._dispatch_broadcast(udata, size)
+    else
+        eprint("dispatch_cast unknown type", cast_type)
+    end
+end
+
 ThreadMessage.reg(CLT_MSG_S, dispatch_clt_message)
 if IS_GATEWAY then
     ThreadMessage.reg(CLT_MSG_C, dispatch_to_clt)
+    ThreadMessage.reg(CLT_CAST, dispatch_cast)
 end
 
 return NetMsg

@@ -34,14 +34,14 @@ local function private_chat(player, pkt)
 
     make_msg(player, pkt)
 
-    target:send_pkt(M.ChatMsg, pkt)
+    NetMsg.send(target, M.ChatMsg, pkt)
 end
 
 -- 世界聊天
 local function world_chat(player, pkt)
     make_msg(player, pkt)
 
-    -- SrvMgr.clt_multicast(2, {}, CHAT.DOCHAT, rpkt)
+    NetMsg.broadcast(M.ChatMsg, pkt)
 end
 
 

@@ -28,6 +28,7 @@ E = require "modules.system.error"
 require("protocol.protocol")
 require("message.pbc")
 require("message.net_msg")
+require("message.channel")
 
 -- P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0
 -- 在加载其他业务模块之前优先级p0的逻辑
