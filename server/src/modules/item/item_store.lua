@@ -17,6 +17,7 @@ local ItemStore = oo.class("ItemStore")
 --@field ihash table<integer, ItemOjb[]> [道具id]=道具列表，仅背包启用，装备不用
 
 local log_tbl = {}
+local dec_pkt = {}
 
 --@param pid 角色id
 --@param bid number 背包id
@@ -83,6 +84,7 @@ function ItemStore:save(player)
     if not self:modify() then return true end
 
     local list = table.to_array(self.list)
+
     Send[DATA_ADDR].DataCache.update("player_item",
         {"pid", player.pid, "bid", self.id},
         {pid = player.pid, bid = self.id, list = list}
@@ -151,11 +153,7 @@ function ItemStore:log(item_obj, change_num, op, ext)
 end
 
 -- 添加某个道具
-function ItemStore:add(item_obj, op, log_ext)
-    if not item_obj.uid then
-        item_obj.uid = BagMgr.next_id()
-    end
-
+function ItemStore:add(player, item_obj, op, log_ext)
     self.list[item_obj.uid] = item_obj
     self.size = (self.size or 0) + 1
 
@@ -168,11 +166,26 @@ function ItemStore:add(item_obj, op, log_ext)
     self:set_modify(true)
     self:log(item_obj, item_obj.num, op, log_ext)
 
+    Item.send_update(player, item_obj, self.id)
+
     return item_obj.num
 end
 
+function ItemStore:add_count(player, obj, num, op, log_str)
+    -- 这里不判断堆叠数量、道具是否一样，需要在外部判断
+
+    obj.num = obj.num + num
+
+    self:set_modify(true)
+    self:log(obj, num, op, log_str)
+
+    Item.send_update(player, obj, self.id)
+
+    return num
+end
+
 -- 删除某个道具
-function ItemStore:dec(item_obj, op, log_ext)
+function ItemStore:dec(player, item_obj, op, log_ext)
     local uid = item_obj
     if not self.list[uid] then
         eprint("item dec obj not in store", uid, item_obj.id, op)
@@ -200,11 +213,16 @@ function ItemStore:dec(item_obj, op, log_ext)
     self:set_modify(true)
     self:log(item_obj, -removed, op, log_ext)
 
+    -- 数量为0表示删除
+    dec_pkt.uid = uid
+    Item.send_update(player, dec_pkt, self.id)
+
+
     return removed
 end
 
 -- 删除某个道具指定的数量
-function ItemStore:dec_count(item_obj, change_num, op, log_ext)
+function ItemStore:dec_count(player, item_obj, change_num, op, log_ext)
     if change_num >= item_obj.num then
         return self:dec(item_obj, op, log_ext)
     end
@@ -212,6 +230,7 @@ function ItemStore:dec_count(item_obj, change_num, op, log_ext)
     item_obj.num = item_obj.num - change_num
     self:set_modify(true)
     self:log(item_obj, -change_num, op, log_ext)
+    Item.send_update(player, item_obj, self.id)
 
     return change_num
 end

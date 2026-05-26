@@ -95,7 +95,7 @@ function DataCache.get(tbl_name, keys, fields, opts)
 
         tbl_cache = tbl_cache[v]
         if not tbl_cache then
-            return load_from_db(tbl_name, keys, fields)
+            return load_from_db(tbl_name, keys, fields, opts)
         end
     end
 
@@ -157,7 +157,7 @@ function DataCache.update(tbl_name, keys, value)
     -- 因此更新缓存时，所有数据都要发过来（包括一些不需要更新的字段）
     local tbl_cache = DataCache.set(tbl_name, keys, value)
 
-    print("cache update", tbl_name, table.concat(keys, "_"))
+    dprint("cache update", tbl_name, table.concat(keys, "_"))
     if tbl_cache.modify_time then return end
 
     local idx = this.save_seed + 1

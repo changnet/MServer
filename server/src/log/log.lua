@@ -8,7 +8,7 @@ local g_async_log = g_async_log
 local logger_print = g_async_log.print
 
 local vd_recursion = nil
-local enable_dbg = g_setting and g_setting.debug
+local enable_dbg = g_debug or g_setting.log_debug
 
 local function vd_insert(tbl, v, ...)
     -- table.insert本身就不支持insert一个nil值，所以这里只要是nil值就表示中止
@@ -19,7 +19,13 @@ local function vd_insert(tbl, v, ...)
 end
 
 local function vd_key(k)
-    if type(k) == "string" then return k end
+    if type(k) == "string" then
+        -- 数字字符串的表示方式应该为：{["2"] = 1}
+        if tonumber(k) then
+            return "[\"" .. k .. "\"]"
+        end
+        return k
+    end
     return "[" .. tostring(k) .. "]"
 end
 
@@ -226,7 +232,7 @@ end
 -- 启用或禁用调试日志打印
 function Log.enable_debug(enable)
     enable_dbg = enable
-    g_setting.debug = enable
+    g_setting.log_debug = enable
 end
 
 --//////////////////////////////////////////////////////////////////////////////

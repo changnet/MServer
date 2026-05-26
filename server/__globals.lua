@@ -1,4 +1,4 @@
--- auto export by lua-tags 198 symbols
+-- auto export by lua-tags 200 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -160,6 +160,7 @@ return {
 "dprintf", -- src/log/log.lua
 "eprint", -- src/log/log.lua
 "eprintf", -- src/log/log.lua
+"g_debug", -- src/engine/startup.lua
 "g_lcodec", -- src/rpc/rpc.lua
 "g_mongodb", -- src/data/w_mongodb.lua
 "g_mysql", -- src/data/w_mysql.lua
@@ -187,6 +188,7 @@ return {
 "require_no_update", -- src/global/require.lua
 "require_worker", -- src/global/require.lua
 "rpairs", -- src/global/table.lua
+"run_ikey_test", -- src/modules/test/integrate_test.lua
 "scall", -- src/global/global.lua
 "script_loaded", -- src/global/global.lua
 "storage", -- src/data/global_data.lua

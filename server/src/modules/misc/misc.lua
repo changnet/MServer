@@ -53,4 +53,21 @@ function Misc.reload()
     end
 end
 
+-- 执行一个文件中的函数(一般是调试用，不能用于业务逻辑)
+function Misc.eval_file(file, func_name, ...)
+    local path, err = package.searchpath(file, package.path)
+    if not path then error(err) end
+
+    local f, msg = loadfile(path)
+    if not f then error(msg) end
+
+    local m = f()
+    local func = m[func_name]
+    if not func then
+        error(string.format("no func %s found in %s", func_name, file))
+    end
+
+    return func(...)
+end
+
 return Misc

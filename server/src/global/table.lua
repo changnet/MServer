@@ -15,7 +15,13 @@ local function dump_insert(tbl, v, ...)
 end
 
 local function dump_key(k)
-    if type(k) == "string" then return k end
+    if type(k) == "string" then
+        -- 数字字符串的表示方式应该为：{["2"] = 1}
+        if tonumber(k) then
+            return "[\"" .. k .. "\"]"
+        end
+        return k
+    end
     return "[" .. tostring(k) .. "]"
 end
 

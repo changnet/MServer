@@ -37,6 +37,7 @@ local function get(player, res)
     return count
 end
 
+-- @return 成功添加的数量
 local function add(player, res, op, log_str, ext)
     local id = res.id
     local bag_id = ItemConf[id].bag_id

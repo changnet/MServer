@@ -25,10 +25,20 @@ function sys.restore_table(tbl)
 
     -- 一个table中，要么全是数字键，要么全是字符串键，不能混用
     if type(k1) == "string" and tonumber(k1) then
-        for k, v in pairs(tbl) do
+        local i = 1
+        local keys = {}
+
+        -- 遍历table时，不允许新增key
+        for k in pairs(tbl) do
+            keys[i] = k
+            i = i + 1
+        end
+
+        for _, k in ipairs(keys) do
             local n = tonumber(k)
-            tbl[n] = v
+            local v = tbl[k]
             tbl[k] = nil
+            tbl[n] = v
         end
     else
         for _, v in pairs(tbl) do

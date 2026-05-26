@@ -40,6 +40,7 @@ function GameTest.gm(ai)
         entity:send_pkt(M.ChatMsg, {channel = 1, context = "@res 10001 1"})
         entity:send_pkt(M.ChatMsg, {channel = 1, context = "@res 20001 1"})
         entity:send_pkt(M.ChatMsg, {channel = 1, context = "@mail test"})
+        entity:send_pkt(M.ChatMsg, {channel = 1, context = "@test ikey"})
     end
 end
 

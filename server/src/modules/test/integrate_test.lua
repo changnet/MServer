@@ -30,14 +30,20 @@ local function set_or_validate_ikey(stg, log_str)
         if table.equal(stg, ikey) then
             print("validate ikey success for", log_str)
         else
-            eprint("validate ikey failed for", log_str, stg)
+            eprint("validate ikey failed for", log_str, table.dump(stg))
         end
     end
 end
 
 -- GM: @test ikey
 -- 测试各种存储的ikey是否能正确恢复
-function IntegrateTest.ikey(player)
+function run_ikey_test(player)
+    print("run ikey test", player)
+
+    if type(player) == "number" then
+        player = PlayerMgr.get_player(player)
+    end
+
     if type(player) == "table" then
         local stg = Player.get_storage(player, "ikeytest")
         if not stg then
@@ -48,15 +54,30 @@ function IntegrateTest.ikey(player)
     end
 
     local sys_stg = storage("ikeytest")
-    set_or_validate_ikey(sys_stg, "sys")
+    if sys_stg then
+        set_or_validate_ikey(sys_stg, "sys")
+    end
 
     local json_stg = {}
-    set_or_validate_ikey(sys_stg, "json")
+    set_or_validate_ikey(json_stg, "json")
     local json_str = Json.encode(json_stg)
     local json_stg2 = sys.restore_json(json_str)
     set_or_validate_ikey(json_stg2, "json")
 end
 
+-- GM: @test ikey
+-- 测试各种存储的ikey是否能正确恢复
+function IntegrateTest.ikey(player)
+    run_ikey_test(player)
+
+    -- player没有全局数据，到game再执行一次测试
+    if LOCAL_TYPE ~= W.GAME then
+        local pid = type(player) == "table" and player.pid or player
+        Send[GAME_ADDR].Misc.eval_file("test.integrate_test", "ikey", pid)
+    end
+end
+
+-- GM: @test xxx
 function IntegrateTest.run(player, cmd, ...)
     assert("run" ~= cmd, "test cmd should not be run")
     local func = IntegrateTest[cmd]

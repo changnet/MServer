@@ -17,6 +17,7 @@ Util = require "engine.util"
 -- 服务器设置文件
 g_setting = nil
 g_ready = false -- 当前线程是否启动完
+g_debug = false -- 是否调试环境
 
 -- 需要按优先级启动的模块
 local startup_modules = nil
@@ -74,6 +75,7 @@ local function load_setting()
     end
 
     g_setting = dofile(path)
+    g_debug = g_setting.debug
 end
 
 local function set_path()

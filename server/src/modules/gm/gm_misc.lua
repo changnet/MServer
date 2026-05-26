@@ -30,8 +30,8 @@ end, W.GAME | W.MAIN)
 
 -- 执行测试命令
 GM.reg("test", function(player, cmd, ...)
-    local T = require "test.integrate_test"
-    T.run(player, cmd, ...)
+    local IntegrateTest = require "test.integrate_test"
+    IntegrateTest.run(player, cmd, ...)
     return true
 end)
 
