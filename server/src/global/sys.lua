@@ -16,7 +16,7 @@ function sys.path_up(path)
 end
 
 -- 遍历所有键，如果key是字符串并且可以转换为数字，则转换为数字
-function sys.restore_table(tbl)
+local function __restore_table(tbl)
     local k1 = next(tbl)
     if not k1 then return end
 
@@ -29,7 +29,9 @@ function sys.restore_table(tbl)
         local keys = {}
 
         -- 遍历table时，不允许新增key
-        for k in pairs(tbl) do
+        for k, v in pairs(tbl) do
+            if type(v) == "table" then __restore_table(v) end
+
             keys[i] = k
             i = i + 1
         end
@@ -42,17 +44,20 @@ function sys.restore_table(tbl)
         end
     else
         for _, v in pairs(tbl) do
-            if type(v) == "table" then
-                sys.restore_table(v)
-            end
+            if type(v) == "table" then __restore_table(v) end
         end
     end
+end
+
+-- 遍历所有键，如果key是字符串并且可以转换为数字，则转换为数字
+function sys.restore_table(tbl)
+    return __restore_table(tbl)
 end
 
 -- 把json字符串转换为table，并且把所有可以转换为数字的字符串键转换为数字
 function sys.restore_json(str)
     local tbl = Json.decode(str)
-    sys.restore_table(tbl)
+    __restore_table(tbl)
     return tbl
 end
 

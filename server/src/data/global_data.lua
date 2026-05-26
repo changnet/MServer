@@ -28,7 +28,7 @@ end
 -- 创建一块存储空间，定时自动存库，按worker区分
 -- @param key 存储空间key
 -- @param initializer 存储空间初始化时默认值或者函数
--- @param save_key 如果需要单独存一条记录，可以指定save_key
+-- @param save_key 一般为nil,如果需要单独存一条记录，可以指定save_key
 function storage(key, initializer, save_key)
     -- 很多线程没有全局数据，但会统一加载这个文件
     if not is_storage then return end
@@ -44,8 +44,9 @@ function storage(key, initializer, save_key)
     if not object then
         if type(initializer) == "function" then
             object = initializer()
+            assert(object)
         else
-            object = initializer
+            object = initializer or {}
         end
 
         save_storage[key] = object

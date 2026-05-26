@@ -53,9 +53,11 @@ function run_ikey_test(player)
         set_or_validate_ikey(stg, "player")
     end
 
-    local sys_stg = storage("ikeytest")
-    if sys_stg then
-        set_or_validate_ikey(sys_stg, "sys")
+    local gstg = storage("ikeytest")
+    if gstg then
+        set_or_validate_ikey(gstg, "global")
+    else
+        dprint("no global storage, global test ignore")
     end
 
     local json_stg = {}

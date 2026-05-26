@@ -14,11 +14,9 @@ local function get_memory(player)
 end
 
 -- 保存玩家邮件数据到缓存
-local function save_player_mail(player)
-    local stg = get_memory(player)
-    Send[DATA_ADDR].DataCache.update("player_mail",
-        {"pid", player.pid},
-        {pid = player.pid, list = table.to_array(stg.list or {})})
+local function set_modify(player, stg)
+    if not stg then stg = get_memory(player) end
+    stg.modify = 1
 end
 
 -- 邮件权重计算（越小越容易被删除）
@@ -54,11 +52,11 @@ local function check_mail_limit(player)
         list_map[m.id] = nil
         MailInternal.log(player.pid, LOG.DEL_MAIL, m)
     end
-    save_player_mail(player)
+    set_modify(player, stg)
 end
 
 -- 从缓存加载玩家邮件
-local function on_load_mail(player)
+local function on_load(player)
     local e, row = Call[DATA_ADDR].DataCache.get(
         "player_mail", {"pid", player.pid})
 
@@ -79,6 +77,17 @@ local function on_load_mail(player)
     stg.list = list
 
     return true
+end
+
+local function on_save(player)
+    local stg = get_memory(player)
+    if not stg.modify then return end
+
+    Send[DATA_ADDR].DataCache.update("player_mail",
+        {"pid", player.pid},
+        {pid = player.pid, list = table.to_array(stg.list or {})})
+
+    stg.modify = nil
 end
 
 -- 登录事件：加载邮件并同步离线/全服邮件
@@ -102,7 +111,7 @@ function MailPlayer.receive(player, mail_obj)
     MailInternal.log(player.pid, LOG.ADD_MAIL, mail_obj)
 
     check_mail_limit(player)
-    save_player_mail(player)
+    set_modify(player, stg)
 
     send_new(player, mail_obj)
 end
@@ -118,7 +127,7 @@ function MailPlayer.receive_list(player, list)
     end
 
     check_mail_limit(player)
-    save_player_mail(player)
+    set_modify(player, stg)
 end
 
 -- 客户端读取邮件
@@ -129,7 +138,7 @@ local function c_mail_read(player, pkt)
     if m then
         if m.read == 0 then
             m.read = 1
-            save_player_mail(player)
+            set_modify(player, stg)
         end
         NetMsg.send(player, M.MailRead, {id = target_id})
         return
@@ -151,7 +160,7 @@ local function c_mail_del(player, pkt)
     end
 
     if changed then
-        save_player_mail(player)
+        set_modify(player, stg)
         NetMsg.send(player, M.MailDel, {id = target_ids})
     end
 end
@@ -165,7 +174,7 @@ local function c_mail_claim(player, pkt)
         if m.atts and #m.atts > 0 and m.att_stat == 0 then
             m.att_stat = 1
             m.read = 1
-            save_player_mail(player)
+            set_modify(player, stg)
 
             Res.add(player, m.atts, LOG.MAILATTACH)
             MailInternal.log(player.pid, LOG.MAILATTACH, m)
@@ -194,7 +203,7 @@ local function c_mail_claim_all(player, pkt)
     end
 
     if changed then
-        save_player_mail(player)
+        set_modify(player, stg)
         NetMsg.send(player, M.MailClaimAll, {ids = claimed_ids})
     end
 end
@@ -213,7 +222,7 @@ local function c_mail_del_read(player, pkt)
 
     if #del_ids > 0 then
         for _, id in ipairs(del_ids) do stg.list[id] = nil end
-        save_player_mail(player)
+        set_modify(player, stg)
         NetMsg.send(player, M.MailDelRead, {ids = del_ids})
     end
 end
@@ -236,7 +245,8 @@ GM.reg("mail", function(player, p1, p2, p3)
 end)
 
 Event.reg(EV.LOGIN, on_login)
-Event.reg(EV.LOADING, on_load_mail)
+Event.reg(EV.LOADING, on_load)
+Event.reg(EV.SAVE, on_save)
 
 NetMsg.reg(M.MailRead, c_mail_read)
 NetMsg.reg(M.MailDel, c_mail_del)

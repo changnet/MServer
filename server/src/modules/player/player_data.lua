@@ -32,7 +32,7 @@ function PlayerData.load(player)
 
     local s
     local row_data = row.data
-    vd(row)
+
     if row_data then
         s = row_data
     else
