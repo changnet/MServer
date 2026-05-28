@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # mongo control shell
 # 一些常用的mongo操作放这里。线上部署不要用这里的用户名和密码
@@ -27,6 +27,7 @@ DEF_USR=test
 DEF_PWD=test
 DEF_DBN=test_999
 DEF_ADM=admin
+JS_FILE="../server/setting/db_game.js"
 
 # 创建数据库帐号管理员
 # mongodb和MySQL不一样，每个数据库都必须创建专属的帐号。而创建创建帐号需要帐号管理员
@@ -36,7 +37,7 @@ DEF_ADM=admin
 #   authorization: enabled
 # systemctl start mongod
 # 运行完脚本后，再加上authorization:enabled然后重启数据库
-function admin()
+admin()
 {
 # Read：允许用户读取指定数据库
 # readWrite：允许用户读写指定数据库
@@ -57,21 +58,26 @@ EOF
 
 # ./mongodb.sh shell 数据库
 # 进入测试服数据库shell ./mongodb.sh shell test_999
-function shell()
+shell()
 {
     mongosh --host 127.0.0.1 --port 27017 -u $DEF_USR -p $DEF_PWD $1
 }
 
-# 运行mongo脚本文件
-# ./mongodb.sh cmd test_999 mongo_clear
-function cmd()
+# ./mongodb.sh init 初始化数据库
+init()
 {
-    mongosh --host 127.0.0.1 --port 27017 -u $DEF_USR -p $DEF_PWD $3 < ../project/$4.js
+    mongosh --host 127.0.0.1 --port 27017 -u $DEF_USR -p $DEF_PWD --authenticationDatabase $DEF_DBN --file $JS_FILE init $DEF_DBN
+}
+
+# ./mongodb.sh reset 删除所有数据并重新初始化数据库
+reset()
+{
+    mongosh --host 127.0.0.1 --port 27017 -u $DEF_USR -p $DEF_PWD --authenticationDatabase $DEF_DBN --file $JS_FILE reset $DEF_DBN
 }
 
 # ./mongodb.sh install
 # 安装数据库并创建用于测试的用户，此命令必须用管理员执行
-function install()
+install()
 {
 	# https://docs.mongodb.com/manual/tutorial/install-mongodb-on-debian/
 	# Debian 12 "Bookworm" + MongoDB 8.0 Community Edition 2025-05
@@ -114,5 +120,5 @@ db.createUser( {user:"$DEF_USR",pwd:"$DEF_PWD",roles:["dbAdmin","readWrite"]} )
 EOF
 }
 
-parameter=($@)
-$1 ${parameter[@]:1}
+# sh mongodb.sh init test_999
+$1 $2 $3 $4 $5

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 CLI=mariadb #mysql
 
@@ -24,45 +24,54 @@ CLI=mariadb #mysql
 # 用于开发、测试的帐号和用户名
 DEF_USR=test
 DEF_PWD=test
-DEF_DBN=test_999
+LOG_DB=test_999
+LOG_SQL="../server/setting/db_log.sql"
 
 # 创建内网测试用户，正式服不要给这么高的权限并且要限制登录ip
 # ./mysql.sh new_user 管理员用户名 管理员密码 新用户名 新用户密码
 # ./mysql.sh new_user root 1 test test
-function new_user()
+new_user()
 {
-    $CLI -u$1 -p$2 <<EOF
-    CREATE USER "$3"@'%' IDENTIFIED BY "$4";
-    GRANT ALL PRIVILEGES ON *.* TO "$3"@'%' WITH GRANT OPTION;
+    $CLI -u$DEF_USR -p$DEF_PWD <<EOF
+    CREATE USER "$LOG_DB"@'%' IDENTIFIED BY "$4";
+    GRANT ALL PRIVILEGES ON *.* TO "$LOG_DB"@'%' WITH GRANT OPTION;
     flush privileges;
 EOF
 }
 
-# 创建日志库
-# ./mysql.sh new_log_schema 用户名 用户密码 数据库名
-# ./mysql.sh new_log_schema test test test_999
-function new_log_schema()
+# 初始化日志库
+init()
 {
-    $CLI -u$1 -p$2 <<EOF
-    create schema $3 default character set utf8mb4 collate utf8mb4_general_ci;
-EOF
+	echo "init database $LOG_DB ..."
+    $CLI -u$DEF_USR -p$DEF_PWD -e "create database $LOG_DB default character set utf8mb4 collate utf8mb4_general_ci;"
 
-$CLI -u$1 -p$2 $3 --default_character_set utf8mb4 < "../project/log_schema.sql"
+	$CLI -u$DEF_USR -p$DEF_PWD $LOG_DB --default_character_set utf8mb4 < $LOG_SQL
+	
+	echo "init database $LOG_DB ok"
+}
+
+reset()
+{
+    $CLI -u$DEF_USR -p$DEF_PWD -e "drop database if exists $LOG_DB;"
+
+    init
 }
 
 # 导出数据库结构
-function dump_struct()
+dump()
 {
-    mysqldump -u$1 -p$2 --default_character_set utf8mb4 --no-data $3 > "../project/log_schema.sql"
+    mysqldump -u$DEF_USR -p$DEF_PWD --default_character_set utf8mb4 --no-data $LOG_DB > $LOG_SQL
 }
 
 # 安装数据库，初始初始化一个用于测试的用户名、密码以及一个测试用的日志数据库
-function install()
+install()
 {
 	# 使用debconf-set-selections自动填充apt install中需要的用户名和密码
 	export DEBIAN_FRONTEND="noninteractive"
-	debconf-set-selections <<< "mariadb-server mysql-server/root_password password $DEF_PWD"
-	debconf-set-selections <<< "mariadb-server mysql-server/root_password_again password $DEF_PWD"
+	debconf-set-selections <<EOF
+mariadb-server mysql-server/root_password password $DEF_PWD
+mariadb-server mysql-server/root_password_again password $DEF_PWD
+EOF
 
 	apt install -y mariadb-server
 
@@ -71,11 +80,10 @@ function install()
 	new_user root $DEF_PWD $DEF_USR $DEF_PWD
 
 	# 创建一个用于测试的数据库
-	echo "create test database $DEF_DBN"
-	new_log_schema $DEF_USR $DEF_PWD $DEF_DBN
+	init
 
 	echo "all DONE !"
 }
 
-parameter=($@)
-$1 ${parameter[@]:1}
+# sh mariadb.sh reset
+$1 $2 $3 $4 $5
