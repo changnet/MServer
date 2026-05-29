@@ -12,6 +12,10 @@ local this = memory("LogMgr", {
     buffer = {} -- this.buffer[table_name] = {rows...}
 })
 
+local time_cache
+local time_cache_str
+local time_func = os.time
+
 local function flush_table_logs(mysql, table_name, rows)
     local e = mysql:insert(table_name, rows)
     if e ~= 0 then
@@ -24,7 +28,10 @@ local function flush_logs()
     local mysql = this.mysql
 
     -- 还在startup中
-    if not mysql.connected then return end
+    if not mysql.connected then
+        eprint("log mgr flush db not connect")
+        return
+    end
 
     if 0 ~= mysql:ping() then
         local e, str = mysql:error()
@@ -65,7 +72,10 @@ local function stop()
     local mysql = this.mysql
 
     -- 还在startup中
-    if not mysql or not mysql.connected then return end
+    if not mysql or not mysql.connected then
+        eprint("log mgr db not connect")
+        return
+    end
 
     flush_logs()
 
@@ -77,6 +87,16 @@ function LogMgr.db(name, tbl)
     add_log(name, tbl)
 end
 
+local function fmt_time()
+    local now = time_func()
+    if now ~= time_cache then
+        time_cache = now
+        time_cache_str = os.date("%Y-%m-%d %H:%M:%S", now)
+    end
+
+    return time_cache_str
+end
+
 function LogMgr.misc(pid, op, v1, v2, v3)
     add_log("misc", {
         pid = pid or 0,
@@ -84,7 +104,7 @@ function LogMgr.misc(pid, op, v1, v2, v3)
         val = tostring(v1 or ""),
         val1 = tostring(v2 or ""),
         val2 = tostring(v3 or ""),
-        time = os.date("%Y-%m-%d %H:%M:%S")
+        time = fmt_time(),
     })
 end
 
@@ -95,7 +115,7 @@ function LogMgr.pmisc(pid, op, v1, v2, v3)
         val = tostring(v1 or ""),
         val1 = tostring(v2 or ""),
         val2 = tostring(v3 or ""),
-        time = os.date("%Y-%m-%d %H:%M:%S")
+        time = fmt_time(),
     })
 end
 

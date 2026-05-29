@@ -7,6 +7,7 @@ MoneyType ={
     [RES_COPPER] = RES_COPPER,
 }
 
+local log_tbl = {}
 local info_pkt = {}
 local update_pkt = {type = 0, num = 0}
 
@@ -41,8 +42,16 @@ local function res_num_factory(mtype)
     end
 end
 
-local function log_money(player, mtype, num, op, log_str)
-    -- TODO 要写入数据库
+local function log_money(player, mtype, num, new_num, op, log_str)
+    -- 写入数据库
+    log_tbl.pid = player.pid
+    log_tbl.op = op
+    log_tbl.id = mtype
+    log_tbl.change = num
+    log_tbl.new_num = new_num
+    log_tbl.val1 = log_str
+    Send[LOG_ADDR].LogMgr.db("money", log_tbl)
+
     printf("Money log, pid = %d, mtype = %d, num = %d, op = %d, log_str = %s",
         player.pid, mtype, num, op, log_str)
 end
@@ -62,7 +71,7 @@ function Money.add(player, res, op, log_str, ext)
 
     player.money[mtype] = new_num
 
-    log_money(player, mtype, num, op, log_str)
+    log_money(player, mtype, num, new_num, op, log_str)
 
     update_pkt.type = mtype
     update_pkt.num = new_num
@@ -85,7 +94,7 @@ function Money.dec(player, res, op, log_str, ext)
 
     player.money[mtype] = new_num
 
-    log_money(player, mtype, num, op, log_str)
+    log_money(player, mtype, num, new_num, op, log_str)
 
     update_pkt.type = mtype
     update_pkt.num = new_num

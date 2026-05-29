@@ -119,7 +119,7 @@ function MySQL:connect_later(host, port, user, password, database, ssl)
                 printf("%s(%d): %s", name, e1, str)
                 return false
             end
-            return true
+            -- 立马用ping确认结果并设置connected
         end
         if 0 == self.mysql:ping() then
             self.connected = true

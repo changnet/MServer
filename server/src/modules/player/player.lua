@@ -200,6 +200,8 @@ function Player.login(player)
     player.paddr = LOCAL_ADDR
     player.status = PlayerStatus.LOGIN -- 玩家状态，默认登录中
 
+    Log.pmisc(player, "login")
+
     -- 加载玩家基础数据
     if not load_db_data(player) then
         return
@@ -272,6 +274,8 @@ end
 -- 退出
 function Player.logout(player, why)
     local pid = player.pid
+
+    Log.pmisc(player, "logout")
 
     Event.pemit(player, EV.LOGOUT)
     save_db_data(player, true)
