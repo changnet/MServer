@@ -149,7 +149,7 @@ function ItemStore:log(item_obj, change_num, log_id, ext)
     log_tbl.ext = ext
     log_tbl.bid = self.id
 
-    Log.db("item", log_tbl)
+    Log.db("log_item", log_tbl)
 end
 
 -- 添加某个道具

@@ -112,7 +112,7 @@ function LogMgr.db(name, tbl)
 end
 
 function LogMgr.misc(pid, op, v1, v2, v3)
-    add_log("misc", {
+    add_log("log_misc", {
         pid = pid or 0,
         op = op or 0,
         val = tostring(v1 or ""),
@@ -123,7 +123,7 @@ function LogMgr.misc(pid, op, v1, v2, v3)
 end
 
 function LogMgr.pmisc(pid, op, v1, v2, v3)
-    add_log("misc", {
+    add_log("log_misc", {
         pid = pid or 0,
         op = op or 0,
         val = tostring(v1 or ""),

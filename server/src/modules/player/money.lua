@@ -50,7 +50,7 @@ local function log_money(player, mtype, num, new_num, log_id, log_str)
     log_tbl.change = num
     log_tbl.new_num = new_num
     log_tbl.val1 = log_str
-    Send[LOG_ADDR].LogMgr.db("money", log_tbl)
+    Send[LOG_ADDR].LogMgr.db("log_money", log_tbl)
 
     printf("Money log, pid = %d, mtype = %d, num = %d, log_id = %d, log_str = %s",
         player.pid, mtype, num, log_id, log_str)
