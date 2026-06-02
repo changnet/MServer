@@ -17,9 +17,10 @@ local time_cache_str
 local time_func = os.time
 
 local function flush_table_logs(mysql, table_name, rows)
-    local e = mysql:insert(table_name, rows)
+    local e = mysql:align_insert(table_name, rows)
     if e ~= 0 then
-        eprintf("log mysql insert error %d %s", e, mysql:error() or "")
+        local e1, str = mysql:error()
+        eprint("log mysql insert error", e,  e1, str)
     end
     this.buffer[table_name] = {}
 end
@@ -30,20 +31,25 @@ local function flush_logs()
     -- 还在startup中
     if not mysql.connected then
         eprint("log mgr flush db not connect")
-        return
+        return 0
     end
 
     if 0 ~= mysql:ping() then
         local e, str = mysql:error()
         eprintf("log mysql ping error %d %s", e, str or "")
-        return
+        return 0
     end
 
+    local count = 0
     for table_name, rows in pairs(this.buffer) do
-        if #rows > 0 then
+        local n = #rows
+        if n > 0 then
+            count = count + n
             flush_table_logs(mysql, table_name, rows)
         end
     end
+
+    return count
 end
 
 local function add_log(table_name, row)
@@ -63,7 +69,11 @@ function LogMgr.start()
     this.mysql = MySQL()
 
     local conf = g_setting.mysql
-    this.mysql:connect_later(conf.ip, conf.port, conf.user, conf.pwd, conf.db)
+    this.mysql:connect_later(conf.ip, conf.port, conf.user, conf.pwd, conf.db, nil,
+    function(mysql)
+        mysql:read_database_struct()
+        printf("log mgr mysql connected")
+    end)
 
     return true
 end
@@ -77,14 +87,12 @@ local function stop()
         return
     end
 
-    flush_logs()
+    local count = flush_logs()
 
     this.mysql:disconnect()
     this.mysql = nil
-end
 
-function LogMgr.db(name, tbl)
-    add_log(name, tbl)
+    printf("log mgr stopped, flush %d logs", count or 0)
 end
 
 local function fmt_time()
@@ -95,6 +103,12 @@ local function fmt_time()
     end
 
     return time_cache_str
+end
+
+function LogMgr.db(name, tbl)
+    if not tbl.time then tbl.time = fmt_time() end
+
+    add_log(name, tbl)
 end
 
 function LogMgr.misc(pid, op, v1, v2, v3)

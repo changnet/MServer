@@ -92,6 +92,8 @@ end, C_FUNC)
 function MySQL:__init()
     -- [tbl_name] = {a = 1, b = 2}，以表名为key，记录各个字段的数据类型
     self.types = {}
+    self.fields = {}
+    self.align_fields = {}
     self.mysql = MySql()
     self.connected = false
 end
@@ -108,7 +110,14 @@ function MySQL:connect(host, port, user, password, database)
 end
 
 -- 按优先级连接mysql
-function MySQL:connect_later(host, port, user, password, database, ssl)
+-- @param host 主机名
+-- @param port 端口
+-- @param user 用户名
+-- @param password 密码
+-- @param database 数据库名
+-- @param ssl 是否启用ssl连接
+-- @param callback 连接成功回调，参数为mysql对象
+function MySQL:connect_later(host, port, user, password, database, ssl, callback)
     local name = "MySQL:" .. database
     Startup.reg(function(retry)
         if not retry then
@@ -123,6 +132,7 @@ function MySQL:connect_later(host, port, user, password, database, ssl)
         end
         if 0 == self.mysql:ping() then
             self.connected = true
+            if callback then callback(self) end
             return true
         end
 
@@ -156,12 +166,22 @@ function MySQL:read_table_struct(table_name)
         types = {}
         self.types[table_name] = types
     end
+    local fields = self.fields[table_name]
+    if not fields then
+        fields = {}
+        self.fields[table_name] = fields
+    end
 
     for _, row in ipairs(rows) do
+        local field = row.Field
+        fields[field] = row
+
         -- varchar(128)变为varchar
         local type_str = string.match(row.Type, "^%a+")
 
-        types[row.Field] = assert(TYPE_STR[type_str])
+        local itype = assert(TYPE_STR[type_str])
+        types[field] = itype
+        row.itype = itype
     end
 
     return true
@@ -259,7 +279,7 @@ end
 
 -- 插入数据
 -- @param tbl 表名
--- @param rows 数据集 {{a=1,b=2},{a=2,b=4}}
+-- @param rows 数据集 {{a=1,b=2},{a=2,b=4}}，需要保证所有数据字段名一致
 -- @param updates ON DUPLICATE KEY UPDATE {a = "values(a)", b = "values(b)"}, 只支持sql语句
 function MySQL:insert(tbl, rows, updates)
     -- INSERT INTO tbl_name (a,b,c) VALUES(1,2,3),(4,5,6),(7,8,9);
@@ -294,6 +314,78 @@ function MySQL:insert(tbl, rows, updates)
         stmt_str(mysql, "ON DUPLICATE KEY UPDATE ")
         -- 原生的sql，ON DUPLICATE KEY UPDATE 后面的a = xxx里，xxx支持数值、字符串，二进制
         -- 但这里无法区分是直接赋值还是a = values(a)这种sql语句，因此只支持sql语句
+        local first = true
+        for k, v in pairs(updates) do
+            if first then
+                first = false
+                stmt_str(mysql, "`", k, "`=", v)
+            else
+                stmt_str(mysql, ",`", k, "`=", v)
+            end
+        end
+    end
+
+    return mysql:stmt_exec(false)
+end
+
+function MySQL:fetch_align_fields(tbl)
+    local align_fields = self.align_fields[tbl]
+    if not align_fields then
+        align_fields = {}
+        for _, field in pairs(self.fields[tbl]) do
+            -- 不允许为Null都
+            table.insert(align_fields, field)
+        end
+        self.align_fields[tbl] = align_fields
+    end
+
+    return align_fields
+end
+
+-- 插入数据
+-- @param tbl 表名
+-- @param rows 数据集 {{a=1,b=2},{a=2,b=4}}，缺省的字段会被赋值为default
+-- @param updates ON DUPLICATE KEY UPDATE {a = "values(a)", b = "values(b)"}, 只支持sql语句
+function MySQL:align_insert(tbl, rows, updates)
+    -- Similar to `insert`, but aligns columns with `self.fields[tbl]`.
+    -- For missing values: if column has a default use `DEFAULT`,
+    -- else if column allows NULL use `NULL`, otherwise fallback to `DEFAULT`.
+    assert(#rows > 0)
+    local mysql = self.mysql
+
+    local fields = self:fetch_align_fields(tbl)
+
+    mysql:stmt_clear()
+    stmt_str(mysql, "INSERT INTO ", tbl, " (")
+    for index, field in ipairs(fields) do
+        if 1 == index then
+            stmt_str(mysql, "`", field.Field, "`")
+        else
+            stmt_str(mysql, ",`", field.Field, "`")
+        end
+    end
+    stmt_str(mysql, ") VALUES ")
+
+    for row_idx, row in ipairs(rows) do
+        stmt_str(mysql, 1 == row_idx and "(" or ",(")
+        for index, field in ipairs(fields) do
+            if 1 ~= index then stmt_str(mysql, ",") end
+
+            local val = row[field.Field]
+            if val ~= nil then
+                stmt_value(mysql, field.itype, val)
+            else
+                -- 有些字段配置了默认值，用DEFAULT比NULL合适
+                -- 如果一个字段为没有指定默认值且允许为NULL，则DEFAULT就是插入NULL
+                -- 但如果这个字段不允许为NULL，用DEFAULT会报错，这个由业务那边控制
+                stmt_str(mysql, "DEFAULT")
+            end
+        end
+        stmt_str(mysql, ")")
+    end
+
+    if updates then
+        stmt_str(mysql, "ON DUPLICATE KEY UPDATE ")
         local first = true
         for k, v in pairs(updates) do
             if first then

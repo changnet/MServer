@@ -137,15 +137,15 @@ end
 -- 记录道具变动
 --@param change_num integer 变动的数量，负数表示扣除
 --@param item_obj ItemObj
---@param op OP 日志操作id
+--@param log_id LOG 日志操作id
 --@param ext string 额外的日志数据
-function ItemStore:log(item_obj, change_num, op, ext)
+function ItemStore:log(item_obj, change_num, log_id, ext)
     log_tbl.id = item_obj.id
     log_tbl.uid = item_obj.uid
     log_tbl.pid = self.pid
     log_tbl.num = item_obj.num
     log_tbl.change_num = change_num
-    log_tbl.op = op
+    log_tbl.log_id = log_id
     log_tbl.ext = ext
     log_tbl.bid = self.id
 

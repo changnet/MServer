@@ -100,24 +100,24 @@ end
 --//////////////////////////////////////////////////////////////////////////////
 --// 下面为玩家相关接口
 
-local function send_mail(player, mail_items, op, log_str, ext)
+local function send_mail(player, mail_items, log_id, log_str, ext)
     local title = (ext and ext.mail_title) or LANG.mail001
     local text =  (ext and ext.mail_text) or LANG.mail002
     Mail.send_player(player, {
         title = title,
         text = text,
         atts = mail_items,
-        op = op,
+        log_id = log_id,
         log_str = log_str,
     })
 end
 
 -- 添加资源，如果背包放不下，放不下那部分将自动发放到邮件
 -- @param res_list 资源数组{{1, 999},{100001, 9, bind = 1}}
--- @param op 操作代码，用于记录日志，见log_header定义
+-- @param log_id 操作代码，用于记录日志，见log_header定义
 -- @param log_str 额外日志信息字符串。比如op为邮件，那么sub_op可以表示哪个功能发的
 -- @param ext 扩展参数，如邮件标题、绑定属性、星级等
-function Res.add(player, res_list, op, log_str, ext)
+function Res.add(player, res_list, log_id, log_str, ext)
     -- ext 扩展参数
     -- 有些特殊的需求，例如根据玩家花的钱统一指定是否发放非绑定道具
     -- 或者在这里指定发放到邮件的邮件标题、内容
@@ -125,7 +125,7 @@ function Res.add(player, res_list, op, log_str, ext)
 
     local mail_items = nil
     for _, res in pairs(res_list) do
-        local add_num = Res.add_one(player, res, op, log_str, ext)
+        local add_num = Res.add_one(player, res, log_id, log_str, ext)
         -- add_num < 0表示出错，这里不再处理，对应的模块必须打印相关日志
         if add_num > 0 and add_num < res.num then
             assert(Res.is_item()) -- 除了道具有背包大小限制，还有什么东西放不下？
@@ -139,32 +139,32 @@ function Res.add(player, res_list, op, log_str, ext)
 
     -- 放不下背包的，默认发邮件
     if mail_items then
-        send_mail(player, mail_items, op, log_str, ext)
+        send_mail(player, mail_items, log_id, log_str, ext)
     end
 end
 
 -- 扣除资源(这个函数并不检测资源是否足够，要检测调用check_dec)
 -- @param res_list 资源数组{{1, 999},{100001, 9, bind = 1}}
--- @param op 操作代码，用于记录日志，见log_header定义
+-- @param log_id 操作代码，用于记录日志，见log_header定义
 -- @param log_str 额外日志信息字符串。比如op为邮件，那么sub_op可以表示哪个功能发的
-function Res.dec(player, res_list, op, log_str)
+function Res.dec(player, res_list, log_id, log_str)
     for _, res in pairs(res_list) do
-        Res.dec_one(player, res, op, log_str)
+        Res.dec_one(player, res, log_id, log_str)
     end
 end
 
 -- 增加一个资源
 -- @param res 资源结构{id=1,num=2}，可包含绑定、星级、强化等特殊属性
--- @param op 操作代码，用于记录日志，见log_header定义
+-- @param log_id 操作代码，用于记录日志，见log_header定义
 -- @param log_str 额外日志信息字符串。比如op为邮件，那么sub_op可以表示哪个功能发的
 -- @param ext 扩展参数，如邮件标题、绑定属性、星级等
-function Res.add_one(player, res, op, log_str, ext)
+function Res.add_one(player, res, log_id, log_str, ext)
     local id = res.id
     local t = ItemConf[id].type
     local res_m = res_func[t]
 
     -- 把res也传过去，有时候某些资源会有特殊属性，如强化、升星...
-    local add_num = res_m.add(player, res, op, log_str, ext)
+    local add_num = res_m.add(player, res, log_id, log_str, ext)
     if add_num < 0 then
         eprintf("Res add error, pid = %d, id = %d, num = %d",
             player.pid, id, res.num)
@@ -176,15 +176,15 @@ end
 -- @param id 资源id
 -- @param count 资源数量
 -- @param res 资源结构，包含绑定、星级、强化等特殊属性时需要传，否则传nil
--- @param op 操作代码，用于记录日志，见log_header定义
+-- @param log_id 操作代码，用于记录日志，见log_header定义
 -- @param log_str 额外日志信息字符串。比如op为邮件，那么sub_op可以表示哪个功能发的
-function Res.dec_one(player, res, op, log_str)
+function Res.dec_one(player, res, log_id, log_str)
     local id = res.id
     local t = ItemConf[id].type
     local res_m = res_func[t]
 
     -- 把res也传过去，有时候某些资源会有特殊属性，如强化、升星...
-    return res_m.dec(player, res, op, log_str)
+    return res_m.dec(player, res, log_id, log_str)
 end
 
 -- 检查某个资源是否足够
@@ -242,14 +242,14 @@ end
 
 -- 添加资源，如果背包放不下，所有奖励发放到邮件
 -- @param res_list 资源数组{{1, 999},{100001, 9, bind = 1}}
--- @param op 操作代码，用于记录日志，见log_header定义
+-- @param log_id 操作代码，用于记录日志，见log_header定义
 -- @param log_str 额外日志信息字符串。比如op为邮件，那么sub_op可以表示哪个功能发的
 -- @param ext 扩展参数，如邮件标题、绑定属性、星级等
-function Res.add_or_mail(player, res_list, op, log_str, ext)
+function Res.add_or_mail(player, res_list, log_id, log_str, ext)
     if Res.check_add(player, res_list, ext) then
-        Res.add(player, res_list, op, log_str, ext)
+        Res.add(player, res_list, log_id, log_str, ext)
     else
-        send_mail(player, res_list, op, log_str, ext)
+        send_mail(player, res_list, log_id, log_str, ext)
     end
 end
 
@@ -259,27 +259,27 @@ end
 --// 如跨进程的购买，check_and_add_dec可以一次执行完成
 
 -- 检测能否放入背包，如果可以则直接放背包，否则返回false
-function Res.check_and_add(player, res_list, op, log_str, ext)
+function Res.check_and_add(player, res_list, log_id, log_str, ext)
     if not Res.check_add(player, res_list, ext) then
         return false, 1
     end
 
-    Res.add(player, res_list, op, log_str, ext)
+    Res.add(player, res_list, log_id, log_str, ext)
     return true
 end
 
 -- 检测能否直接扣除，如果可以则直接扣除，否则返回false
-function Res.check_and_dec(player, res_list, op, log_str)
+function Res.check_and_dec(player, res_list, log_id, log_str)
     if not Res.check_dec(player, res_list) then
         return false, 1
     end
 
-    Res.dec(player, res_list, op, log_str)
+    Res.dec(player, res_list, log_id, log_str)
     return true
 end
 
 -- 检测能否添加、扣除，如果可以则一次性执行扣除、添加操作，否则返回false
-function Res.check_and_add_dec(player, add_list, dec_list, op, log_str, ext)
+function Res.check_and_add_dec(player, add_list, dec_list, log_id, log_str, ext)
     if not Res.check_add(player, add_list, ext) then
         return false, 1
     end
@@ -287,8 +287,8 @@ function Res.check_and_add_dec(player, add_list, dec_list, op, log_str, ext)
         return false, 2
     end
 
-    Res.dec(player, dec_list, op, log_str)
-    Res.add(player, add_list, op, log_str, ext)
+    Res.dec(player, dec_list, log_id, log_str)
+    Res.add(player, add_list, log_id, log_str, ext)
 
     return true
 end

@@ -42,22 +42,22 @@ local function res_num_factory(mtype)
     end
 end
 
-local function log_money(player, mtype, num, new_num, op, log_str)
+local function log_money(player, mtype, num, new_num, log_id, log_str)
     -- 写入数据库
     log_tbl.pid = player.pid
-    log_tbl.op = op
+    log_tbl.log_id = log_id
     log_tbl.id = mtype
     log_tbl.change = num
     log_tbl.new_num = new_num
     log_tbl.val1 = log_str
     Send[LOG_ADDR].LogMgr.db("money", log_tbl)
 
-    printf("Money log, pid = %d, mtype = %d, num = %d, op = %d, log_str = %s",
-        player.pid, mtype, num, op, log_str)
+    printf("Money log, pid = %d, mtype = %d, num = %d, log_id = %d, log_str = %s",
+        player.pid, mtype, num, log_id, log_str)
 end
 
 -- 扣除虚拟货币
-function Money.add(player, res, op, log_str, ext)
+function Money.add(player, res, log_id, log_str, ext)
     local mtype = res.id
     local num = res.num
 
@@ -71,7 +71,7 @@ function Money.add(player, res, op, log_str, ext)
 
     player.money[mtype] = new_num
 
-    log_money(player, mtype, num, new_num, op, log_str)
+    log_money(player, mtype, num, new_num, log_id, log_str)
 
     update_pkt.type = mtype
     update_pkt.num = new_num
@@ -80,7 +80,7 @@ function Money.add(player, res, op, log_str, ext)
     return num
 end
 
-function Money.dec(player, res, op, log_str, ext)
+function Money.dec(player, res, log_id, log_str, ext)
     local mtype = res.id
     local num = res.num
 
@@ -94,7 +94,7 @@ function Money.dec(player, res, op, log_str, ext)
 
     player.money[mtype] = new_num
 
-    log_money(player, mtype, num, new_num, op, log_str)
+    log_money(player, mtype, num, new_num, log_id, log_str)
 
     update_pkt.type = mtype
     update_pkt.num = new_num

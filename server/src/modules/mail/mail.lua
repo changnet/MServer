@@ -23,7 +23,7 @@ local LOCAL_TYPE = LOCAL_TYPE
 ---@field att_stat number 是否已读
 ---@field type number 邮件类型，0个人邮件，1全服邮件，2帮派邮件
 ---@field tparam table 邮件类型相关参数，比如帮派邮件的帮派id
----@field op number 日志操作，用于跟踪附件资源产出。参考log_header
+---@field log_id number 日志操作，用于跟踪附件资源产出。参考log_header
 ---@field log_str string 日志字符串，记录一些额外信息，方便日志分析
 
 local function prepare_mail_obj(mail_obj)
@@ -35,8 +35,8 @@ local function prepare_mail_obj(mail_obj)
     end
 
     -- 有附件需要标记日志来源
-    if mail_obj.atts and not mail_obj.op then
-        error("mail_obj.op is required when mail_obj.atts exists")
+    if mail_obj.atts and not mail_obj.log_id then
+        error("mail_obj.log_id is required when mail_obj.atts exists")
     end
 end
 

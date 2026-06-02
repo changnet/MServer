@@ -234,7 +234,7 @@ GM.reg("mail", function(player, p1, p2, p3)
             text = "test test test text",
             title = "test test test title",
             atts = {{id = 1, num = 100}, {id = 10000, num = 2}},
-            op = LOG.GM,
+            log_id = LOG.GM,
             log_str = "mail test",
         })
     else
