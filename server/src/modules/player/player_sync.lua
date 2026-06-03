@@ -119,6 +119,7 @@ function PlayerSync.on_login(pid, is_new)
     Router.update_player_comm_addr(pid, player.paddr, player.gaddr)
     Event.pemit(player, EV.LOGIN, is_new)
 
+    player.queue = FuncQueue(true)
     player.status = PlayerStatus.NORMAL
     PlayerMgr.set(pid, player)
 

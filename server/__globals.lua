@@ -1,4 +1,4 @@
--- auto export by lua-tags 201 symbols
+-- auto export by lua-tags 203 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -40,6 +40,7 @@ return {
 "EntityCmd", -- src/modules/entity/entity_cmd.lua
 "EntityMgr", -- src/modules/entity/entity_mgr.lua
 "Event", -- src/modules/event/event.lua
+"FuncQueue", -- src/queue/func_queue.lua
 "GAME_ADDR", -- src/engine/preloader.lua
 "GATEWAY_ADDR", -- src/engine/preloader.lua
 "GM", -- src/modules/gm/gm.lua
@@ -99,6 +100,7 @@ return {
 "PlayerDurable", -- src/rpc/PlayerDurable.lua
 "PlayerMgr", -- src/modules/player/player_mgr.lua
 "PlayerOff", -- src/modules/player/player_off.lua
+"PlayerQueue", -- src/queue/player_queue.lua
 "PlayerStatus", -- src/modules/player/player.lua
 "PlayerSync", -- src/modules/player/player_sync.lua
 "Property", -- src/modules/player/property.lua

@@ -2,6 +2,7 @@
 NetMsg = {}
 
 local Buffer = require "engine.Buffer"
+local PlayerQueue = require "queue.player_queue"
 
 local buffer_read_int = Buffer.read_int
 local buffer_write_int = Buffer.write_int
@@ -28,6 +29,8 @@ local pbc_encode = Pbc.encode
 
 local IS_PLAYER = WORKER[LOCAL_TYPE].pobj
 local IS_GATEWAY = LOCAL_TYPE == W.GATEWAY
+
+local player_queue_push = PlayerQueue.push
 
 -- 注册网络消息回调
 -- @param id 协议id
@@ -100,7 +103,7 @@ local function clt_msg_callback(func, schema, pid, buffer, size)
             eprint("clt_msg_callback no player", pid)
             return
         end
-        return CoPool.invoke(func, player, pkt)
+        return player_queue_push(player, func, player, pkt)
     else
         -- 其他的以pid回调，这些worker没有玩家对象，比如竞技场
         return CoPool.invoke(func, pid, pkt)
