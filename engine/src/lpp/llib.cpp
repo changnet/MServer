@@ -33,6 +33,10 @@
         lua_pop(L, 1); /* remove lib */  \
     } while (0)
 
+// gdb调试用：当前线程正在执行的lua_State指针
+// 初始化时设为主L，Lua侧coroutine.resume前更新为协程L
+static thread_local lua_State *tl_running_co = nullptr;
+
 static void __dbg_break_hook(lua_State *L, lua_Debug *ar)
 {
     UNUSED(ar);
@@ -43,31 +47,39 @@ static void __dbg_break_hook(lua_State *L, lua_Debug *ar)
 void __dbg_break()
 {
     // 当程序死循环时，用gdb attach到进程
-    // call __dbg_break()
-    // 然后继续执行，应该能中断lua的执行
-    // 注意：由于无法取得coroutine的L指针，无法中断coroutine中的逻辑（考虑把正在执行的
-    // coroutine设置到一个global值，然后用getglobal取值）
-    // 注意：对正在执行程序的影响未知
-    //lua_State *L = StaticGlobal::L;
+    // 1. info threads 找到死循环线程
+    // 2. thread N 切到该线程
+    // 3. call __dbg_break()
+    // 4. continue 继续执行，hook会中断lua死循环
+    lua_State *L = tl_running_co;
+    if (!L) return;
 
-    //lua_sethook(L, __dbg_break_hook,
-    //            LUA_MASKCALL | LUA_MASKRET | LUA_MASKLINE | LUA_MASKCOUNT, 1);
+    lua_sethook(L, __dbg_break_hook,
+                LUA_MASKCALL | LUA_MASKRET | LUA_MASKLINE | LUA_MASKCOUNT, 1);
 }
 
 const char *__dbg_traceback()
 {
     // 当程序死循环时，用gdb attach到进程
-    // call __dbg_traceback()
-    // 然后继续执行，应该能打印出lua当前的堆栈
-    // 注意：由于无法取得coroutine的L指针，无法打印coroutine中的堆栈
-    // 注意：对正在执行程序的影响未知
-
-    // worker线程的L不一样，这里得改一下
-    lua_State *L = nullptr; // StaticGlobal::L;
+    // 1. info threads 找到死循环线程
+    // 2. thread N 切到该线程
+    // 3. call __dbg_traceback()
+    // 4. 打印返回的字符串即为lua堆栈
+    lua_State *L = tl_running_co;
+    if (!L) return "no lua state in this thread";
 
     luaL_traceback(L, L, nullptr, 0);
-
     return lua_tostring(L, -1);
+}
+
+// Lua侧调用，设置当前正在运行的协程指针
+// 用法: __set_running_co(coroutine)
+static int l_set_running_co(lua_State *L)
+{
+    tl_running_co = lua_tothread(L, 1);
+    if (!tl_running_co) tl_running_co = L;
+
+    return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -436,6 +448,10 @@ void open_cpp(lua_State *L)
     luaopen_dict_tree(L);
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
 
+    // gdb调试用：初始设为主L，后续由Lua侧维护
+    tl_running_co = L;
+    lua_register(L, "__set_running_co", l_set_running_co);
+
     /* when debug,make sure lua stack clean after init */
     assert(0 == lua_gettop(L));
 }
@@ -459,6 +475,8 @@ lua_State *new_state()
 lua_State* delete_state(lua_State* L)
 {
     if (!L) return nullptr;
+
+    tl_running_co = nullptr;
 
     assert(0 == lua_gettop(L));
 

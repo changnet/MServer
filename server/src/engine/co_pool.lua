@@ -17,6 +17,9 @@ local co_running = coroutine.running
 
 local CO_IDLE = "__0xCC_idle" -- 标记协程空闲，尽量不与普通返回值一致
 
+-- 设置当前运行中的协程（用于程序死循环时底层调试）
+local __set_running_co = __set_running_co
+
 -- 0xcccccccc 标记windows未初始化栈内存即烫烫烫烫
 -- 0xcdcdcdcd 标记windows未初始化堆内存即屯屯屯屯
 
@@ -46,6 +49,7 @@ local function co_invoke(co, f, ...)
     -- mark as busy
     current_co = co
     busy_co[co] = 1
+    __set_running_co(co)
     return f(...)
     -- return co_invoke(co, co_yield(CO_IDLE, f(...))) -- 递归方案
 end
@@ -91,6 +95,7 @@ local function co_return(co, ok, v1, ...)
     多传一个参数CO_IDLE，所以v1参数不为指定值默认为情况2
     ]]
 
+    __set_running_co()
     if not ok then
         -- 协程出错后就变为dead状态了，只能丢弃掉
         busy_co[co] = nil
