@@ -122,7 +122,7 @@ local function do_read(socket)
 
     -- 还有消息，延后处理
     s:set_event(EV_READ)
-    g_thread:emplace_message(0, 0, ThreadMessage.SOCKET, socket.socket_id)
+    g_thread:emplace_message(0, 0, ThreadMessage.SOCKET, nil, socket.socket_id)
 end
 
 -- 收到EV_CLOSE事件时，主动关闭socket

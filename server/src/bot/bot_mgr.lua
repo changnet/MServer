@@ -77,7 +77,7 @@ function BotMgr.start()
         for i = 1, count do
             local bot = Bot(i << 32 | LOCAL_ADDR, 1)
 
-            bot.ai.ai.once_gm = 1
+            bot.ai.once_gm = 1
             table.insert(bots, bot)
         end
 

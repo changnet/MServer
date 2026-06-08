@@ -44,6 +44,14 @@ function GameTest.gm(ai)
         entity:send_pkt(M.ChatMsg, {channel = 1, context = "@test ikey"})
         entity:send_pkt(M.ChatMsg, {channel = 1, context = "@test deadloop"})
 
+        -- 避免刚刚发送的大批指令在服务器排队阻塞，导致首次 ping1 包的往返耗时严重偏高
+        -- 这里延迟N秒后再开始测延迟
+        ai.ping_latency_time = os.time() + 3
+    elseif ai.ping_latency_time and os.time() >= ai.ping_latency_time then
+        ai.ping_latency_time = nil
+
+        print("ping latency test, remove msg debug ...")
+        entity.msg_dbg = nil -- 打印日志会严重影响测试结果
         GameTest.ping_latency(ai)
     end
 end
@@ -78,7 +86,7 @@ local function ping_perf_cb(entity)
 
     assert(s.type == ping.type)
 
-    s.count = s.count + cnt
+    s.ts = s.ts + cnt
     s.time = s.time + tot
     if mn < s.min_time then s.min_time = mn end
     if mx > s.max_time then s.max_time = mx end
@@ -87,15 +95,14 @@ local function ping_perf_cb(entity)
     if ping_perf_info.completed < ping_perf_info.total then return end
 
     printf("ALL %s avg: %.3f, min: %d, max: %d, bots: %d",
-        s.type, s.total_time/s.count , s.min_time, s.max_time, s.bots)
+        s.type, s.time/s.ts, s.min_time, s.max_time, s.completed)
 
     if s.type ~= "ping1" then return end
 
-    s.count = 0
     s.completed = 0
     reset_ping_context(ping_perf_info, "ping2")
 
-    local bots = BagMgr.get_bots()
+    local bots = BotMgr.get_bots()
     for _, bot in pairs(bots) do
         bot.ai.ping = nil
         GameTest.ping_latency(bot.ai, ping_perf_cb, "ping2")
@@ -108,7 +115,7 @@ function GameTest.ping_perf(now)
 
     if now < (ping_perf_info.next or 0)  then return end
 
-    local bots = BagMgr.get_bots()
+    local bots = BotMgr.get_bots()
     -- 检测所有机器人是否登录完成
     for _, bot in pairs(bots) do
         if bot.ai.state ~= AST.ON then
@@ -146,8 +153,12 @@ function GameTest.ping_latency(ai, cb, ptype)
         max = 100,
         beg = 0,
     }
-    reset_ping_context(ping)
+    reset_ping_context(ping, ptype)
 
+    --[[
+    bot_4294968211 ping1 100 times finish, avg: 0.020, min: 0, max: 1
+    bot_4294968211 ping2 100 times finish, avg: 0.110, min: 0, max: 1
+    ]]
     ping.cb = cb or function()
         printf("%s %s %d times finish, avg: %.3f, min: %d, max: %d",
             entity.name, ping.type, ping.max,
