@@ -15,11 +15,6 @@ M = {
         s = "player.SLogin", c = "player.CLogin", i = 1, w = "gateway"
 
     },
-    -- 2 ping后端延迟
-    PlayerPing = {
-        s = "player.SPing", c = "player.CPing", i = 2
-
-    },
     -- 3 创角
     PlayerCreate = {
         s = "player.SCreateRole", c = "player.CCreateRole", i = 3, w = "gateway"

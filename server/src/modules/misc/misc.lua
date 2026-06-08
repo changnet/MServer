@@ -5,6 +5,10 @@
 -- 一些杂七杂八的小接口
 Misc = {}
 
+-- 空函数，有些rpc需要调用一个空函数来保证数据完整性
+function Misc.dummy()
+end
+
 -- 重载脚本
 function Misc.reload()
     local t1 = Engine.steady_clock()

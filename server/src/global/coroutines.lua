@@ -11,12 +11,12 @@ if debug then
 
     local resume = coroutine.__resume
     local function _resume_ret(...)
-        __set_running_co()
+        set_running_co()
         return ...
     end
 
     function coroutine.resume(co, ...)
-        __set_running_co(co)
+        set_running_co(co)
         return _resume_ret(resume(co, ...))
     end
 end

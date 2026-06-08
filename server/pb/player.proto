@@ -68,23 +68,6 @@ message CEnterDungeon
     int32 id = 1; // 副本id
 }
 
-message CPing
-{
-    string verify = 1; // 用于校验包完整的字符串
-}
-
-// ping后端延迟
-message SPing
-{
-    message SrvDelay
-    {
-        string name = 1; // 服务名字
-        int32 time = 2; // 延迟，毫秒
-    }
-    repeated SrvDelay delay = 1; // 延迟
-    string verify = 2; // 用于校验包完整的字符串
-}
-
 // 虚拟货币更新
 message MoneyUpdate
 {

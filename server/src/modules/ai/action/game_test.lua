@@ -2,7 +2,8 @@
 GameTest = {}
 
 local chat_cache = {}
-local ping_cache = {}
+local ping_pkt = {channel = 0xFFFF}
+local ping_perf_info = {}
 
 -- 随机一个字符串
 local function randomStr(cache, max_cache, max_len)
@@ -42,41 +43,147 @@ function GameTest.gm(ai)
         entity:send_pkt(M.ChatMsg, {channel = 1, context = "@mail test"})
         entity:send_pkt(M.ChatMsg, {channel = 1, context = "@test ikey"})
         entity:send_pkt(M.ChatMsg, {channel = 1, context = "@test deadloop"})
+
+        GameTest.ping_latency(ai)
+    end
+end
+
+local function send_ping(entity, ping)
+    local ts = ping.ts + 1
+    ping_pkt.context = string.format("@test %s %d", ping.type, ts)
+    entity:send_pkt(M.ChatMsg, ping_pkt)
+
+    ping.ts = ts
+    ping.beg = Engine.steady_clock()
+end
+
+local function reset_ping_context(ping, ptype)
+    ping.type = ptype or "ping1"
+    ping.ts = 0
+    ping.time = 0
+    ping.max_time = 0
+    ping.min_time = 0xFFFFFFFF
+end
+
+local function ping_perf_cb(entity)
+    local ping = entity.ai.ping
+    if not ping then return end
+
+    local cnt = ping.ts or 0
+    local tot = ping.time or 0
+    local mn = ping.min_time or 0
+    local mx = ping.max_time or 0
+
+    local s = ping_perf_info
+
+    assert(s.type == ping.type)
+
+    s.count = s.count + cnt
+    s.time = s.time + tot
+    if mn < s.min_time then s.min_time = mn end
+    if mx > s.max_time then s.max_time = mx end
+
+    ping_perf_info.completed = ping_perf_info.completed + 1
+    if ping_perf_info.completed < ping_perf_info.total then return end
+
+    printf("ALL %s avg: %.3f, min: %d, max: %d, bots: %d",
+        s.type, s.total_time/s.count , s.min_time, s.max_time, s.bots)
+
+    if s.type ~= "ping1" then return end
+
+    s.count = 0
+    s.completed = 0
+    reset_ping_context(ping_perf_info, "ping2")
+
+    local bots = BagMgr.get_bots()
+    for _, bot in pairs(bots) do
+        bot.ai.ping = nil
+        GameTest.ping_latency(bot.ai, ping_perf_cb, "ping2")
+    end
+end
+
+-- 测试服务器性能，对所有bots发起GameTest.ping_latency
+function GameTest.ping_perf(now)
+    if ping_perf_info.run then return end
+
+    if now < (ping_perf_info.next or 0)  then return end
+
+    local bots = BagMgr.get_bots()
+    -- 检测所有机器人是否登录完成
+    for _, bot in pairs(bots) do
+        if bot.ai.state ~= AST.ON then
+            ping_perf_info.next = now + 1000
+            print("bot not login, wait ...")
+            return
+        end
+    end
+
+    -- 开始进行测试
+    ping_perf_info.run = 1
+
+    -- 初始化统计信息
+    ping_perf_info.type = "ping1"
+    ping_perf_info.total = #bots
+    ping_perf_info.completed = 0
+    reset_ping_context(ping_perf_info)
+
+    for _, bot in pairs(bots) do
+        GameTest.ping_latency(bot.ai, ping_perf_cb)
     end
 end
 
 -- 测试服务器延迟
-function GameTest.ping(ai)
-    if ai.ping_time then return end -- 上一次的还没返回
+function GameTest.ping_latency(ai, cb, ptype)
+    local ping = ai.ping
+    if ping then
+        print("GameTest.ping_latency already beg")
+        return
+    end -- 上一次的还没返回
 
     local entity = ai.entity
 
-    local str = randomStr(ping_cache, 1024, 60 * 1024)
+    ping = {
+        max = 100,
+        beg = 0,
+    }
+    reset_ping_context(ping)
 
-    ai.ping_ts = (ai.ping_ts or 0) + 1
-    ai.ping_time = Engine.steady_clock()
-    ai.ping_verify = str
+    ping.cb = cb or function()
+        printf("%s %s %d times finish, avg: %.3f, min: %d, max: %d",
+            entity.name, ping.type, ping.max,
+            ping.time / ping.ts, ping.min_time, ping.max_time
+        )
 
-    entity:send_pkt(M.PlayerPing, {verify = str})
+        if "ping1" == ping.type then
+            reset_ping_context(ping, "ping2")
+
+            send_ping(entity, ping)
+        end
+    end
+    ai.ping = ping
+
+    send_ping(entity, ping)
 end
 
 local function s_ping(entity, ecode, pkt)
     local ai = entity.ai
+    local ping = ai.ping
 
-    local beg = ai.ping_time
+    local ms = Engine.steady_clock() - ping.beg
 
-    ai.ping_time = nil
-    if ai.ping_verify ~= pkt.verify then
-        print("ping verify error", entity.name, ai.ping_verify, pkt.verify)
+    ping.time = ping.time + ms
+    if ms > ping.max_time then ping.max_time = ms end
+    if ms < ping.min_time then ping.min_time = ms end
+
+    if tonumber(pkt.context) ~= ping.ts then
+        print("ping ts error", entity.name, pkt.context, ping.ts)
+        return
     end
 
-    -- 服务器不忙的情况下，延迟是1~5毫秒左右.60帧则是16ms以下
-    local ms = Engine.steady_clock() - beg
-    print("ping", entity.name, ai.ping_ts, ms, #pkt.verify)
-    for _, delay in pairs(pkt.delay) do
-        if (delay.time or 0) + ms > 10 then
-            print("     latency too large", delay.name, (delay.time or 0) + ms)
-        end
+    if ping.ts >= ping.max then
+        ping.cb(entity)
+    else
+        send_ping(entity, ping)
     end
 end
 
@@ -100,6 +207,10 @@ end
 local function s_chat_msg(entity, pkt)
     -- printf("chat: %d say %s", pkt.pid, pkt.context)
 
+    if pkt.channel == 0xFFFF then
+        return s_ping(entity, 0, pkt)
+    end
+
     if pkt.pid == entity.pid then
         entity.ai.fail_chat = nil
 
@@ -116,7 +227,6 @@ end
 
 -- ************************************************************************** --
 
-BotMgr.reg(M.PlayerPing, s_ping)
 BotMgr.reg(M.ChatMsg, s_chat_msg)
 
 return GameTest

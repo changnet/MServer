@@ -85,6 +85,26 @@ function IntegrateTest.deadloop()
     -- while true do end
 end
 
+-- ping测试，只测试client-->gateway-->player返回
+function IntegrateTest.ping1(roleObj, id)
+    local pkt = {
+        channel = 0xFFFF,
+        context = string.format("%d", id),
+    }
+    NetMsg.send(roleObj, M.ChatMsg, pkt)
+end
+
+-- ping测试，只测试client-->gateway-->player-->game返回，和ping1对比
+function IntegrateTest.ping2(roleObj, id)
+    Call[GAME_ADDR].Misc.dummy()
+
+    local pkt = {
+        channel = 0xFFFF,
+        context = string.format("%d", id),
+    }
+    NetMsg.send(roleObj, M.ChatMsg, pkt)
+end
+
 -- GM: @test xxx
 function IntegrateTest.run(player, cmd, ...)
     assert("run" ~= cmd, "test cmd should not be run")

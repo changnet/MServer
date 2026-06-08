@@ -16,12 +16,6 @@ read_globals =
     "g_async_log",
     "g_sharedata",
     "Engine",
-    "__VERSION__",
-    "__TIMESTAMP__",
-    "LINUX",
-    "WINDOWS",
-    "IPV4",
-    "IPV6"
 }
 
 local rw_globals = {
@@ -31,6 +25,7 @@ local rw_globals = {
     "utf8",
     "math",
     "debug",
+    "coroutine",
     "g_thread",
 }
 

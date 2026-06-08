@@ -69,7 +69,14 @@ const char *__dbg_traceback()
     if (!L) return "no lua state in this thread";
 
     luaL_traceback(L, L, nullptr, 0);
-    return lua_tostring(L, -1);
+    const char *str = lua_tostring(L, -1);
+
+    // 如果不恢复堆栈，可能会影响原来的死循环代码，恢复的话堆栈又没有了指针。
+    // 但由于这里是gdb在操作，没有任何内存回收，这个指针虽然不在栈上了基本是能看到堆栈信息的
+    // 最坏情况是gdb访问一个非法指针，但这也不会对程序有影响
+    lua_pop(L, 1);
+
+    return str;
 }
 
 // Lua侧调用，设置当前正在运行的协程指针

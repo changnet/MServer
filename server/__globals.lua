@@ -1,4 +1,4 @@
--- auto export by lua-tags 203 symbols
+-- auto export by lua-tags 202 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -94,7 +94,6 @@ return {
 "PWSend", -- src/rpc/rpc_proxy.lua
 "Pbc", -- src/message/pbc.lua
 "PbcCodec", -- engine/__pbccodec.lua
-"Ping", -- src/modules/system/ping.lua
 "Player", -- src/modules/player/player.lua
 "PlayerData", -- src/modules/player/player_data.lua
 "PlayerDurable", -- src/rpc/PlayerDurable.lua
