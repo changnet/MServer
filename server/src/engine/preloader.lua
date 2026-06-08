@@ -28,6 +28,7 @@ GATEWAY_ADDR = Engine.make_address(W.GATEWAY, 1) -- 网关的地址
 ACCOUNT_ADDR = Engine.make_address(W.ACCOUNT, 1) -- 帐号管理的地址
 LOG_ADDR = Engine.make_address(W.LOG, 1) -- 日志的地址
 
+require "global.coroutines"
 require "engine.co_pool"
 require "message.thread_message"
 require "engine.signal"

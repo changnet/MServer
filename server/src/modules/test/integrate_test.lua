@@ -79,6 +79,12 @@ function IntegrateTest.ikey(player)
     end
 end
 
+-- 死循环测试：能否中断并查出死循环的调用栈
+function IntegrateTest.deadloop()
+    -- print("run deadloop test")
+    -- while true do end
+end
+
 -- GM: @test xxx
 function IntegrateTest.run(player, cmd, ...)
     assert("run" ~= cmd, "test cmd should not be run")

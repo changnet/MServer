@@ -394,6 +394,10 @@ void init_env(const char *source)
     S->set_kv("__COMPLIER_", __COMPLIER_);
     S->set_kv("__BACKEND__", __BACKEND__);
     S->set_kv("__TIMESTAMP__", __TIMESTAMP__); // 这个时间不准，只有被编译到才会更新
+    // 是否debug构建
+#ifndef NDEBUG
+    S->set_kv("__DEBUG__", "true");
+#endif
 }
 
 void open_env(lua_State *L)
