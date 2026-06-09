@@ -32,6 +32,22 @@ local IS_GATEWAY = LOCAL_TYPE == W.GATEWAY
 
 local player_queue_push = PlayerQueue.push
 
+local IS_PROFILE = true
+local Profile = require "profile.profile"
+if IS_PROFILE then
+    Profile.init_timing_context("NetMsg", 256)
+end
+
+local function callback_factory(id, func)
+    if not IS_PROFILE then return func end
+
+    return function(...)
+        Profile.begin_timing("NetMsg", true)
+        func(...)
+        Profile.end_timing("NetMsg", id)
+    end
+end
+
 -- 注册网络消息回调
 -- @param id 协议id
 -- @param func 回调函数
@@ -42,7 +58,7 @@ function NetMsg.reg(msg, func)
     local id = msg.i
     assert(not callback[id])
     callback[id] = {
-        f = func,
+        f = callback_factory(id, func),
         c = msg.c,
         s = msg.s,
     }
@@ -59,7 +75,7 @@ function NetMsg.reg_noauth(msg, func, flag)
     local id = msg.i
     assert(not callback[id])
     callback[id] = {
-        f = func,
+        f = callback_factory(id, func),
         c = msg.c,
         s = msg.s,
         n = flag or 0, -- noauth
@@ -70,25 +86,13 @@ end
 function NetMsg.load_forward_msg()
     if LOCAL_TYPE ~= W.GATEWAY then return end
 
-    -- TODO 这个要优化下，把所有协议放到一个table M中，访问协议时用M.Login
-    local path, err = package.searchpath("protocol.protocol", package.path)
-    if not path then error(err) end
-
-    local env = {}
-    loadfile(path, "bt", env)()
-
     forward_wtype = {}
     local wnt = WorkerNameType
-    for _, mod in pairs(env) do
-        if "table" == type(mod) then
-            for _, msg in pairs(mod) do
-                local i = msg.i
-                if "number" == type(i) then
-                    local wname = msg.w
-                    forward_wtype[i] = wnt[wname] or DEF_DISPATCH_WTYPE
-                end
-            end
-        end
+
+    for _, msg in pairs(M) do
+        local i = msg.i
+        local wname = msg.w
+        forward_wtype[i] = wnt[wname] or DEF_DISPATCH_WTYPE
     end
 end
 

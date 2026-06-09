@@ -23,11 +23,6 @@ GM.reg("debug", function(pid, p1)
     return true
 end, -1)
 
--- ping一下服务器间的延迟，看卡不卡
-GM.reg("ping", function()
-    Ping.start(1)
-end, W.GAME | W.MAIN)
-
 -- 执行测试命令
 GM.reg("test", function(player, cmd, ...)
     local IntegrateTest = require "test.integrate_test"
@@ -48,6 +43,19 @@ GM.reg("res", function(player, id, num)
         Res.add(player, {{id = id, num = num}}, LOG.GM)
     else
         Res.dec(player, {{id = id, num = num}}, LOG.GM)
+    end
+
+    return true
+end)
+
+GM.reg("profile", function(player, cmd, addr_name, profile_name, param)
+    -- @profile timing player1 NetMsg 1
+    if "timing" == cmd then
+        local addr = Worker.name_addr(addr_name)
+        assert(addr)
+        Send[addr].Profile.log_timing(profile_name, "1" == param)
+    else
+        error("unknow profile cmd " .. tostring(cmd))
     end
 
     return true

@@ -61,6 +61,7 @@ local __G_DUMP_STACK = __G_DUMP_STACK
 local g_lcodec = g_lcodec
 local g_mthread = g_mthread
 local WorkerHash = WorkerHash
+local LOCAL_ADDR = LOCAL_ADDR
 local RPC_REQ = ThreadMessage.RPC_REQ
 local RPC_RES = ThreadMessage.RPC_RES
 local lcodec_encode_to_buffer = g_lcodec.encode_to_buffer
@@ -140,6 +141,12 @@ local function call_return(ok, ...)
 end
 
 local function send(name, addr, ...)
+    -- 允许在当前线程用rpc调用本线程函数，方便统一写代码不用多加个if判断
+    if LOCAL_ADDR == addr then
+        local func = parse_name_func(name)
+        return func(...)
+    end
+
     local w = WorkerHash[addr] or g_mthread
 
     local ptr, size = lcodec_encode_to_buffer(g_lcodec, 0, name, ...)
@@ -152,6 +159,11 @@ local function send_func_factory(name, addr)
 end
 
 local function call(name, addr, ...)
+    -- 允许在当前线程用rpc调用本线程函数，方便统一写代码不用多加个if判断
+    if LOCAL_ADDR == addr then
+        local func = parse_name_func(name)
+        return func(...)
+    end
     local w = WorkerHash[addr] or g_mthread
 
     -- 每个协程需要分配一个session，这样返回时才知道唤醒哪个协程

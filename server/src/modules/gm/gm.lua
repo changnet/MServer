@@ -112,12 +112,9 @@ function GM.run_player_gm(player, str)
     end
 
     local args = split_str(str)
-    local ok, msg1 = GM.dispatch("player", player.pid, data, args)
-    if not ok then
-        eprint("GM dispatch fail", table.concat(args, "_"), msg1)
-        -- 仍然返回true表示已执行gm
-    end
+    GM.dispatch("player", player.pid, data, args)
 
+    -- 仍然返回true表示已执行gm
     return true
 end
 
@@ -179,9 +176,9 @@ function GM.dispatch(source, pid, data, args)
         return true
     end
 
-    local is_main = 0 ~= (wtype & W.MAIN)
+    local is_main = wtype & W.MAIN
     wtype = wtype & ~W.MAIN
-    if is_main then
+    if 0 ~= is_main then
         Send[MAIN_ADDR].GM.run(source, pid, args)
         return true
     end
@@ -198,6 +195,7 @@ function GM.dispatch(source, pid, data, args)
         return true
     end
 
+    -- 都未指定，则随机找一个对应类型的执行即可
     for addr in pairs(WorkerData) do
         local wt, _, main = Engine.unmake_address(addr)
         if wt == wtype and (is_main == main) then
@@ -206,7 +204,8 @@ function GM.dispatch(source, pid, data, args)
         end
     end
 
-    return false, "no gm node addr found" .. tostring(args[1])
+    eprint("GM dispatch fail, no route found", table.concat(args, "_"))
+    return false
 end
 
 return GM

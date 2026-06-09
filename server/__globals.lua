@@ -1,4 +1,4 @@
--- auto export by lua-tags 202 symbols
+-- auto export by lua-tags 203 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -102,6 +102,7 @@ return {
 "PlayerQueue", -- src/queue/player_queue.lua
 "PlayerStatus", -- src/modules/player/player.lua
 "PlayerSync", -- src/modules/player/player_sync.lua
+"Profile", -- src/profile/profile.lua
 "Property", -- src/modules/player/property.lua
 "RES_COPPER", -- src/modules/res/res_header.lua
 "RES_GOLD", -- src/modules/res/res_header.lua
