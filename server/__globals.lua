@@ -1,11 +1,10 @@
--- auto export by lua-tags 203 symbols
+-- auto export by lua-tags 202 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
 "ABTSYS", -- src/modules/attribute/attribute_header.lua
 "ACCOUNT_ADDR", -- src/engine/preloader.lua
 "AST", -- src/modules/ai/ai_header.lua
-"ASYNC", -- src/modules/async_worker/async_worker_header.lua
 "AccountMgr", -- src/modules/account/account_mgr.lua
 "Acism", -- engine/__acism.lua
 "Alert", -- src/modules/misc/alert.lua
