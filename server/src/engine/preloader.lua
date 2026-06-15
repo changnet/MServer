@@ -29,7 +29,8 @@ ACCOUNT_ADDR = Engine.make_address(W.ACCOUNT, 1) -- 帐号管理的地址
 LOG_ADDR = Engine.make_address(W.LOG, 1) -- 日志的地址
 
 require "global.coroutine"
-require "engine.co_pool"
+require "profile.profile"
+require "engine.co_pool" -- 重写了corotinue的，必须在co_pool前加载
 require "message.thread_message"
 require "engine.signal"
 require "rpc.rpc"
