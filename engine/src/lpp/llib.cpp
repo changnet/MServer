@@ -10,6 +10,7 @@
 #include "lutil.hpp"
 #include "llist_aoi.hpp"
 #include "system/dict_tree.hpp"
+#include "system/profile.hpp"
 
 #include "net/socket.hpp"
 #include "net/io/tls_ctx.hpp"
@@ -388,6 +389,14 @@ static void luaopen_dict_tree(lua_State *L)
     lc.def<&DictTree::set_ignore_chars>("set_ignore_chars");
 }
 
+static void luaopen_profile(lua_State *L)
+{
+    lcpp::Class<Profile> lc(L, "engine.Profile");
+    lc.def<&Profile::begin_hook>("begin_hook");
+    lc.def<&Profile::end_hook>("end_hook");
+    lc.def<&Profile::set_hook>("set_hook");
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace llib
@@ -457,6 +466,7 @@ void open_cpp(lua_State *L)
     luaopen_buffer(L);
     luaopen_stdin_reader(L);
     luaopen_dict_tree(L);
+    luaopen_profile(L);
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
 
     // gdb调试用：初始设为主L，后续由Lua侧维护

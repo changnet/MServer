@@ -27,6 +27,9 @@ local ENABLE_PROFILE = g_debug
 local steady_clock = Engine.steady_clock
 local coroutine_running = coroutine.running
 
+-- C++函数级分析器实例（活跃时非nil）
+local hook_profiler = _G.__hook_profiler
+
 local function get_ctx(name)
     local ctx = ctx_hash[name]
     if not ctx then
@@ -171,6 +174,40 @@ function Profile.log_timing(name, reset)
     end
 end
 
+-- 开始函数级hook分析
+-- @param min_t integer 过滤阈值（毫秒），只输出总耗时大于此值的调用栈
+function Profile.begin_hook(min_t)
+    if hook_profiler then
+        eprint("profile hook already active")
+        return
+    end
+    local EngineProfile = require("engine.Profile")
+    hook_profiler = EngineProfile()
+    _G.__hook_profiler = hook_profiler
+
+    hook_profiler:begin_hook(min_t or 0)
+    print("profile hook begin, min_t =", min_t or 0)
+end
+
+-- 结束函数级hook分析，把报告写入文件
+function Profile.end_hook()
+    if not hook_profiler then
+        eprint("profile hook not active")
+        return
+    end
+
+    util.mkdir_p("profile")
+    local now_str = os.date("%Y%m%d%H%M%S")
+    local path = string.format("profile/hook_%s_%s.txt", LOCAL_NAME, now_str)
+
+
+    hook_profiler:end_hook(path)
+    hook_profiler = nil
+    _G.__hook_profiler = nil
+
+    print("profile hook end, write to", path)
+end
+
 if ENABLE_PROFILE then
     if not _G.__profile then
         _G.__profile = {
@@ -186,20 +223,35 @@ if ENABLE_PROFILE then
 
     function coroutine.yield(...)
         local co = coroutine_running()
+
+        -- Lua层timing统计
         local ctx = co_hash[co]
         if ctx then
             ctx.yield_tm = steady_clock()
         end
+
+        -- C++函数级profiler：yield前解除hook
+        if hook_profiler then
+            hook_profiler:set_hook(co, false)
+        end
+
         return yield(...)
     end
 
     function coroutine.resume(co, ...)
+        -- C++函数级profiler：resume前添加hook
+        if hook_profiler then
+            hook_profiler:set_hook(co, true)
+        end
+
+        -- Lua层timing统计
         local ctx = co_hash[co]
         if ctx then
             local now = steady_clock()
             ctx.yield_total = ctx.yield_total + (now - ctx.yield_tm)
             ctx.yield_tm = nil
         end
+
         return resume(co, ...)
     end
 end
