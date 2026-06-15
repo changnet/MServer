@@ -186,6 +186,11 @@ function Profile.begin_hook(min_t)
     _G.__hook_profiler = hook_profiler
 
     hook_profiler:begin_hook(min_t or 0)
+
+    -- 其他协程在下面的resume里处理（包括主协程，C++处理了）
+    -- local co = coroutine.running()
+    -- hook_profiler:set_hook(co, true)
+
     print("profile hook begin, min_t =", min_t or 0)
 end
 

@@ -69,11 +69,12 @@ private:
     void on_return(lua_State *L);
 
     // 记录函数耗时到节点
-    void record_frame(Frame &frame, int64_t now);
+    void record_frame(Frame &frame);
 
     // 输出报告
     void write_report(const char *path);
     void write_node(FILE *fp, Node *node, int depth);
+    void remove_suspend_time(CoState &cs);
 
     // 清理所有数据
     void reset();

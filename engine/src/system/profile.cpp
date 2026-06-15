@@ -49,9 +49,9 @@ Profile::~Profile()
 }
 
 // 记录一个栈帧的耗时到对应的树节点
-void Profile::record_frame(Frame &frame, int64_t now)
+void Profile::record_frame(Frame &frame)
 {
-    int64_t duration = now - frame.enter_time;
+    int64_t duration = timing::steady_clock() - frame.enter_time;
 
     frame.node->times++;
     frame.node->total_time += duration;
@@ -101,8 +101,7 @@ void Profile::on_call(
     // 尾调用：先结算上一个栈帧
     if (tail && !cs.stack.empty())
     {
-        int64_t now = timing::steady_clock();
-        record_frame(cs.stack.back(), now);
+        record_frame(cs.stack.back());
         cs.stack.pop_back();
     }
 
@@ -117,12 +116,12 @@ void Profile::on_call(
 
 void Profile::on_return(lua_State *L)
 {
+    // begin_hook肯定是在一个函数中调用，因此这个函数是记录不到开始，不配对的
     auto it = stacks_.find(L);
     if (it == stacks_.end() || it->second.stack.empty()) return;
 
     auto &cs = it->second;
-    int64_t now = timing::steady_clock();
-    record_frame(cs.stack.back(), now);
+    record_frame(cs.stack.back());
     cs.stack.pop_back();
 
     // 调用栈为空时，从map删除避免协程GC后泄漏
@@ -160,12 +159,31 @@ int Profile::end_hook(lua_State *L)
     lua_sethook(L, nullptr, 0, 0);
     hooking_ = false;
 
+    // 挂起的线程，全部停止计时，修正挂起时间。没回调的一律按当前时间算
+    for (auto& x : stacks_)
+    {
+        remove_suspend_time(x.second);
+    }
+
     write_report(path);
     reset();
 
     tl_active_ = nullptr;
 
     return 0;
+}
+
+void Profile::remove_suspend_time(CoState &cs)
+{
+    if (0 == cs.suspend_time) return;
+
+    int64_t now = timing::steady_clock();
+    int64_t dt  = now - cs.suspend_time;
+    for (auto &frame : cs.stack)
+    {
+        frame.enter_time += dt;
+    }
+    cs.suspend_time = 0;
 }
 
 // Lua: profiler:set_hook(co, enable)
@@ -186,17 +204,7 @@ int Profile::set_hook(lua_State *L)
         auto it = stacks_.find(co);
         if (it != stacks_.end())
         {
-            auto &cs = it->second;
-            if (cs.suspend_time > 0)
-            {
-                int64_t now = timing::steady_clock();
-                int64_t dt = now - cs.suspend_time;
-                for (auto &frame : cs.stack)
-                {
-                    frame.enter_time += dt;
-                }
-                cs.suspend_time = 0;
-            }
+            remove_suspend_time(it->second);
         }
     }
     else
@@ -267,8 +275,14 @@ void Profile::write_node(
                         ? 0
                         : node->min_time;
 
-    // 缩进用tab表示调用层级
-    std::string indent(depth, '\t');
+    std::string indent;
+    for (int i = 0; i < depth; ++i)
+    {
+        if (i == depth - 1)
+            indent += "|+ ";
+        else
+            indent += "|  ";
+    }
 
     fprintf(fp,
             "%-10lld %-10lld %-10lld %-10lld %-10lld "

@@ -3,6 +3,8 @@
 -- xzc
 -- 进程入口文件(此文件不可热更)
 
+coroutine.main = coroutine.running()
+
 local util = require "engine.util"
 
 -- 简单模拟c的getopt函数，把参数读出来，按table返回
