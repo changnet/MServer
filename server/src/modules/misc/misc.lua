@@ -53,7 +53,7 @@ function Misc.reload()
     end
     for addr in pairs(WorkerData) do
         wait_size = wait_size + 1
-        Callback[addr].Misc.reload(reload_finish)
+        Callback[addr].Misc.reload().done(reload_finish)
     end
 end
 

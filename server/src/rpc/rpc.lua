@@ -6,7 +6,7 @@ Rpc = {}
 Call = {}
 
 -- rpc调用，使用回调函数异步返回
--- 用法：Callback[addr].MongoDB.find(func, ...)
+-- 用法：Callback[addr].MongoDB.find(...).done(func)
 Callback = {}
 
 -- rpc调用，无返回
@@ -193,18 +193,37 @@ local function next_id()
 end
 
 local function callback_func_factory(name, addr)
-    return function(func, ...)
+    return function(...)
         local w = WorkerHash[addr] or g_mthread
 
         local session = next_id()
         rpc_session.session[session] = {
-            func = func,
+            -- func = func,
         }
+
         local ptr, size = lcodec_encode_to_buffer(g_lcodec, session, name, ...)
         last_codec_size = size
-        return w:emplace_message(LOCAL_ADDR, addr, RPC_REQ, ptr, size)
+        w:emplace_message(LOCAL_ADDR, addr, RPC_REQ, ptr, size)
+
+        Callback.session = session
+        return Callback
     end
 end
+
+function Callback.done(cb)
+    local session = Callback.session
+    local s = rpc_session.session[session]
+    if not s then
+        error("Callback no session found")
+    end
+    if s.func then
+        error("Callback already had a cb func")
+    end
+
+    s.func = cb
+    Callback.session = nil
+end
+
 
 local function do_session_request(src, session, func, ...)
     local ptr, size = lcodec_encode_to_buffer(g_lcodec,
