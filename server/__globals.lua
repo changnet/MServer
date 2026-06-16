@@ -1,4 +1,4 @@
--- auto export by lua-tags 202 symbols
+-- auto export by lua-tags 203 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -76,6 +76,7 @@ return {
 "MailPlayer", -- src/modules/mail/mail_player.lua
 "MailSys", -- src/modules/mail/mail_sys.lua
 "Map", -- engine/__map.lua
+"MemProfile", -- src/profile/mem_profile.lua
 "Misc", -- src/modules/misc/misc.lua
 "Money", -- src/modules/player/money.lua
 "MoneyType", -- src/modules/player/money.lua

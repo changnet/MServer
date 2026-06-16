@@ -213,6 +213,28 @@ function Profile.end_hook()
     print("profile hook end, write to", path)
 end
 
+-- 打印日志信息
+-- 要打印的table名字，比如_G，或者A.B.C
+function Profile.log_mem(name)
+    local tbl = _G
+    if name ~= "_G" then
+        local args = string.split(name, ".", true)
+        for _, k in pairs(args) do
+            tbl = tbl[k]
+            if not table then
+                error(string.format("no table %s found: %s"), name, k)
+            end
+        end
+    end
+
+    if "table" ~= type(tbl) then
+        error(string.format("%s is not a table: %s"), name, type(tbl))
+    end
+
+    local MemProfile = require "profile.mem_profile"
+    MemProfile.table_mem(tbl, name)
+end
+
 if ENABLE_PROFILE then
     if not _G.__profile then
         _G.__profile = {

@@ -49,21 +49,22 @@ GM.reg("res", function(player, id, num)
 end)
 
 GM.reg("profile", function(player, cmd, addr_name, profile_name, param)
+    local addr = Worker.name_addr(addr_name)
+    assert(addr)
     if "timing" == cmd then
         -- @profile timing player1 NetMsg 1
-        local addr = Worker.name_addr(addr_name)
-        assert(addr)
         Send[addr].Profile.log_timing(profile_name, "1" == param)
     elseif "hook" == cmd then
         -- @profile hook player1 beg 0
         -- @profile hook player1 end
-        local addr = Worker.name_addr(addr_name)
-        assert(addr)
         if "beg" == profile_name then
             Send[addr].Profile.begin_hook(tonumber(param))
         else
             Send[addr].Profile.end_hook()
         end
+    elseif "mem" == cmd then
+        -- @profile mem player1 _G
+        Send[addr].Profile.log_mem(profile_name)
     else
         error("unknow profile cmd " .. tostring(cmd))
     end
