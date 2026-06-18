@@ -16,7 +16,7 @@ class LListAoi final : public ListAOI
 {
 public:
     ~LListAoi() {}
-    explicit LListAoi(lua_State *L) { UNUSED(L); }
+    LListAoi() {}
 
     /// 是否使用y轴，仅十字链表可用
     int32_t use_y(lua_State *L);

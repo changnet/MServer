@@ -34,6 +34,25 @@
         lua_pop(L, 1); /* remove lib */  \
     } while (0)
 
+
+// 保证即使在release模式下，这个函数没有调用也不会被C++ name mangling或者优化掉
+#ifdef _MSC_VER
+    #define KEEP extern "C" __declspec(noinline)
+
+    // win下保证链接器不会把它丢掉
+    #pragma comment(linker, "/include:__dbg_break")
+    #pragma comment(linker, "/include:__dbg_traceback")
+#else
+    // linux下，加了used和retain，链接器应该不会丢掉了
+    #define KEEP \
+        extern "C" __attribute__((used, retain, noinline, visibility("default")))
+#endif
+
+// 防止ICF折叠，防止整体优化
+#define NO_OPTIMIZE                \
+    volatile int __guard__ = 0xDB; \
+    (void)__guard__
+
 // gdb调试用：当前线程正在执行的lua_State指针
 // 初始化时设为主L，Lua侧coroutine.resume前更新为协程L
 static thread_local lua_State *tl_running_co = nullptr;
@@ -45,8 +64,9 @@ static void __dbg_break_hook(lua_State *L, lua_Debug *ar)
     luaL_error(L, __FUNCTION__);
 }
 
-void __dbg_break()
+KEEP void __dbg_break()
 {
+    NO_OPTIMIZE;
     // 当程序死循环时，用gdb attach到进程
     // 1. info threads 找到死循环线程
     // 2. thread N 切到该线程
@@ -59,13 +79,16 @@ void __dbg_break()
                 LUA_MASKCALL | LUA_MASKRET | LUA_MASKLINE | LUA_MASKCOUNT, 1);
 }
 
-const char *__dbg_traceback()
+KEEP const char *__dbg_traceback()
 {
+    NO_OPTIMIZE;
     // 当程序死循环时，用gdb attach到进程
     // 1. info threads 找到死循环线程
     // 2. thread N 切到该线程
     // 3. call __dbg_traceback()
     // 4. 打印返回的字符串即为lua堆栈
+    // 在win下，Visual Sutdio全部中断，打开调试/窗口/即时窗口输入{,,master.exe}__dbg_traceback()然后回车
+    // 只输入__dbg_traceback() Visual Studio会只在当前运行栈的上下文查找，会提示未定义的标识符
     lua_State *L = tl_running_co;
     if (!L) return "no lua state in this thread";
 

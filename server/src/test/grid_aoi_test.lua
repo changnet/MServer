@@ -60,7 +60,7 @@ local function valid_visual_list(et, list)
 
         -- 校验视野范围
         if not in_visual_range(et, other) then
-            printf("range fail,id = %d,pos(%d,%d) and id = %d,pos(%d,%s)",
+            printf("visual fail,id = %d,pos(%d,%d) and id = %d,pos(%d,%d)",
                    et.id, et.x, et.y, other.id, other.x, other.y)
             assert(false)
         end
@@ -117,7 +117,7 @@ local function valid_out(et, list)
 
         -- 校验视野范围
         if in_visual_range(et, other) then
-            printf("range fail,id = %d,pos(%d,%d) and id = %d,pos(%d,%s)",
+            printf("range fail,id = %d,pos(%d,%d) and id = %d,pos(%d,%d)",
                    et.id, et.x, et.y, other.id, other.x, other.y)
             assert(false)
         end

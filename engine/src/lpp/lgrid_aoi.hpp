@@ -9,8 +9,10 @@
 class LGridAoi final : public GridAOI
 {
 public:
+    LGridAoi()
+    {
+    }
     ~LGridAoi() {}
-    explicit LGridAoi(lua_State *L) { UNUSED(L); }
 
     /**
      * 设置地图大小
