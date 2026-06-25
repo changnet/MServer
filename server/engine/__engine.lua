@@ -4,11 +4,13 @@
 Engine = {}
 
 
----@param sig number
----@param mask number
+---@brief 设置信号的行为
+---@param sig 信号id
+---@param mask 0按默认行为处理信号 1忽略该信号 其他值则统一回调到脚本处理
 function Engine.signal_mask(sig, mask)
 end
 
+--- 获取信号掩码并重置原有信号掩码
 function Engine.signal_mask_once()
 end
 
@@ -34,7 +36,10 @@ end
 function Engine.system_clock()
 end
 
-function Engine.time()
+--- sync log是在日志线程未启动或者已关闭情况下紧急使用的，所以不考虑颜色之类花里胡哨的东西
+--- 在日志线程未关闭的情况下，直接往文件或者控制台写会引起多线程导致显示不正确
+---@param nullptr any
+function Engine.time(nullptr)
 end
 
 function Engine.clock()
@@ -43,15 +48,16 @@ end
 function Engine.time_ms()
 end
 
+---@brief 合并更新数据
+--- sharedata:update("user_list", 12345, {name = "abc"})
+---@return 成功返回 true，失败返回 false, err_msg
 function Engine.update()
 end
 
----@brief 让当前线程睡眠指定时间
----@param ms 毫秒
+---@param ms number
 function Engine.sleep(ms)
 end
 
----@brief 设置当前线程的名字
----@param name 线程名字，最大16字符（包括\0结尾）
+---@param name string
 function Engine.set_thread_name(name)
 end

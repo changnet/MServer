@@ -53,8 +53,8 @@ local function map_type(ctype)
     ctype = string.gsub(ctype, "%s*&%s*", "")
     ctype = string.gsub(ctype, "%s*%*%s*", "")
     ctype = string.match(ctype, "^%s*(.-)%s*$") or ctype
-    
-    if ctype == "int" or ctype == "int32_t" or ctype == "uint32_t" or ctype == "int64_t" or ctype == "uint64_t" 
+
+    if ctype == "int" or ctype == "int32_t" or ctype == "uint32_t" or ctype == "int64_t" or ctype == "uint64_t"
        or ctype == "float" or ctype == "double" or ctype == "size_t" or ctype == "short" or ctype == "long" then
         return "number"
     elseif ctype == "bool" then
@@ -88,33 +88,33 @@ local function parse_includes(main_file)
         print("Failed to open " .. main_file)
         return nil
     end
-    
+
     add_to_queue(main_file)
     local head = 1
     while head <= #include_queue do
         local f = include_queue[head]
         head = head + 1
-        
+
         local c = read_file(f)
         if c then
             cpp_content[f] = c
             local cur_dir = string.match(f, "^(.*/)[^/]+$") or ""
-            
+
             for quote, inc in string.gmatch(c, '#include%s+([%s<"])([^>%s"]+)[>%s"]') do
                 local paths = {
                     cur_dir .. inc,
                     dir .. inc,
                 }
-                
+
                 if string.match(inc, "parson") then table.insert(paths, deps_dir .. "lua_parson/" .. inc) end
                 if string.match(inc, "rapidxml") then table.insert(paths, deps_dir .. "lua_rapidxml/" .. inc) end
-                
+
                 for _, path in ipairs(paths) do
                     local test_f = io.open(path, "r")
                     if test_f then
                         test_f:close()
                         add_to_queue(path)
-                        
+
                         local base = string.match(path, "^(.*)%.[hH][pP]?[pP]?$")
                         if base then
                             for _, ext in ipairs({".cpp", ".c"}) do
@@ -141,7 +141,7 @@ local function parse_modules_and_classes(main_content)
     local modules = {}
     local classes = {}
     local current_module = nil
-    
+
     for line in string.gmatch(main_content, "[^\r\n]+") do
         -- module
         local mod_name = string.match(line, 'lcpp::module_begin%(L,%s*"([^"]+)"%)')
@@ -156,7 +156,7 @@ local function parse_modules_and_classes(main_content)
         if string.match(line, 'lcpp::module_end%(L%)') then
             current_module = nil
         end
-        
+
         -- class
         local cls_cpp, cls_lua = string.match(line, 'lcpp::Class<([^>]+)>%s+%w+%(L,%s*"([^"]+)"%)')
         if cls_lua then
@@ -171,13 +171,13 @@ local function parse_modules_and_classes(main_content)
         if m_cpp and current_module then
             table.insert(current_module.methods, { cpp_symbol = m_cpp, lua_name = m_lua })
         end
-        
+
         local v_cpp, v_lua = string.match(line, 'lc%.set%(([^,]+),%s*"([^"]+)"%)')
         if v_cpp and current_module then
             table.insert(current_module.vars, { cpp_symbol = v_cpp, lua_name = v_lua })
         end
     end
-    
+
     return modules, classes
 end
 
@@ -193,7 +193,7 @@ local function parse_lua_lib_open(main_content, modules)
                 if not reg_array then
                     reg_array = string.match(func_body, "luaL_setfuncs%([^,]+,%s*([%w_]+)%s*,")
                 end
-                
+
                 if reg_array then
                     local array_def = string.match(content, reg_array .. "%s*%[%]%s*=%s*%{(.-)%}%s*;")
                     if array_def then
@@ -219,7 +219,7 @@ end
 
 local function extract_comments(content, func_pos)
     local before = string.sub(content, 1, func_pos - 1)
-    
+
     local lines = {}
     local s = 1
     while true do
@@ -231,7 +231,7 @@ local function extract_comments(content, func_pos)
         table.insert(lines, string.sub(before, s, e - 1))
         s = e + 1
     end
-    
+
     local cs = {}
     for i = #lines, 1, -1 do
         local line = string.gsub(lines[i], "\r", "")
@@ -260,7 +260,7 @@ local function extract_comments(content, func_pos)
             end
         end
     end
-    
+
     if #cs > 0 then return table.concat(cs, "\n") end
     return nil
 end
@@ -269,7 +269,7 @@ local function search_method_in_file(content, method_name)
     local _, bare_method = split_namespace(method_name)
     local clean = string.gsub(content, "/%*.-%*/", space_replacer)
     clean = string.gsub(clean, "//[^\n]*", space_replacer)
-    
+
     for pos, rettype, func_name, args in string.gmatch(clean, "()\n[ \t]*([^\n;{%(%.]-[^ \t\n;{%(%.])[ \t]+([^ \t\n%.%->%(]+)[ \t]*%(([^;{]-)%)[^;{]-[;{]") do
         if func_name and not string.match(func_name, "^(if|while|for|switch|catch)$") then
             local _, bare_func = split_namespace(func_name)
@@ -277,13 +277,13 @@ local function search_method_in_file(content, method_name)
                 rettype = string.gsub(rettype, "^%s*virtual%s+", "")
                 rettype = string.gsub(rettype, "^%s*static%s+", "")
                 if rettype == "" or string.match(rettype, "^%s+$") then rettype = "void" end
-                
+
                 local comment = extract_comments(content, pos)
                 return { rettype = rettype, args = args, comment = comment, name = bare_method }
             end
         end
     end
-    
+
     return nil
 end
 
@@ -334,12 +334,12 @@ local function search_method(class_name, method_name, visited)
         res.file = file
         return res
     end
-    
+
     for _, base in ipairs(bases) do
         res = search_method(base, method_name, visited)
         if res then return res end
     end
-    
+
     return nil
 end
 
@@ -383,7 +383,7 @@ local function resolve_symbols(modules, classes)
             end
         end
     end
-    
+
     for _, cls in ipairs(classes) do
         for _, v in ipairs(cls.vars) do
             local sym = search_global_variable(v.cpp_symbol)
@@ -398,7 +398,7 @@ local function resolve_symbols(modules, classes)
             if class_name == "" and cls.cpp_name then
                 class_name = cls.cpp_name
             end
-            
+
             local sym = search_method(class_name, method_name)
             if not sym then
                 print("Error: Method not found for " .. cls.lua_name .. ":" .. func.lua_name .. " -> " .. func.cpp_symbol)
@@ -420,7 +420,7 @@ local function generate_function_lua(sym, mod_name, is_method, func_lua_name, wr
             if line ~= "" then
                 local pname = string.match(line, "^@param%s+([%w_]+)")
                 if pname then table.insert(doc_params, pname) end
-                
+
                 has_param = has_param or string.match(line, "^@param")
                 if string.match(line, "^@") then
                     write_func("---" .. line)
@@ -430,7 +430,7 @@ local function generate_function_lua(sym, mod_name, is_method, func_lua_name, wr
             end
         end
     end
-    
+
     local args_str = ""
     local args_list = {}
     if sym.args and sym.args ~= "" and sym.args ~= "void" and sym.args ~= "lua_State *L" and sym.args ~= "lua_State* L" then
@@ -446,15 +446,15 @@ local function generate_function_lua(sym, mod_name, is_method, func_lua_name, wr
             else
                 aname = string.match(arg, "([%w_]+)")
             end
-            
+
             if aname and aname ~= "L" then
                 table.insert(args_list, aname)
-                
+
                 local matched_param = nil
                 if sym.comment and has_param then
                     matched_param = string.match(sym.comment, "@param%s+" .. aname .. "%s+")
                 end
-                
+
                 if not matched_param and not has_param then
                     print("Warning: Parameter " .. aname .. " missing comment in " .. mod_name .. (is_method and ":" or ".") .. func_lua_name)
                     write_func("---@param " .. aname .. " " .. map_type(atype))
@@ -467,7 +467,7 @@ local function generate_function_lua(sym, mod_name, is_method, func_lua_name, wr
         end
     end
     args_str = table.concat(args_list, ", ")
-    
+
     if is_method then
         write_func(string.format("function %s:%s(%s)", mod_name, func_lua_name, args_str))
     else
@@ -485,7 +485,7 @@ local function write_exports(modules, classes)
         write(string.format("-- 导出模块: %s", mod.lua_name))
         write(string.format("%s = {}", mod.lua_name))
         write("\n")
-        
+
         for _, func in ipairs(mod.funcs) do
             if func.sym then
                 generate_function_lua(func.sym, mod.lua_name, false, func.lua_name, write)
@@ -494,17 +494,17 @@ local function write_exports(modules, classes)
                 write("end\n")
             end
         end
-        
+
         local out_str = table.concat(out, "\n")
         local file_name = string.lower(mod.lua_name) .. ".lua"
         local out_file = export_dir .. "__" .. file_name
-        local f = io.open(out_file, "w")
+        local f = io.open(out_file, "wb")
         if f then
             f:write(out_str)
             f:close()
         end
     end
-    
+
     for _, cls in ipairs(classes) do
         print("class", cls.lua_name )
         local out = {}
@@ -512,7 +512,7 @@ local function write_exports(modules, classes)
         write("---@diagnostic disable: missing-return\n")
         write(string.format("-- 导出类: %s", cls.lua_name))
         write(string.format("%s = {}", cls.lua_name))
-        
+
         if #cls.vars > 0 then
             for _, v in ipairs(cls.vars) do
                 local val = v.sym and v.sym.val or "0"
@@ -520,7 +520,7 @@ local function write_exports(modules, classes)
             end
             write("")
         end
-        
+
         for _, func in ipairs(cls.methods) do
             if func.sym then
                 generate_function_lua(func.sym, cls.lua_name, true, func.lua_name, write)
@@ -529,11 +529,11 @@ local function write_exports(modules, classes)
                 write("end\n")
             end
         end
-        
+
         local out_str = table.concat(out, "\n")
         local file_name = string.lower(cls.lua_name) .. ".lua"
         local out_file = export_dir .. "__" .. file_name
-        local f = io.open(out_file, "w")
+        local f = io.open(out_file, "wb")
         if f then
             f:write(out_str)
             f:close()
@@ -543,23 +543,23 @@ end
 
 local function main()
     local beg = os.clock()
-    
+
     -- 1. 解析 INCLUDE，加载所有关联C++内容
     local main_content = parse_includes(entrance)
     if not main_content then return end
-    
+
     -- 2. 解析 类和模块定义
     local modules, classes = parse_modules_and_classes(main_content)
-    
+
     -- 3. 解析 LUA_LIB_OPEN
     parse_lua_lib_open(main_content, modules)
-    
+
     -- 4. 去所有文件中搜索符号和注释
     resolve_symbols(modules, classes)
-    
+
     -- 5. 将解析好的数据统一写入文件
     write_exports(modules, classes)
-    
+
     print("export done, time " .. os.clock() - beg)
 end
 

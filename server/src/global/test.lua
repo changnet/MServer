@@ -176,6 +176,9 @@ local function co_run(func)
     T.co = co
 
     local ok, msg = coroutine.resume(co)
+    if not ok then
+        return false, debug.traceback(co, msg)
+    end
     return ok, msg
 end
 

@@ -135,6 +135,7 @@ local function iter_tower_object(tower, min_x, min_y, max_x, max_y, func, ...)
     for _, obj in pairs(tower) do
         -- 同一个obj会被多个tower管理，遍历时要去重。用table去掉太慢
         if obj.__v ~= version then
+            obj.__v = version
             local x, y = obj.x, obj.y
             if x >= min_x and x <= max_x and y >= min_y and y <= max_y then
                 func(obj, ...)
@@ -187,6 +188,7 @@ local function collect_obj(obj, tbl, self_id)
     if obj.uid ~= self_id then
         local n = tbl.n + 1
         tbl[n] = obj.uid
+        tbl.n = n
     end
 end
 

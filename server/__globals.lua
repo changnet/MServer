@@ -1,4 +1,4 @@
--- auto export by lua-tags 203 symbols
+-- auto export by lua-tags 205 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -28,6 +28,7 @@ return {
 "DEFINE_END", -- src/global/require.lua
 "DataCache", -- src/data/data_cache.lua
 "DataMgr", -- src/data/data_mgr.lua
+"DictTree", -- engine/__dicttree.lua
 "DistId", -- src/idgen/dist_id.lua
 "Durable", -- src/rpc/durable.lua
 "E", -- src/modules/module_loader.lua
@@ -103,6 +104,7 @@ return {
 "PlayerStatus", -- src/modules/player/player.lua
 "PlayerSync", -- src/modules/player/player_sync.lua
 "Profile", -- src/profile/profile.lua
+"Profile", -- engine/__profile.lua
 "Property", -- src/modules/player/property.lua
 "RES_COPPER", -- src/modules/res/res_header.lua
 "RES_GOLD", -- src/modules/res/res_header.lua

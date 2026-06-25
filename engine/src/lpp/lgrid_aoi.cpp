@@ -58,7 +58,7 @@ int32_t LGridAoi::get_interest_me_entity(lua_State *L)
     const struct EntityCtx *ctx = get_entity_ctx(id);
     if (!ctx)
     {
-        table_pack_size(L, 2, 0);
+        table_pack_size(L, 3, 0);
         return 0;
     }
 
@@ -94,7 +94,7 @@ int32_t LGridAoi::get_entity(lua_State *L)
                                        {
                                            ++n;
                                            lua_pushinteger(L, ctx->id_);
-                                           lua_rawseti(L, 2, n);
+                                           lua_rawseti(L, 3, n);
                                        }
                                    });
     if (0 != ecode)

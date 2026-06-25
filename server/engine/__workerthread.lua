@@ -36,10 +36,10 @@ end
 ---@brief 启动定时器
 ---@param id 定时器唯一id
 ---@param after N毫秒秒后第一次执行
----@param repeat 重复执行间隔，毫秒数
+---@param interval 重复执行间隔，毫秒数
 ---@param policy 定时器重新规则时的策略
 ---@return 成功返回>=1,失败返回值<0
-function WorkerThread:timer_start(id, after, repeat, policy)
+function WorkerThread:timer_start(id, after, interval, policy)
 end
 
 ---@brief 停止定时器并从管理器中删除
