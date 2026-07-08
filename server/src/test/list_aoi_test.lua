@@ -1,7 +1,10 @@
 -- list_aoi_test.lua 十字链表AOI测试
 -- xzc
 -- 2021-01-01
-local ListAoi = require "engine.ListAoi"
+local OrthListAoi = require "engine.OrthListAoi"
+local SkipListAoi = require "engine.SkipListAoi"
+
+local function build_aoi_test(ListAoi, test_name, is_orth, is_skip)
 
 -- 默认使用左手坐标系，故2D地图只有x、z轴，没有y轴
 
@@ -326,9 +329,9 @@ local function run_history(load)
     printf("%d history action load !", #history)
 
     is_valid = true
-    is_use_y = true
+    is_use_y = is_orth
     local aoi = ListAoi()
-    aoi:set_index(400, MAX_X)
+    if is_skip then aoi:set_index(400, MAX_X) end
     for idx, his in ipairs(history) do
         if true then
             local action = his.action
@@ -429,12 +432,12 @@ local function random_test(aoi, max_x, max_y, max_z, max_entity, max_random)
     if is_valid then assert(aoi:valid_dump(false)) end
 end
 
-Test.describe("list aoi test", function()
+Test.describe(test_name, function()
     Test.it("list_aoi_bug", function()
         is_valid = true
-        is_use_y = true
+        is_use_y = is_orth
         local aoi = ListAoi()
-        aoi:set_index(400, MAX_X)
+        if is_skip then aoi:set_index(400, MAX_X) end
 
         -- 当移动667时，x轴左移刚好跨过691视野左边界，y轴左移出视野，需要C++那边
         -- 处理实体重复标记
@@ -447,10 +450,10 @@ Test.describe("list aoi test", function()
         entity_info = {}
         exit_info = {}
         is_valid = true
-        is_use_y = true
+        is_use_y = is_orth
         local aoi = ListAoi()
 
-        aoi:set_index(400, MAX_X)
+        if is_skip then aoi:set_index(400, MAX_X) end
 
         -- 测试进入临界值,坐标传入的都是像素，坐标从0开始，所以减1
         enter(aoi, 99991, 0, 0, 0, V_PLAYER, ET_PLAYER)
@@ -571,9 +574,9 @@ Test.describe("list aoi test", function()
         is_use_y = false
         local aoi_no_y = ListAoi()
 
-        aoi_no_y:set_index(100, MAX_X)
+        if is_skip then aoi_no_y:set_index(100, MAX_X) end
 
-        aoi_no_y:use_y(false)
+        if is_orth then aoi_no_y:use_y(false) end
         is_use_history = false
         random_test(aoi_no_y, MAX_X - 1, MAX_Y - 1, MAX_Z - 1, max_entity,
                     max_random)
@@ -589,9 +592,9 @@ Test.describe("list aoi test", function()
         is_use_y = false
         local aoi_no_y = ListAoi()
 
-        aoi_no_y:set_index(1, MAX_X)
+        if is_skip then aoi_no_y:set_index(1, MAX_X) end
 
-        aoi_no_y:use_y(false)
+        if is_orth then aoi_no_y:use_y(false) end
         is_use_history = false
         random_test(aoi_no_y, MAX_X - 1, MAX_Y - 1, MAX_Z - 1, max_entity,
                     max_random)
@@ -603,12 +606,12 @@ Test.describe("list aoi test", function()
              "perf test %d entity and %d times random move/exit/enter",
              max_entity, max_random), function()
         is_valid = false
-        is_use_y = true
+        is_use_y = is_orth
         entity_info = {}
         exit_info = {}
 
         share_aoi = ListAoi()
-        share_aoi:set_index(400, MAX_X)
+        if is_skip then share_aoi:set_index(400, MAX_X) end
 
         is_use_history = false
         random_test(share_aoi, MAX_X - 1, MAX_Y - 1, MAX_Z - 1, max_entity,
@@ -645,3 +648,7 @@ Test.describe("list aoi test", function()
             Test.print("actually run " .. cnt)
         end)
 end)
+end
+
+build_aoi_test(OrthListAoi, "orth list aoi test", true, false)
+build_aoi_test(SkipListAoi, "skip list aoi test", false, true)

@@ -103,8 +103,8 @@ return {
 "PlayerQueue", -- src/queue/player_queue.lua
 "PlayerStatus", -- src/modules/player/player.lua
 "PlayerSync", -- src/modules/player/player_sync.lua
-"Profile", -- src/profile/profile.lua
 "Profile", -- engine/__profile.lua
+"Profile", -- src/profile/profile.lua
 "Property", -- src/modules/player/property.lua
 "RES_COPPER", -- src/modules/res/res_header.lua
 "RES_GOLD", -- src/modules/res/res_header.lua

@@ -342,23 +342,40 @@ static void luaopen_grid_aoi(lua_State *L)
     lc.def<&LGridAoi::is_same_pos>("is_same_pos");
 }
 
-static void luaopen_list_aoi(lua_State *L)
+static void luaopen_orth_list_aoi(lua_State *L)
 {
-    lcpp::Class<LListAoi> lc(L, "engine.ListAoi");
+    lcpp::Class<LOrthListAoi> lc(L, "engine.OrthListAoi");
 
-    lc.def<&LListAoi::valid_dump>("valid_dump");
-    lc.def<&LListAoi::use_y>("use_y");
-    lc.def<&LListAoi::set_index>("set_index");
-    lc.def<&LListAoi::update_visual>("update_visual");
+    lc.def<&LOrthListAoi::valid_dump>("valid_dump");
+    lc.def<&LOrthListAoi::use_y>("use_y");
+    lc.def<&LOrthListAoi::update_visual>("update_visual");
 
-    lc.def<&LListAoi::get_entity>("get_entity");
-    lc.def<&LListAoi::get_all_entity>("get_all_entity");
-    lc.def<&LListAoi::get_visual_entity>("get_visual_entity");
-    lc.def<&LListAoi::get_interest_me_entity>("get_interest_me_entity");
+    lc.def<&LOrthListAoi::get_entity>("get_entity");
+    lc.def<&LOrthListAoi::get_all_entity>("get_all_entity");
+    lc.def<&LOrthListAoi::get_visual_entity>("get_visual_entity");
+    lc.def<&LOrthListAoi::get_interest_me_entity>("get_interest_me_entity");
 
-    lc.def<&LListAoi::exit_entity>("exit_entity");
-    lc.def<&LListAoi::enter_entity>("enter_entity");
-    lc.def<&LListAoi::update_entity>("update_entity");
+    lc.def<&LOrthListAoi::exit_entity>("exit_entity");
+    lc.def<&LOrthListAoi::enter_entity>("enter_entity");
+    lc.def<&LOrthListAoi::update_entity>("update_entity");
+}
+
+static void luaopen_skip_list_aoi(lua_State *L)
+{
+    lcpp::Class<LSkipListAoi> lc(L, "engine.SkipListAoi");
+
+    lc.def<&LSkipListAoi::valid_dump>("valid_dump");
+    lc.def<&LSkipListAoi::set_index>("set_index");
+    lc.def<&LSkipListAoi::update_visual>("update_visual");
+
+    lc.def<&LSkipListAoi::get_entity>("get_entity");
+    lc.def<&LSkipListAoi::get_all_entity>("get_all_entity");
+    lc.def<&LSkipListAoi::get_visual_entity>("get_visual_entity");
+    lc.def<&LSkipListAoi::get_interest_me_entity>("get_interest_me_entity");
+
+    lc.def<&LSkipListAoi::exit_entity>("exit_entity");
+    lc.def<&LSkipListAoi::enter_entity>("enter_entity");
+    lc.def<&LSkipListAoi::update_entity>("update_entity");
 }
 
 static void luaopen_map(lua_State *L)
@@ -485,7 +502,8 @@ void open_cpp(lua_State *L)
     luaopen_astar(L);
     luaopen_mongo(L);
     luaopen_grid_aoi(L);
-    luaopen_list_aoi(L);
+    luaopen_orth_list_aoi(L);
+    luaopen_skip_list_aoi(L);
     luaopen_buffer(L);
     luaopen_stdin_reader(L);
     luaopen_dict_tree(L);

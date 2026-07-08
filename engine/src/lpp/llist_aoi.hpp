@@ -1,18 +1,14 @@
 #pragma once
 
-#ifdef USE_ORTH_LIST_AOI
-    #include "scene/orth_list_aoi.hpp"
-using ListAOI = OrthListAOI;
-#else
-    #include "scene/skip_list_aoi.hpp"
-using ListAOI = SkipListAOI;
-#endif
+#include "scene/orth_list_aoi.hpp"
+#include "scene/skip_list_aoi.hpp"
 #include <lua.hpp>
 
 /**
  * AOI链表实现
  */
-class LListAoi final : public ListAOI
+template <typename ListAOIMpl>
+class LListAoi final : public ListAOIMpl
 {
 public:
     ~LListAoi() {}
@@ -109,3 +105,6 @@ public:
      */
     int32_t valid_dump(lua_State *L);
 };
+
+using LSkipListAoi = LListAoi<SkipListAOI>;
+using LOrthListAoi = LListAoi<OrthListAOI>;

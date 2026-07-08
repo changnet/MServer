@@ -26,6 +26,7 @@ local LOCAL_TYPE = LOCAL_TYPE
 ---@field log_id number 日志操作，用于跟踪附件资源产出。参考log_header
 ---@field log_str string 日志字符串，记录一些额外信息，方便日志分析
 
+--@param mail_obj MailObj 邮件对象
 local function prepare_mail_obj(mail_obj)
     if not mail_obj.cid then
         error("mail_obj.cid is required")
