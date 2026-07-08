@@ -1,10 +1,7 @@
--- list_aoi_test.lua 十字链表AOI测试
+-- orth_aoi_test.lua 十字链表AOI测试
 -- xzc
 -- 2021-01-01
-local OrthListAoi = require "engine.OrthListAoi"
-local SkipListAoi = require "engine.SkipListAoi"
-
-local function build_aoi_test(ListAoi, test_name, is_orth, is_skip)
+local ListAoi = require "engine.OrthListAoi"
 
 -- 默认使用左手坐标系，故2D地图只有x、z轴，没有y轴
 
@@ -318,20 +315,20 @@ local function save_history()
     local json = require "engine.lua_parson"
 
     printf("%d history action save !", #history)
-    json.encode_to_file(history, "list_aoi_his.json")
+    json.encode_to_file(history, "orth_aoi_his.json")
 end
 
 -- luacheck:ignore run_history
 local function run_history(load)
     local json = require "engine.lua_parson"
-    if load then history = json.decode_from_file("list_aoi_his.json") end
+    if load then history = json.decode_from_file("orth_aoi_his.json") end
 
     printf("%d history action load !", #history)
 
     is_valid = true
-    is_use_y = is_orth
+    is_use_y = true
     local aoi = ListAoi()
-    if is_skip then aoi:set_index(400, MAX_X) end
+    aoi:set_index(400, MAX_X)
     for idx, his in ipairs(history) do
         if true then
             local action = his.action
@@ -432,12 +429,12 @@ local function random_test(aoi, max_x, max_y, max_z, max_entity, max_random)
     if is_valid then assert(aoi:valid_dump(false)) end
 end
 
-Test.describe(test_name, function()
-    Test.it("list_aoi_bug", function()
+Test.describe("orth aoi test", function()
+    Test.it("orth_aoi_bug", function()
         is_valid = true
-        is_use_y = is_orth
+        is_use_y = true
         local aoi = ListAoi()
-        if is_skip then aoi:set_index(400, MAX_X) end
+        aoi:set_index(400, MAX_X)
 
         -- 当移动667时，x轴左移刚好跨过691视野左边界，y轴左移出视野，需要C++那边
         -- 处理实体重复标记
@@ -446,14 +443,14 @@ Test.describe(test_name, function()
         update(aoi, 667, 2260, 1581, 9303)
         valid_interest_me(aoi, et99981)
     end)
-    Test.it("base list aoi test", function()
+    Test.it("base orth aoi test", function()
         entity_info = {}
         exit_info = {}
         is_valid = true
-        is_use_y = is_orth
+        is_use_y = true
         local aoi = ListAoi()
 
-        if is_skip then aoi:set_index(400, MAX_X) end
+        aoi:set_index(400, MAX_X)
 
         -- 测试进入临界值,坐标传入的都是像素，坐标从0开始，所以减1
         enter(aoi, 99991, 0, 0, 0, V_PLAYER, ET_PLAYER)
@@ -554,7 +551,7 @@ Test.describe(test_name, function()
     end)
 
     -- 如果随机测试出现一些不好重现的问题，可以把整个过程记录下来，再慢慢排除
-    -- t_it("base list aoi history", function()
+    -- t_it("base orth aoi history", function()
     --     entity_info = {}
     --     exit_info = {}
 
@@ -574,9 +571,9 @@ Test.describe(test_name, function()
         is_use_y = false
         local aoi_no_y = ListAoi()
 
-        if is_skip then aoi_no_y:set_index(100, MAX_X) end
+        aoi_no_y:set_index(100, MAX_X)
 
-        if is_orth then aoi_no_y:use_y(false) end
+        aoi_no_y:use_y(false)
         is_use_history = false
         random_test(aoi_no_y, MAX_X - 1, MAX_Y - 1, MAX_Z - 1, max_entity,
                     max_random)
@@ -592,9 +589,9 @@ Test.describe(test_name, function()
         is_use_y = false
         local aoi_no_y = ListAoi()
 
-        if is_skip then aoi_no_y:set_index(1, MAX_X) end
+        aoi_no_y:set_index(1, MAX_X)
 
-        if is_orth then aoi_no_y:use_y(false) end
+        aoi_no_y:use_y(false)
         is_use_history = false
         random_test(aoi_no_y, MAX_X - 1, MAX_Y - 1, MAX_Z - 1, max_entity,
                     max_random)
@@ -606,12 +603,12 @@ Test.describe(test_name, function()
              "perf test %d entity and %d times random move/exit/enter",
              max_entity, max_random), function()
         is_valid = false
-        is_use_y = is_orth
+        is_use_y = true
         entity_info = {}
         exit_info = {}
 
         share_aoi = ListAoi()
-        if is_skip then share_aoi:set_index(400, MAX_X) end
+        share_aoi:set_index(400, MAX_X)
 
         is_use_history = false
         random_test(share_aoi, MAX_X - 1, MAX_Y - 1, MAX_Z - 1, max_entity,
@@ -648,7 +645,3 @@ Test.describe(test_name, function()
             Test.print("actually run " .. cnt)
         end)
 end)
-end
-
-build_aoi_test(OrthListAoi, "orth list aoi test", true, false)
-build_aoi_test(SkipListAoi, "skip list aoi test", false, true)

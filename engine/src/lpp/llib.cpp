@@ -347,6 +347,7 @@ static void luaopen_orth_list_aoi(lua_State *L)
     lcpp::Class<LOrthListAoi> lc(L, "engine.OrthListAoi");
 
     lc.def<&LOrthListAoi::valid_dump>("valid_dump");
+    lc.def<&LOrthListAoi::set_index>("set_index");
     lc.def<&LOrthListAoi::use_y>("use_y");
     lc.def<&LOrthListAoi::update_visual>("update_visual");
 
@@ -366,6 +367,7 @@ static void luaopen_skip_list_aoi(lua_State *L)
 
     lc.def<&LSkipListAoi::valid_dump>("valid_dump");
     lc.def<&LSkipListAoi::set_index>("set_index");
+    lc.def<&LSkipListAoi::use_y>("use_y");
     lc.def<&LSkipListAoi::update_visual>("update_visual");
 
     lc.def<&LSkipListAoi::get_entity>("get_entity");
