@@ -80,7 +80,17 @@ public:
     bool valid_dump(bool dump) const;
 
     /// 遍历x轴链表上的实体(直到func返回false)
-    void each_entity(std::function<bool(EntityCtx *)> &&func);
+    template <typename Func>
+    void each_entity(Func &&func)
+    {
+        for (auto x : list_)
+        {
+            if (x->id_)
+            {
+                if (!func(x)) return;
+            }
+        }
+    }
 
     /**
      * @brief 设置索引参数
@@ -218,12 +228,32 @@ protected:
     void shift_entity(EntityCtx *ctx, int32_t old_x);
 
     /// 以ctx为中心，遍历指定范围内的实体
-    void each_range_entity(const EntityCtx *ctx, int32_t visual,
-                           std::function<void(EntityCtx *ctx)> &&func);
-    /// 以ctx为中心，遍历指定范围内的实体
+    template <typename Func>
     void each_range_entity(const EntityCtx *ctx, int32_t prev_visual,
-                           int32_t next_visual,
-                           std::function<void(EntityCtx *ctx)> &&func);
+                           int32_t next_visual, Func &&func)
+    {
+        // 往链表左边遍历(注意这个for循环不会遍历begin本身，但由于第一个节点必须是索引，这里刚好不需要遍历)
+        auto prev = ctx->iter_;
+        for (--prev; prev != list_.begin() && (*prev)->pos_x_ >= prev_visual; --prev)
+        {
+            if ((*prev)->id_) func(*prev);
+        }
+
+        // 往链表右边遍历
+        auto next = ctx->iter_;
+        for (++next; next != list_.end() && (*next)->pos_x_ <= next_visual; ++next)
+        {
+            if ((*next)->id_) func(*next);
+        }
+    }
+
+    /// 以ctx为中心，遍历指定范围内的实体
+    template <typename Func>
+    void each_range_entity(const EntityCtx *ctx, int32_t visual, Func &&func)
+    {
+        each_range_entity(ctx, ctx->pos_x_ - visual, ctx->pos_x_ + visual,
+                          std::forward<Func>(func));
+    }
     /// 实体other进入ctx的视野范围
     void on_enter_range(EntityCtx *ctx, EntityCtx *other, EntityVector *list_in,
                         bool me);

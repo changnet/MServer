@@ -98,32 +98,7 @@ void SkipListAOI::set_index(int32_t index, int32_t max_x)
     }
 }
 
-void SkipListAOI::each_range_entity(const EntityCtx *ctx, int32_t prev_visual,
-                                    int32_t next_visual,
-                                    std::function<void(EntityCtx *ctx)> &&func)
-{
-    // 往链表左边遍历(注意这个for循环不会遍历begin本身，但由于第一个节点必须是索引，这里
-    // 刚好不需要遍历)
-    auto prev = ctx->iter_;
-    for (--prev; prev != list_.begin() && (*prev)->pos_x_ >= prev_visual; --prev)
-    {
-        if ((*prev)->id_) func(*prev);
-    }
 
-    // 往链表右边遍历
-    auto next = ctx->iter_;
-    for (++next; next != list_.end() && (*next)->pos_x_ <= next_visual; ++next)
-    {
-        if ((*next)->id_) func(*next);
-    }
-}
-
-void SkipListAOI::each_range_entity(const EntityCtx *ctx, int32_t visual,
-                                    std::function<void(EntityCtx *)> &&func)
-{
-    each_range_entity(ctx, ctx->pos_x_ - visual, ctx->pos_x_ + visual,
-                      std::forward<std::function<void(EntityCtx *)> &&>(func));
-}
 
 bool SkipListAOI::remove_entity_from_vector(EntityVector *list,
                                             const EntityCtx *ctx)
@@ -503,13 +478,7 @@ int32_t SkipListAOI::update_visual(EntityId id, int32_t visual,
     return 0;
 }
 
-void SkipListAOI::each_entity(std::function<bool(EntityCtx *)> &&func)
-{
-    for (auto x : list_)
-    {
-        if (x->id_) func(x);
-    }
-}
+
 
 bool SkipListAOI::valid_dump(bool dump) const
 {

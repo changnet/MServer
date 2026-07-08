@@ -54,46 +54,7 @@ void GridAOI::set_size(int32_t width, int32_t height, int32_t pix_grid)
     memset(entity_grid_, 0, sizeof(EntityVector *) * width_ * height_);
 }
 
-int32_t GridAOI::each_range_entity(int32_t x, int32_t y, int32_t dx, int32_t dy,
-                                   std::function<void(EntityCtx *)> &&func)
-{
-    // 4个坐标必须为矩形的对角像素坐标,这里转换为左上角和右下角坐标
-    if (x > dx || y > dy)
-    {
-        ELOG("%s invalid pos", __FUNCTION__);
-        return -1;
-    }
 
-    // 转换为格子坐标
-    x  = x / pix_grid_;
-    y  = y / pix_grid_;
-    dx = dx / pix_grid_;
-    dy = dy / pix_grid_;
-
-    if (!valid_pos(x, y, dx, dy)) return -1;
-
-    raw_each_range_entity(x, y, dx, dy,
-                          std::forward<std::function<void(EntityCtx *)>>(func));
-    return 0;
-}
-
-void GridAOI::raw_each_range_entity(int32_t x, int32_t y, int32_t dx, int32_t dy,
-                                    std::function<void(EntityCtx *)> &&func)
-{
-    // 遍历范围内的所有格子
-    // 注意坐标是格子的中心坐标，因为要包含当前格子，用<=
-    for (int32_t ix = x; ix <= dx; ix++)
-    {
-        for (int32_t iy = y; iy <= dy; iy++)
-        {
-            const EntityVector *list = entity_grid_[ix + width_ * iy];
-            if (list)
-            {
-                for (auto ctx : *list) func(ctx);
-            }
-        }
-    }
-}
 
 bool GridAOI::remove_entity_from_vector(EntityVector *list,
                                         const struct EntityCtx *ctx)

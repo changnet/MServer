@@ -1,4 +1,4 @@
--- list_aoi_test.lua 跳表AOI测试
+-- skip_aoi_test.lua 跳表AOI测试
 -- xzc
 -- 2021-01-01
 local ListAoi = require "engine.SkipListAoi"
@@ -315,13 +315,13 @@ local function save_history()
     local json = require "engine.lua_parson"
 
     printf("%d history action save !", #history)
-    json.encode_to_file(history, "list_aoi_his.json")
+    json.encode_to_file(history, "skip_aoi_his.json")
 end
 
 -- luacheck:ignore run_history
 local function run_history(load)
     local json = require "engine.lua_parson"
-    if load then history = json.decode_from_file("list_aoi_his.json") end
+    if load then history = json.decode_from_file("skip_aoi_his.json") end
 
     printf("%d history action load !", #history)
 
@@ -430,7 +430,7 @@ local function random_test(aoi, max_x, max_y, max_z, max_entity, max_random)
 end
 
 Test.describe("skip aoi test", function()
-    Test.it("list_aoi_bug", function()
+    Test.it("skip_aoi_bug", function()
         is_valid = true
         is_use_y = true
         local aoi = ListAoi()

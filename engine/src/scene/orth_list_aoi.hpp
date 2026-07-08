@@ -29,9 +29,12 @@ public:
     class Ctx
     {
     public:
-        virtual void reset();
-        virtual int32_t type() const = 0;
-        virtual EntityCtx *entity() { return nullptr; }
+        explicit Ctx(int32_t type) : type_(type), owner_(nullptr) {}
+        void reset();
+        inline int32_t type() const { return type_; }
+        inline EntityCtx *entity() const { return owner_; }
+
+        virtual ~Ctx() = default;
 
         /// 更新坐标
         void update_pos(int32_t x, int32_t y, int32_t z);
@@ -57,6 +60,8 @@ public:
         }
 
     public:
+        int32_t type_;
+        EntityCtx *owner_;
         int32_t pos_x_; // 像素坐标x
         int32_t pos_y_; // 像素坐标y
         int32_t pos_z_; // 像素坐标z
@@ -74,33 +79,27 @@ public:
     };
 
     /// 实体的视野左右边界
-    template <CtxType type_> class VisualCtx final : public Ctx
+    template <CtxType type_t> class VisualCtx final : public Ctx
     {
     public:
-        explicit VisualCtx(EntityCtx *ctx)
+        explicit VisualCtx(EntityCtx *ctx) : Ctx(type_t)
         {
             Ctx::reset();
-            entity_ = ctx;
+            owner_ = ctx;
         }
-        int32_t type() const override { return type_; }
-        EntityCtx *entity() override { return entity_; }
-
-    private:
-        EntityCtx *entity_; /// 该视野边界所属的实体
     };
 
     /// 场景中单个实体的类型、坐标等数据
     class EntityCtx final : public Ctx
     {
     public:
-        explicit EntityCtx() : next_v_(this), prev_v_(this) {}
-        int32_t type() const override { return CT_ENTITY; }
+        explicit EntityCtx() : Ctx(CT_ENTITY), next_v_(this), prev_v_(this) { owner_ = this; }
 
         /// 这个实体是否拥有视野(一些怪物之类的不需要视野，可提高aoi的效率，需要附近的实体
         /// 列表可通过get_visual_entity实时获取)
         bool has_visual() const { return visual_ > 0 && (mask_ & INTEREST); }
 
-        void reset() override;
+        void reset();
         /// 更新视野坐标
         void update_visual(int32_t visual);
 
@@ -138,7 +137,20 @@ public:
     EntityCtx *get_entity_ctx(EntityId id);
 
     /// 遍历x轴链表上的实体(直到func返回false)
-    void each_entity(std::function<bool(EntityCtx *)> &&func);
+    template <typename Func>
+    void each_entity(Func &&func)
+    {
+        // TODO 需要遍历特定坐标内的实体时，从三轴中的任意一轴都是等效，因此这里随意选择x轴
+        Ctx *ctx = first_x_;
+        while (ctx)
+        {
+            if (CT_ENTITY == ctx->type())
+            {
+                if (!func((EntityCtx *)ctx)) return;
+            }
+            ctx = ctx->next_x_;
+        }
+    }
 
     /**
      * @brief 实体进入场景
@@ -199,8 +211,29 @@ protected:
                                           const EntityCtx *ctx);
 
     /// 以ctx为中心，遍历指定范围内的实体
-    void each_range_entity(const Ctx *ctx, int32_t visual,
-                           std::function<void(EntityCtx *ctx)> &&func);
+    template <typename Func>
+    void each_range_entity(const Ctx *ctx, int32_t visual, Func &&func)
+    {
+        // 实体同时存在三轴链表上，只需要遍历其中一个链表即可
+
+        // 往链表左边遍历
+        int32_t prev_visual = ctx->pos_x_ - visual;
+        Ctx *prev           = ctx->prev_x_;
+        while (prev && prev->pos_x_ >= prev_visual)
+        {
+            if (CT_ENTITY == prev->type()) func((EntityCtx *)prev);
+            prev = prev->prev_x_;
+        }
+
+        // 往链表右边遍历
+        int32_t next_visual = ctx->pos_x_ + visual;
+        Ctx *next           = ctx->next_x_;
+        while (next && next->pos_x_ <= next_visual)
+        {
+            if (CT_ENTITY == next->type()) func((EntityCtx *)next);
+            next = next->next_x_;
+        }
+    }
 
     /// 实体other进入ctx的视野范围
     void on_enter_range(EntityCtx *ctx, EntityCtx *other, EntityVector *list_in,
@@ -283,18 +316,16 @@ protected:
     }
 
     /// 把ctx插入到链表合适的地方
-    template <int32_t Ctx::*pos_, Ctx *Ctx::*next_, Ctx *Ctx::*prev_>
-    void insert_list(Ctx *&list, Ctx *ctx, std::function<void(Ctx *ctx)> &&func);
+    template <int32_t Ctx::*pos_, Ctx *Ctx::*next_, Ctx *Ctx::*prev_, typename Func>
+    void insert_list(Ctx *&list, Ctx *ctx, Func &&func);
 
     /// 把ctx插入到链表合适的地方
-    template <int32_t Ctx::*pos_, Ctx *Ctx::*next_, Ctx *Ctx::*prev_>
-    void insert_entity(Ctx *&list, EntityCtx *ctx,
-                       std::function<void(Ctx *ctx)> &&func);
+    template <int32_t Ctx::*pos_, Ctx *Ctx::*next_, Ctx *Ctx::*prev_, typename Func>
+    void insert_entity(Ctx *&list, EntityCtx *ctx, Func &&func);
 
     /// 把ctx的视野边界插入到链表合适的地方
-    template <int32_t Ctx::*pos_, Ctx *Ctx::*next_, Ctx *Ctx::*prev_>
-    void insert_visual_list(Ctx *&list, EntityCtx *ctx,
-                            std::function<void(Ctx *ctx)> &&func);
+    template <int32_t Ctx::*pos_, Ctx *Ctx::*next_, Ctx *Ctx::*prev_, typename Func>
+    void insert_visual_list(Ctx *&list, EntityCtx *ctx, Func &&func);
 
     /// 把ctx从链表中删除
     template <Ctx *Ctx::*next_, Ctx *Ctx::*prev_>

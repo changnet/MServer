@@ -115,12 +115,42 @@ protected:
     }
 
     /// 遍历矩形内的实体(坐标为像素坐标)
-    int32_t each_range_entity(int32_t x, int32_t y, int32_t dx, int32_t dy,
-                              std::function<void(EntityCtx *)> &&func);
+    template <typename Func>
+    int32_t each_range_entity(int32_t x, int32_t y, int32_t dx, int32_t dy, Func &&func)
+    {
+        // 4个坐标必须为矩形的对角像素坐标,这里转换为左上角和右下角坐标
+        if (x > dx || y > dy) return -1;
+
+        // 转换为格子坐标
+        x  = x / pix_grid_;
+        y  = y / pix_grid_;
+        dx = dx / pix_grid_;
+        dy = dy / pix_grid_;
+
+        if (!valid_pos(x, y, dx, dy)) return -1;
+
+        raw_each_range_entity(x, y, dx, dy, std::forward<Func>(func));
+        return 0;
+    }
 
     /// 遍历矩形内的实体，不检测范围(坐标为格子坐标)
-    void raw_each_range_entity(int32_t x, int32_t y, int32_t dx, int32_t dy,
-                               std::function<void(EntityCtx *)> &&func);
+    template <typename Func>
+    void raw_each_range_entity(int32_t x, int32_t y, int32_t dx, int32_t dy, Func &&func)
+    {
+        // 遍历范围内的所有格子
+        // 注意坐标是格子的中心坐标，因为要包含当前格子，用<=
+        for (int32_t ix = x; ix <= dx; ix++)
+        {
+            for (int32_t iy = y; iy <= dy; iy++)
+            {
+                const EntityVector *list = entity_grid_[ix + width_ * iy];
+                if (list)
+                {
+                    for (auto ctx : *list) func(ctx);
+                }
+            }
+        }
+    }
 
     // 获取视野范围
     void get_visual_range(int32_t &x, int32_t &y, int32_t &dx, int32_t &dy,

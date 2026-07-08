@@ -104,30 +104,6 @@ bool OrthListAOI::remove_entity_from_vector(EntityVector *list,
     return false;
 }
 
-void OrthListAOI::each_range_entity(const Ctx *ctx, int32_t visual,
-                                    std::function<void(EntityCtx *)> &&func)
-{
-    // 实体同时存在三轴链表上，只需要遍历其中一个链表即可
-
-    // 往链表左边遍历
-    int32_t prev_visual = ctx->pos_x_ - visual;
-    Ctx *prev           = ctx->prev_x_;
-    while (prev && prev->pos_x_ >= prev_visual)
-    {
-        if (CT_ENTITY == prev->type()) func((EntityCtx *)prev);
-        prev = prev->prev_x_;
-    }
-
-    // 往链表右边遍历
-    int32_t next_visual = ctx->pos_x_ + visual;
-    Ctx *next           = ctx->next_x_;
-    while (next && next->pos_x_ <= next_visual)
-    {
-        if (CT_ENTITY == next->type()) func((EntityCtx *)next);
-        next = next->next_x_;
-    }
-}
-
 void OrthListAOI::on_enter_range(EntityCtx *ctx, EntityCtx *other,
                                  EntityVector *list_in, bool me)
 {
@@ -247,11 +223,11 @@ bool OrthListAOI::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
     // 插入另外的二轴，由于x轴已经遍历了，所以这里不需要再处理视野问题
     if (use_y_)
     {
-        insert_entity<&Ctx::pos_y_, &Ctx::next_y_, &Ctx::prev_y_>(first_y_, ctx,
-                                                                  nullptr);
+        insert_entity<&Ctx::pos_y_, &Ctx::next_y_, &Ctx::prev_y_>(
+            first_y_, ctx, [](Ctx *other) {});
     }
     insert_entity<&Ctx::pos_z_, &Ctx::next_z_, &Ctx::prev_z_>(first_z_, ctx,
-                                                              nullptr);
+                                                              [](Ctx *other) {});
 
     return true;
 }
@@ -449,10 +425,10 @@ int32_t OrthListAOI::insert_visual(EntityCtx *ctx, EntityVector *list_in)
     if (use_y_)
     {
         insert_visual_list<&Ctx::pos_y_, &Ctx::next_y_, &Ctx::prev_y_>(
-            first_y_, ctx, nullptr);
+            first_y_, ctx, [](Ctx *other) {});
     }
-    insert_visual_list<&Ctx::pos_z_, &Ctx::next_z_, &Ctx::prev_z_>(first_z_,
-                                                                   ctx, nullptr);
+    insert_visual_list<&Ctx::pos_z_, &Ctx::next_z_, &Ctx::prev_z_>(
+        first_z_, ctx, [](Ctx *other) {});
     return 0;
 }
 
@@ -486,9 +462,8 @@ int32_t OrthListAOI::remove_visual(EntityCtx *ctx, EntityVector *list_out)
 // /////////////////////////////////////////////////////////////////////////////
 
 template <int32_t OrthListAOI::Ctx::*pos_, OrthListAOI::Ctx *OrthListAOI::Ctx::*next_,
-          OrthListAOI::Ctx *OrthListAOI::Ctx::*prev_>
-void OrthListAOI::insert_list(Ctx *&list, Ctx *ctx,
-                              std::function<void(Ctx *)> &&func)
+          OrthListAOI::Ctx *OrthListAOI::Ctx::*prev_, typename Func>
+void OrthListAOI::insert_list(Ctx *&list, Ctx *ctx, Func &&func)
 {
     if (!list)
     {
@@ -498,9 +473,11 @@ void OrthListAOI::insert_list(Ctx *&list, Ctx *ctx,
 
     Ctx *next = list;
     Ctx *prev = list->*prev_;
-    while (next && ctx->comp<pos_>(next) > 0)
+    while (next && ctx->template comp<pos_>(next) > 0)
     {
-        if (func) func(next);
+        // Avoid compilation error when func is a lambda that can't take null or something,
+        // Actually func is guaranteed not null if it's a lambda or we can just call it
+        func(next);
 
         prev = next;
         next = next->*next_;
@@ -513,31 +490,26 @@ void OrthListAOI::insert_list(Ctx *&list, Ctx *ctx,
 }
 
 template <int32_t OrthListAOI::Ctx::*pos_, OrthListAOI::Ctx *OrthListAOI::Ctx::*next_,
-          OrthListAOI::Ctx *OrthListAOI::Ctx::*prev_>
-void OrthListAOI::insert_entity(Ctx *&list, EntityCtx *ctx,
-                                std::function<void(Ctx *)> &&func)
+          OrthListAOI::Ctx *OrthListAOI::Ctx::*prev_, typename Func>
+void OrthListAOI::insert_entity(Ctx *&list, EntityCtx *ctx, Func &&func)
 {
     // 如果该实体不需要视野，则只插入单个实体，不插入视野边界
     // 依次插入视野左边界、实体、视野右边界，每一个都以上一个为起点进行遍历，以提高插入效率
     if (ctx->has_visual())
     {
-        insert_list<pos_, next_, prev_>(
-            list, &(ctx->prev_v_),
-            std::forward<std::function<void(Ctx *)> &&>(func));
+        insert_list<pos_, next_, prev_>(list, &(ctx->prev_v_),
+                                        std::forward<Func>(func));
 
         Ctx *first = &(ctx->prev_v_);
-        insert_list<pos_, next_, prev_>(
-            first, ctx, std::forward<std::function<void(Ctx *)> &&>(func));
+        insert_list<pos_, next_, prev_>(first, ctx, std::forward<Func>(func));
 
         first = ctx;
-        insert_list<pos_, next_, prev_>(
-            first, &(ctx->next_v_),
-            std::forward<std::function<void(Ctx *)> &&>(func));
+        insert_list<pos_, next_, prev_>(first, &(ctx->next_v_),
+                                        std::forward<Func>(func));
     }
     else
     {
-        insert_list<pos_, next_, prev_>(
-            list, ctx, std::forward<std::function<void(Ctx *)> &&>(func));
+        insert_list<pos_, next_, prev_>(list, ctx, std::forward<Func>(func));
     }
 }
 
@@ -711,9 +683,8 @@ void OrthListAOI::shift_visual(Ctx *&list, EntityCtx *ctx,
 }
 
 template <int32_t OrthListAOI::Ctx::*pos_, OrthListAOI::Ctx *OrthListAOI::Ctx::*next_,
-          OrthListAOI::Ctx *OrthListAOI::Ctx::*prev_>
-void OrthListAOI::insert_visual_list(Ctx *&list, EntityCtx *ctx,
-                                     std::function<void(Ctx *)> &&func)
+          OrthListAOI::Ctx *OrthListAOI::Ctx::*prev_, typename Func>
+void OrthListAOI::insert_visual_list(Ctx *&list, EntityCtx *ctx, Func &&func)
 {
 
     Ctx *prev = ctx;
@@ -722,9 +693,9 @@ void OrthListAOI::insert_visual_list(Ctx *&list, EntityCtx *ctx,
     // 向右遍历，把视野右边界插入到ctx右边合适的地方
     Ctx *next_v = &(ctx->next_v_);
     assert(!(next_v->*prev_) && !(next_v->*next_)); // 校验之前必定不在链表上
-    while (next && next_v->comp<pos_>(next) > 0)
+    while (next && next_v->template comp<pos_>(next) > 0)
     {
-        if (func) func(next);
+        func(next);
 
         prev = next;
         next = next->*next_;
@@ -740,9 +711,9 @@ void OrthListAOI::insert_visual_list(Ctx *&list, EntityCtx *ctx,
     prev        = ctx->*prev_;
     Ctx *prev_v = &(ctx->prev_v_);
     assert(!(prev_v->*next_) && !(prev_v->*prev_)); // 校验之前必定不在链表上
-    while (prev && prev_v->comp<pos_>(prev) < 0)
+    while (prev && prev_v->template comp<pos_>(prev) < 0)
     {
-        if (func) func(prev);
+        func(prev);
 
         next = prev;
         prev = prev->*prev_;
@@ -752,20 +723,6 @@ void OrthListAOI::insert_visual_list(Ctx *&list, EntityCtx *ctx,
     prev_v->*prev_ = prev;
     prev_v->*next_ = next;
     next->*prev_   = prev_v;
-}
-
-void OrthListAOI::each_entity(std::function<bool(EntityCtx *)> &&func)
-{
-    // TODO 需要遍历特定坐标内的实体时，从三轴中的任意一轴都是等效，因此这里随意选择x轴
-    Ctx *ctx = first_x_;
-    while (ctx)
-    {
-        if (CT_ENTITY == ctx->type())
-        {
-            if (!func((EntityCtx *)ctx)) return;
-        }
-        ctx = ctx->next_x_;
-    }
 }
 
 bool OrthListAOI::valid_dump(bool dump) const
