@@ -1,4 +1,4 @@
--- auto export by lua-tags 205 symbols
+-- auto export by lua-tags 209 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -36,6 +36,7 @@ return {
 "EMPTY", -- src/modules/system/define.lua
 "ET", -- src/modules/entity/entity_header.lua
 "EV", -- src/modules/event/event_header.lua
+"EV", -- engine/__ev.lua
 "Engine", -- engine/__engine.lua
 "EntityCmd", -- src/modules/entity/entity_cmd.lua
 "EntityMgr", -- src/modules/entity/entity_mgr.lua
@@ -84,6 +85,7 @@ return {
 "Mongo", -- engine/__mongo.lua
 "MySql", -- engine/__mysql.lua
 "NetMsg", -- src/message/net_msg.lua
+"OrthListAoi", -- engine/__orthlistaoi.lua
 "PCall", -- src/rpc/rpc_proxy.lua
 "PP", -- src/modules/player/property.lua
 "PP_DEF", -- src/modules/player/property.lua
@@ -122,6 +124,7 @@ return {
 "ShareData", -- engine/__sharedata.lua
 "Shutdown", -- src/engine/shutdown.lua
 "Signal", -- src/engine/signal.lua
+"SkipListAoi", -- engine/__skiplistaoi.lua
 "Socket", -- engine/__socket.lua
 "SocketMgr", -- src/network/socket_mgr.lua
 "SrvMgr", -- src/network/srv_mgr.lua
@@ -139,6 +142,7 @@ return {
 "WorkerData", -- src/worker/worker.lua
 "WorkerHash", -- src/worker/worker.lua
 "WorkerNameType", -- src/worker/worker.lua
+"WorkerThread", -- engine/__workerthread.lua
 "__G_C_TRACKBACK", -- src/global/global.lua
 "__G_DUMP_STACK", -- src/global/global.lua
 "__assert", -- src/engine/startup.lua

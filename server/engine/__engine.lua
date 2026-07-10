@@ -14,47 +14,44 @@ end
 function Engine.signal_mask_once()
 end
 
---- 把线程添加到管理器，用于消息转发
----@param addr 线程地址
----@param ctx 线程指针
+---@param addr number
+---@param ctx any
 function Engine.add_thread_ctx(addr, ctx)
 end
 
---- 把线程从管理器删除
----@param addr 线程地址
+---@param addr number
 function Engine.del_thread_ctx(addr)
 end
 
---- 获取一个线程指针
----@param addr 线程地址
-function Engine.get_thread_ctx(addr)
+function Engine.get_thread_ctx()
 end
 
 function Engine.steady_clock()
 end
 
+--- 获取实时utc时间
+---@return utc时间（毫秒）
 function Engine.system_clock()
 end
 
---- sync log是在日志线程未启动或者已关闭情况下紧急使用的，所以不考虑颜色之类花里胡哨的东西
---- 在日志线程未关闭的情况下，直接往文件或者控制台写会引起多线程导致显示不正确
----@param nullptr any
-function Engine.time(nullptr)
+--- 获取帧utc时间戳(单位秒)
+function Engine.time()
 end
 
+--- 获取帧时间（毫秒）
 function Engine.clock()
 end
 
+--- 获取帧utc时间戳(单位毫秒)
 function Engine.time_ms()
 end
 
----@brief 合并更新数据
---- sharedata:update("user_list", 12345, {name = "abc"})
----@return 成功返回 true，失败返回 false, err_msg
+--- 更新全局pbc env到当前线程
 function Engine.update()
 end
 
----@param ms number
+---@brief 让当前线程睡眠指定时间
+---@param ms 毫秒
 function Engine.sleep(ms)
 end
 

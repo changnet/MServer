@@ -100,10 +100,9 @@ end
 function util.uuid_short()
 end
 
----@brief 根据域名获取ip地址，此函数会阻塞
----@param addrs ip地址数组
----@param host 需要解析的域名
----@return 0成功
+---@param addrs any
+---@param host string
+---@param v4 boolean
 function util.get_addr_info(addrs, host, v4)
 end
 
