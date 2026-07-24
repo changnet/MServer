@@ -7,9 +7,8 @@ CLI=mariadb #mysql
 # 查看使用哪个配置文件 mariadb --verbose --help | grep my.cnf，一般是/etc/mysql/my.cnf
 
 # mariadb的配置在 cat /etc/mysql/mariadb.conf.d/50-server.cnf
-# 旧debian系统下，/etc/mysql/debian.cnf配置root用户不用密码进入，所以即使设置了root密码
-# root用户仍然能不用密码进入，用了密码反而不行，但debian 12不会
-# debian 12下，默认使用uninx_socket进行连接，所以即使设置了root密码，默认也能以root用户不需要密码进入
+# 旧debian系统下，/etc/mysql/debian.cnf配置root用户不用密码进入，所以即使设置了root密码root用户仍然能不用密码进入，用了密码反而不行，但debian 12不会
+# debian 12下，默认使用uninx_socket进行连接，所以即使设置了root密码，默认也能以root用户不需要密码进入。注意非root用户（系统的root用户而不是mysql的）即使密码正确，默认也是无法以root用户登录的，需要用su切换到root先
 # 但如果通过tcp（mariadb --protocol=tcp -uroot -p，则是需要密码的）
 
 # debian12 apt安装的mariadb默认在/etc/mysql/mariadb.conf.d/50-server.cnf下bind-address= 127.0.0.1，需要修改为0.0.0.0
@@ -32,11 +31,13 @@ LOG_SQL="../server/setting/db_log.sql"
 # ./mysql.sh new_user root 1 test test
 new_user()
 {
-    $CLI -u$DEF_USR -p$DEF_PWD <<EOF
-    CREATE USER "$LOG_DB"@'%' IDENTIFIED BY "$4";
-    GRANT ALL PRIVILEGES ON *.* TO "$LOG_DB"@'%' WITH GRANT OPTION;
+    $CLI -uroot -p$DEF_PWD <<EOF
+    CREATE USER "$DEF_USR"@'%' IDENTIFIED BY "$DEF_PWD";
+    GRANT ALL PRIVILEGES ON *.* TO "$DEF_USR"@'%' WITH GRANT OPTION;
     flush privileges;
 EOF
+    echo "create user $DEF_USR done"
+    # DROP USER test@'%';
 }
 
 # 初始化日志库
@@ -46,7 +47,7 @@ init()
     $CLI -u$DEF_USR -p$DEF_PWD -e "create database $LOG_DB default character set utf8mb4 collate utf8mb4_general_ci;"
 
 	$CLI -u$DEF_USR -p$DEF_PWD $LOG_DB --default_character_set utf8mb4 < $LOG_SQL
-	
+
 	echo "init database $LOG_DB ok"
 }
 
@@ -66,6 +67,11 @@ dump()
 # 安装数据库，初始初始化一个用于测试的用户名、密码以及一个测试用的日志数据库
 install()
 {
+	if [ "$(id -u)" -ne 0 ]; then
+		echo "ERROR: need root to run install!" >&2
+		exit 1
+	fi
+
 	# 使用debconf-set-selections自动填充apt install中需要的用户名和密码
 	export DEBIAN_FRONTEND="noninteractive"
 	debconf-set-selections <<EOF

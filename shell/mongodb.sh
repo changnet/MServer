@@ -79,13 +79,18 @@ reset()
 # 安装数据库并创建用于测试的用户，此命令必须用管理员执行
 install()
 {
+	if [ "$(id -u)" -ne 0 ]; then
+		echo "ERROR: need root to run install!" >&2
+		exit 1
+	fi
+
 	# https://docs.mongodb.com/manual/tutorial/install-mongodb-on-debian/
 	# Debian 12 "Bookworm" + MongoDB 8.0 Community Edition 2025-05
 	# 获取debian的名字，如debian 10叫buster
 	apt install -y gnupg curl
 	curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc | \
-   		gpg -o /usr/share/keyrings/mongodb-server-8.0.gpg --dearmor
-	echo "deb [ signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] http://repo.mongodb.org/apt/debian bookworm/mongodb-org/8.0 main" | sudo tee /etc/apt/sources.list.d/mongodb-org-8.0.list
+		gpg -o /usr/share/keyrings/mongodb-server-8.0.gpg --dearmor
+	echo "deb [ signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] http://repo.mongodb.org/apt/debian bookworm/mongodb-org/8.0 main" | tee /etc/apt/sources.list.d/mongodb-org-8.0.list
 	apt update
 	apt install -y mongodb-org
 
@@ -113,11 +118,7 @@ install()
 	systemctl start mongod
 	echo "wait for mongodb start ..."
 	sleep 15
-	echo "create test database: $DEF_DBN"
-	mongosh --host 127.0.0.1 --port 27017 -u $DEF_ADM -p $DEF_PWD admin << EOF
-use $DEF_DBN
-db.createUser( {user:"$DEF_USR",pwd:"$DEF_PWD",roles:["dbAdmin","readWrite"]} )
-EOF
+	reset
 }
 
 # sh mongodb.sh init test_999
