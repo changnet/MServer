@@ -3,16 +3,16 @@
 #include <type_traits>
 
 #define CHECK_LIST(list, index) \
-    EntityVector *list = lua_istable(L, index) ? new_entity_vector() : nullptr
+    EntityVector *list = lua_istable(L, index) ? this->new_entity_vector() : nullptr
 #define DEL_LIST(list) \
-    if (list) del_entity_vector(list)
+    if (list) this->del_entity_vector(list)
 #define PACK_LIST(list, index, filter)           \
     do                                           \
     {                                            \
         if (list)                                \
         {                                        \
             table_pack(L, index, *list, filter); \
-            del_entity_vector(list);             \
+            this->del_entity_vector(list);       \
         }                                        \
     } while (0)
 

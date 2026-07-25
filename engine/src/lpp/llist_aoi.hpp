@@ -104,6 +104,11 @@ public:
      * @param dump 是否打印链表数据
      */
     int32_t valid_dump(lua_State *L);
+
+private:
+    using EntityCtx = typename ListAOIMpl::EntityCtx;
+    using EntityId = typename ListAOIMpl::EntityId;
+    using EntityVector = typename ListAOIMpl::EntityVector;
 };
 
 using LSkipListAoi = LListAoi<SkipListAOI>;
