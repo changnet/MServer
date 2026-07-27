@@ -29,7 +29,7 @@ return
     cli = true, -- 是否启用命令行输入
     lang = "zh", -- 简体中文
     server = 1, -- 当前服务器id
-    mode = "process", -- 当前进程启动模式
+    mode = "thread", -- 当前进程启动模式
     server_type = 1, -- 服务器类型，1游戏服，2跨服，3中心服
 
     -- 网关配置（监听客户端连接的ip和端口）
