@@ -29,7 +29,6 @@ graph LR
         direction TB
         Net["🌐 Net 网络线程"]
         Log["📝 Log 日志线程"]
-
         Main["👑 Main 线程 (管理/调度)"]
 
         subgraph WorkerPool ["⚙️ Worker 工作线程 (并行处理节点)"]
@@ -40,6 +39,7 @@ graph LR
             Player2["Player 2 (玩家业务2)"]
             OtherWorkers["...(其他业务线程)"]
         end
+        Net ~~~ Log ~~~ Main ~~~ WorkerPool
     end
 
     subgraph ThreadArch ["单个线程独立内部架构 (一个线程一个Lua VM)"]
@@ -77,6 +77,102 @@ graph LR
     class LuaLayer,BizLogic lua
 ```
 
-## 其他
+## 典型单服部署架构
 
-* 配置导表工具：https://github.com/changnet/py_exceltools
+```mermaid
+graph LR
+    subgraph Clients ["📱 客户端集群"]
+        direction TB
+        C1["客户端 1"]
+        C2["客户端 2"]
+        C3["客户端 3"]
+        C4["..."]
+
+        C1 ~~~ C2
+        C2 ~~~ C3
+        C3 ~~~ C4
+    end
+
+    subgraph Servers ["📱 服务器"]
+        direction LR
+
+        subgraph GatewayProcess ["🛡️ Gateway 进程 (网关服)"]
+            direction TB
+            GW_Net["底层网络收发"]
+            GW_Login["Login 登录与认证"]
+
+            GW_Net ~~~ GW_Login
+        end
+
+        subgraph Backend [" "]
+            direction TB
+
+            subgraph GameProcess ["⚔️ Game 进程 (逻辑服)"]
+                direction TB
+                GameLogic["全局游戏业务线程"]
+
+                subgraph Players ["Player Workers (多节点并发处理玩家业务)"]
+                    direction TB
+                    P1["Player 1"]
+                    P2["Player 2"]
+                    P3["Player 3..."]
+
+                    P1 ~~~ P2
+                    P2 ~~~ P3
+                end
+
+                subgraph Scenes ["Scene Workers (节点并发处理场景)"]
+                    direction TB
+                    S1["Scene 1"]
+                    S2["Scene 2"]
+                    S3["Scene 3..."]
+
+                    S1 ~~~ S2
+                    S2 ~~~ S3
+                end
+
+                OtherThreads["其他业务线程..."]
+
+                GameLogic ~~~ Players
+                Players ~~~ Scenes
+                Scenes ~~~ OtherThreads
+            end
+
+            subgraph DataProcess ["💾 Data 进程 (数据服)"]
+                direction TB
+                D_Cache["数据缓存层 (Cache)"]
+                D_DB["数据库读写调度 (DB I/O)"]
+
+                D_Cache ~~~ D_DB
+            end
+        end
+    end
+
+    Clients <-->|"外网直连"| GatewayProcess
+    GatewayProcess == "RPC" <==> GameProcess
+    GatewayProcess == "RPC" <==> DataProcess
+    GameProcess == "RPC" <==> DataProcess
+
+    %% 样式表
+    classDef client fill:#f1f8e9,stroke:#7cb342,stroke-width:2px,color:#000
+    classDef gateway fill:#e1f5fe,stroke:#039be5,stroke-width:2px,color:#000
+    classDef game fill:#fff8e1,stroke:#ffa000,stroke-width:2px,color:#000
+    classDef dataserver fill:#fce4ec,stroke:#d81b60,stroke-width:2px,color:#000
+    classDef backend fill:none,stroke:none
+
+    class C1,C2,C3,C4 client
+    class GatewayProcess gateway
+    class GameProcess game
+    class DataProcess dataserver
+    class Backend backend
+```
+
+上面是一个典型的单服游戏服务器架构。**网关**作为一个独立进程负责网络数据以及认证，即使被攻击崩溃也不会影响业务逻辑。**数据缓存及数据库读写**也在一个独立进程，即使业务逻辑进程崩溃，也能保证数据安全。而**游戏逻辑**进程中根据业务需求开启多个线程，保证并发又避免多进程部署复杂的问题。
+
+
+
+
+
+# 其他
+* 更多功能介绍[Wiki](https://github.com/changnet/MServer/wiki)
+* 配置导表工具：https://github.com/changnet/exceltools
