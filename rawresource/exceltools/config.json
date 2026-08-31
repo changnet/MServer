@@ -1,0 +1,25 @@
+{
+    "buttons": [
+        {
+            "command": "run.bat -i {excel_dir} --structpath {struct_path} --customformat {custom_format} --supportint64 {support_int64} --sout lua ../../server/config ../../server/config/conf_d.lua",
+            "name": "导出全部",
+            "type": "Run"
+        },
+        {
+            "command": "run.bat -i {excel_dir} --structpath {struct_path} --customformat {custom_format} --supportint64 {support_int64} --sout lua ../../server/config ../../server/config/conf_d.lua --files {selected_files}",
+            "name": "导出选中",
+            "type": "Run"
+        },
+        {
+            "command": "run.bat -i {excel_dir} --structpath {struct_path} --customformat {custom_format} --supportint64 {support_int64} --sout lua ../../server/config ../../server/config/conf_d.lua",
+            "name": "导出后端",
+            "type": "Run"
+        }
+    ],
+    "client_dir": "../client",
+    "custom_format": "lua",
+    "excel_dir": "../excels",
+    "server_dir": "../../server/config",
+    "struct_path": "../excels/struct.json",
+    "support_int64": false
+}

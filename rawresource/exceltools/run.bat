@@ -1,7 +1,7 @@
 @echo off
 cd /d "%~dp0"
 
-python ../../../exceltools.py %*
+exceltools.exe %*
 
 echo .
 pause
