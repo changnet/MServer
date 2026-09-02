@@ -168,6 +168,8 @@ int32_t TimerMgr::new_heap(HeapTimer &ht, int64_t now, int32_t id,
         HeapNode *new_timers = new HeapNode[ht.capacity_]();
         // 上面index + 1，最末总有一个空闲，所以这里memcpy时不用size - 1
         memcpy(new_timers, ht.list_, sizeof(HeapNode) * ht.size_);
+
+        delete[] ht.list_;
         ht.list_ = new_timers;
     }
 
@@ -221,21 +223,21 @@ void TimerMgr::timer_reschedule(Timer *timer, int64_t now)
     {
     case P_ALIGN:
     {
-        // 严格对齐到特定时间，比如一个定时器每5秒触发一次，那必须是在 0 5 10 15
-        // 触发 即使主线程卡了，也不允许在其他秒数触发
+        // 只触发1次，同时严格对齐到特定时间，比如一个定时器在整点触发
+        // 即使主线程卡了，也不允许在其他秒数触发
         assert(timer->repeat_ > 0);
-        while (timer->at_ < now) timer->at_ += timer->repeat_;
+        while (timer->at_ <= now) timer->at_ += timer->repeat_;
         break;
     }
     case P_SPIN:
     {
-        // 自旋到时间恢复正常
-        // 假如定时器1秒触发1次，现在过了5秒，则会在很短时间内触发5次回调
+        // 触发多次直到时间恢复正常，假如定时器1秒触发1次，现在过了5秒，则触发5次回调
         break;
     }
     default:
     {
-        // 按当前时间重新计时，这是最常用的定时器，libev、libevent都是这种处理方式
+        // 按当前时间再触发一次，重新计时
+        // 这是最常用的定时器，libev、libevent都是这种处理方式
         timer->at_ = now;
         break;
     }
@@ -281,5 +283,7 @@ int64_t TimerMgr::next_interval()
     int64_t ni1 = next_heap_interval(timer_, now);
     int64_t ni2 = next_heap_interval(periodic_, utc);
 
-    return ni1 < ni2 ? ni1 : ni2;
+    int64_t n = ni1 < ni2 ? ni1 : ni2;
+
+    return n < 0 ? 0 : n;
 }

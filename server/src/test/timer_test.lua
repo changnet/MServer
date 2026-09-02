@@ -13,36 +13,34 @@ Test.describe("timer test", function()
     Test.it("timer interval test", function()
         local after = 69
         local msec = 17
-        local times = 6
-
-        local next_ms = 0
+        local times = 0
+        local max_times = 10
+        local base_clock
 
         local timer_interval_test = function()
-            -- printf("timer interval expect %d, got %d", next_ms, Engine.clock())
+            local expect_ms = base_clock + after + times * msec
+            times = times + 1
             local sclock = Engine.steady_clock()
-            local val = math.abs(sclock - next_ms)
+            local val = math.abs(sclock - expect_ms)
             if val > accuracy then
                 Test.print(string.format(
                     "timer interval precision %d, steady clock %d, \z
                     clock = %d, expect %d, times %d",
-                    val, sclock, Engine.clock(), next_ms, times))
+                    val, sclock, Engine.clock(), expect_ms, times))
                 Test.assert(false)
             end
 
-            times = times - 1
-            next_ms = next_ms + msec
-            if times <= 0 then Test.done() end
+            if times >= max_times then Test.done() end
         end
 
         Rtti.name_func("timer_interval_test", timer_interval_test)
 
         -- 定时器是以帧时间计算，保证帧时间和实时时间一致，不然定时器就会有误差
         Engine.update()
-        local now_ms = Engine.steady_clock()
+        base_clock = Engine.steady_clock()
+        Test.equal(base_clock, Engine.clock())
 
-        next_ms = now_ms + after
-        Test.equal(now_ms, Engine.clock())
-        Timer.interval(after, msec, times, timer_interval_test)
+        Timer.interval(after, msec, max_times, timer_interval_test)
 
         Test.wait(10000)
         Timer.clear() -- 清除所有定时器，避免出错或者超时后定时器回调影响其他测试

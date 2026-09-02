@@ -17,14 +17,13 @@ EV::~EV()
 
 void EV::routinue()
 {
-    static const int64_t min_wait = 1;  // 最小等待时间，毫秒
-
     while (likely(!stop_))
     {
         timing::update();
 
+        // 可能为0
         int64_t wait_time = timer_mgr_.next_interval();
-        if (unlikely(wait_time < min_wait)) wait_time = min_wait;
+        if (wait_time < 1) wait_time = 1;
 
         // 等待其他线程的数据
         wait_for(wait_time);

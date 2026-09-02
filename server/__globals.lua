@@ -1,4 +1,4 @@
--- auto export by lua-tags 205 symbols
+-- auto export by lua-tags 209 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -28,6 +28,7 @@ return {
 "DEFINE_END", -- src/global/require.lua
 "DataCache", -- src/data/data_cache.lua
 "DataMgr", -- src/data/data_mgr.lua
+"DictTree", -- engine/__dicttree.lua
 "DistId", -- src/idgen/dist_id.lua
 "Durable", -- src/rpc/durable.lua
 "E", -- src/modules/module_loader.lua
@@ -84,6 +85,7 @@ return {
 "Mongo", -- engine/__mongo.lua
 "MySql", -- engine/__mysql.lua
 "NetMsg", -- src/message/net_msg.lua
+"OrthListAoi", -- engine/__orthlistaoi.lua
 "PCall", -- src/rpc/rpc_proxy.lua
 "PP", -- src/modules/player/property.lua
 "PP_DEF", -- src/modules/player/property.lua
@@ -103,6 +105,7 @@ return {
 "PlayerQueue", -- src/queue/player_queue.lua
 "PlayerStatus", -- src/modules/player/player.lua
 "PlayerSync", -- src/modules/player/player_sync.lua
+"Profile", -- engine/__profile.lua
 "Profile", -- src/profile/profile.lua
 "Property", -- src/modules/player/property.lua
 "RES_COPPER", -- src/modules/res/res_header.lua
@@ -121,6 +124,7 @@ return {
 "ShareData", -- engine/__sharedata.lua
 "Shutdown", -- src/engine/shutdown.lua
 "Signal", -- src/engine/signal.lua
+"SkipListAoi", -- engine/__skiplistaoi.lua
 "Socket", -- engine/__socket.lua
 "SocketMgr", -- src/network/socket_mgr.lua
 "SrvMgr", -- src/network/srv_mgr.lua
