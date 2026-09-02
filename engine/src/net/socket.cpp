@@ -386,25 +386,25 @@ int32_t Socket::connect(int32_t addr, const char *host, int32_t port)
     int32_t ok;
     size_t addr_size;
     struct sockaddr *sock_addr;
+    struct sockaddr_in host_addr_v4;
+    struct sockaddr_in6 host_addr_v6;
     if (ip_version_ == IPV4)
     {
-        struct sockaddr_in host_addr;
-        memset(&host_addr, 0, sizeof(host_addr));
-        host_addr.sin_family = AF_INET;
-        host_addr.sin_port   = htons((uint16_t)port);
-        ok                   = inet_pton(AF_INET, host, &host_addr.sin_addr);
-        addr_size            = sizeof(host_addr);
-        sock_addr            = (struct sockaddr *)&host_addr;
+        memset(&host_addr_v4, 0, sizeof(host_addr_v4));
+        host_addr_v4.sin_family = AF_INET;
+        host_addr_v4.sin_port   = htons((uint16_t)port);
+        ok                   = inet_pton(AF_INET, host, &host_addr_v4.sin_addr);
+        addr_size = sizeof(host_addr_v4);
+        sock_addr               = (struct sockaddr *)&host_addr_v4;
     }
     else
     {
-        struct sockaddr_in6 host_addr;
-        memset(&host_addr, 0, sizeof(host_addr));
-        host_addr.sin6_family = AF_INET6;
-        host_addr.sin6_port   = htons((uint16_t)port);
-        ok                    = inet_pton(AF_INET6, host, &host_addr.sin6_addr);
-        addr_size             = sizeof(host_addr);
-        sock_addr             = (struct sockaddr *)&host_addr;
+        memset(&host_addr_v6, 0, sizeof(host_addr_v6));
+        host_addr_v6.sin6_family = AF_INET6;
+        host_addr_v6.sin6_port   = htons((uint16_t)port);
+        ok        = inet_pton(AF_INET6, host, &host_addr_v6.sin6_addr);
+        addr_size = sizeof(host_addr_v6);
+        sock_addr = (struct sockaddr *)&host_addr_v6;
     }
 
     // https://man7.org/linux/man-pages/man3/inet_pton.3.html

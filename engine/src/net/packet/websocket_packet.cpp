@@ -404,5 +404,5 @@ void WebsocketPacket::new_masking_key(char mask[4])
     y = z;
     z = t ^ x ^ y;
 
-    std::memcmp(mask, &z, 4);
+    std::memcpy(mask, &z, 4);
 }
