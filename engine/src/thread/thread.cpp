@@ -8,12 +8,12 @@
 Thread::Thread(const std::string &name)
 {
     name_   = name;
-    stop_   = true;
+    stop_.store(true, std::memory_order_release);
 }
 
 Thread::~Thread()
 {
-    if (!stop_)
+    if (!stop_.load(std::memory_order_acquire))
     {
         ELOG_R("thread %s not stop", name_.c_str());
         stop(true);
@@ -91,7 +91,7 @@ bool Thread::start(int32_t ms)
         return false;
     }
 
-    stop_ = false;
+    stop_.store(false, std::memory_order_release);
     thread_ = std::thread(&Thread::spawn, this, ms);
 
     return true;
@@ -99,7 +99,7 @@ bool Thread::start(int32_t ms)
 
 void Thread::stop(bool join)
 {
-    stop_ = true;
+    stop_.store(true, std::memory_order_release);
 
     if (join && thread_.joinable())
     {
@@ -113,7 +113,7 @@ void Thread::stop(bool join)
 
 void Thread::routine(int32_t ms)
 {
-    while (likely(!stop_))
+    while (likely(!stop_.load(std::memory_order_acquire)))
     {
         int32_t ev = cv_.wait_for(ms);
         routine_once(ev);

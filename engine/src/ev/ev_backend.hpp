@@ -141,7 +141,7 @@ private:
     void dispatch_event(EVIO *w, int32_t ev);
 
 protected:
-    bool done_;     /// 是否终止进程
+    std::atomic<bool> done_;     /// 是否终止进程
     bool modify_protected_; // 当前禁止修改poll等数组结构
     bool busy_; // 是否繁忙(还有未处理完的事)
     std::thread thread_;

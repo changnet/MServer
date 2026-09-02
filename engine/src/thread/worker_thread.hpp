@@ -28,7 +28,7 @@ public:
     // 是否运行中
     bool is_start() const
     {
-        return !stop_;
+        return !stop_.load(std::memory_order_acquire);
     }
     /**
      * @brief 启动定时器
@@ -86,7 +86,7 @@ protected:
     void dispatch_message();
 
 private:
-    bool stop_;
+    std::atomic<bool> stop_;
     lua_State *L_;
     std::string name_;
     std::thread thread_;

@@ -8,7 +8,7 @@
 
 WorkerThread::WorkerThread(const std::string &name)
 {
-    stop_ = true;
+    stop_.store(true, std::memory_order_release);
     L_ = nullptr;
     name_ = name;
 }
@@ -31,7 +31,7 @@ int32_t WorkerThread::start(lua_State *L)
         params_[i - index].assign(p);
     }
 
-    stop_   = false;
+    stop_.store(false, std::memory_order_release);
     thread_ = std::thread(&WorkerThread::routine, this);
 
     return 0;
@@ -39,7 +39,7 @@ int32_t WorkerThread::start(lua_State *L)
 
 void WorkerThread::stop(bool join)
 {
-    stop_ = true;
+    stop_.store(true, std::memory_order_release);
 
     if (join && thread_.joinable())
     {
@@ -143,7 +143,7 @@ void WorkerThread::routine()
         return;
     }
 
-    while (likely(!stop_))
+    while (likely(!stop_.load(std::memory_order_acquire)))
     {
         timing::update();
         int64_t wait_time = timer_mgr_.next_interval();

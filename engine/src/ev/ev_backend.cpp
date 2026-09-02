@@ -27,7 +27,7 @@ EVBackend *EVBackend::instance()
 
 EVBackend::EVBackend()
 {
-    done_             = false;
+    done_.store(false, std::memory_order_release);
     busy_             = false;
     modify_protected_ = false;
 
@@ -52,7 +52,7 @@ bool EVBackend::start()
 
 void EVBackend::stop()
 {
-    done_ = true;
+    done_.store(true, std::memory_order_release);
     wake();
     thread_.join();
 
@@ -83,7 +83,7 @@ void EVBackend::backend()
     static const int32_t min_wait = 1; // 不为0
     static const int32_t max_wait = 2000;
 
-    while (!done_)
+    while (!done_.load(std::memory_order_acquire))
     {
         int32_t ev_count = wait(busy_ ? min_wait : max_wait);
         if (ev_count < 0) break;

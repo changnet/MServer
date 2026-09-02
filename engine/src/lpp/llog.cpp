@@ -89,7 +89,7 @@ LLog::~LLog()
 
 void LLog::stop()
 {
-    if (stop_)
+    if (stop_.load(std::memory_order_acquire))
     {
         ELOG("log thread already stop");
         return;
@@ -100,7 +100,7 @@ void LLog::stop()
 
 int32_t LLog::start(lua_State *L)
 {
-    if (!stop_)
+    if (!stop_.load(std::memory_order_acquire))
     {
         luaL_error(L, "log thread already start");
         return 0;
@@ -116,7 +116,7 @@ int32_t LLog::start(lua_State *L)
 
 int32_t LLog::append(lua_State *L)
 {
-    if (stop_)
+    if (stop_.load(std::memory_order_acquire))
     {
         return luaL_error(L, "log thread not start");
     }

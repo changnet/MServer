@@ -386,8 +386,12 @@ void WebsocketPacket::new_masking_key(char mask[4])
 {
     /* George Marsaglia  Xorshift generator
      * www.jstatsoft.org/v08/i14/paper
+     * 这个算法并不完全满足rfc6455 PRNG要求，但一般够用
+     * 
+     * 如有需求可接入openssl的RAND_butes()函数
      */
-    static unsigned long x = 123456789, y = 362436069, z = 521288629;
+
+    thread_local unsigned long x = 123456789, y = 362436069, z = 521288629;
 
     // period 2^96-1
     unsigned long t;
@@ -400,6 +404,5 @@ void WebsocketPacket::new_masking_key(char mask[4])
     y = z;
     z = t ^ x ^ y;
 
-    uint32_t *new_mask = reinterpret_cast<uint32_t *>(mask);
-    *new_mask          = static_cast<uint32_t>(z);
+    std::memcmp(mask, &z, 4);
 }
