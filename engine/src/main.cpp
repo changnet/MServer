@@ -120,10 +120,25 @@ int32_t main(int32_t argc, char **argv)
     // https://docs.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-setunhandledexceptionfilter
     SetUnhandledExceptionFilter(__unhandled_exception_filte);
 #else
-    if (setting.daemon && daemon(1, 0) < 0)
+    if (setting.daemon)
     {
-        ELOG_R("Failed to create daemon process");
-        return 1;
+        // 业务逻辑的日志有日志线程处理，但部分第三方库可能会打印一些紧急日志
+        // 不以nohup、docker等方式启动时，保留一个用于紧急查bug的日志
+        if (!freopen("daemon_stdout_stderr", "a", stdout)
+            || !freopen("daemon_stdout_stderr", "a", stderr))
+        {
+            ELOG_R("redirect stdout and stderr to daemon_stdout_stderr failed");
+            return 1;
+        }
+
+        // 重定向到文件后默认是全缓冲，进程崩溃时缓冲区里的内容会丢失
+        setvbuf(stdout, nullptr, _IOLBF, 0);
+
+        if (daemon(1, 1) < 0)
+        {
+            ELOG_R("Failed to create daemon process");
+            return 1;
+        }
     }
 #endif
 
