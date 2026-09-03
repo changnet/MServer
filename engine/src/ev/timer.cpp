@@ -196,7 +196,7 @@ void TimerMgr::heap_timeout(HeapTimer &ht, int64_t now, ThreadContext *ctx)
             timer->at_ += timer->repeat_;
 
             // 如果时间出现偏差，重新调整定时器
-            if (unlikely(timer->at_ < now)) timer_reschedule(timer, now);
+            if (unlikely(timer->at_ <= now)) timer_reschedule(timer, now);
 
             assert(timer->repeat_ > 0);
 

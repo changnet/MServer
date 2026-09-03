@@ -38,8 +38,8 @@ public:
     /**
      * @brief 启动utc定时器
      * @param id 定时器唯一id
-     * @param after N秒后第一次执行
-     * @param repeat 重复执行间隔，秒数
+     * @param after N毫秒后第一次执行
+     * @param repeat 重复执行间隔，毫秒数
      * @param policy 定时器重新规则时的策略
      * @return 成功返回》=1,失败返回值<0
      */

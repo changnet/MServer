@@ -124,6 +124,7 @@ public:
     inline void wait_for(int64_t ms)
     {
         std::unique_lock<std::mutex> ul(mutex_);
+        // wait_for在win下默认15.625ms，启用timeBeginPeriod可精确到1ms
         if (queue_.empty()) cv_.wait_for(ul, std::chrono::milliseconds(ms));
     }
 

@@ -136,19 +136,19 @@ function Timer.stop(timer_id)
     return true
 end
 
--- 发起一个utc时间定时器（精度为秒，受调时间影响）
--- @param after N秒后第一次回调
--- @param sec 循环间隔，单位秒，0表示不循环
+-- 发起一个utc时间定时器（精度为毫秒，受调时间影响）
+-- @param after N毫秒后第一次回调
+-- @param ms 循环间隔，单位秒，0表示不循环
 -- @param tims 循环次数，-1表示永久
 -- @param func 回调函数
 -- @param ... 其他回调参数
 -- @return 定时器id
-function Timer.periodic(after, sec, times, func, ...)
-    assert(sec >= 0, "repeat interval MUST > 0")
+function Timer.periodic(after, ms, times, func, ...)
+    assert(ms >= 0, "repeat interval MUST > 0")
 
     local timer_id = get_next_id()
     local cb
-    if after > 5 or (times < 0 or sec * times > 5) then
+    if after > 5 or (times < 0 or ms * times > 5000) then
         -- 如果回调时间很长，则需要该函数能热更
         cb = make_func_name_cb(func, ...)
     else
@@ -165,7 +165,7 @@ function Timer.periodic(after, sec, times, func, ...)
         periodic = true,
     }
 
-    local e = g_thread:periodic_start(timer_id, after, sec, P_ALIGN)
+    local e = g_thread:periodic_start(timer_id, after, ms, P_ALIGN)
     if e <= 0 then
         this.timer[timer_id] = nil
         eprintf("periodic start fail: id = %d, e = %d", timer_id, e)

@@ -47,16 +47,16 @@ Test.describe("timer test", function()
     end)
 
     Test.it("timer periodic test", function()
-        local after = 3
-        local sec = 2
-        local times = 3
+        local after = 3000 -- N毫秒后触发第一次回调
+        local ms = 2000 -- 间隔N毫秒执行
+        local times = 3 -- 总共执行多少次
 
-        local next_s = 0
+        -- Timer.periodic的参数单位是秒，Engine.system_clock()返回的是毫秒，比较时换算
+        local next_ms = 0
 
         local timer_periodic_test = function()
-            -- printf("timer periodic expect %d, got %d", next_s, ev:time())
             local sclock = Engine.system_clock()
-            local val = math.abs(sclock - next_s)
+            local val = math.abs(sclock - next_ms)
             if val > accuracy then
                 Test.print("timer periodic precision lost",
                     val, sclock, Engine.time())
@@ -64,7 +64,7 @@ Test.describe("timer test", function()
             end
 
             times = times - 1
-            next_s = next_s + sec
+            next_ms = next_ms + ms
             if times <= 0 then Test.done() end
         end
 
@@ -73,10 +73,10 @@ Test.describe("timer test", function()
         -- 保证帧时间和实时时间一致
         Engine.update()
         local now = Engine.system_clock()
-        next_s = now + after
+        next_ms = now + after
         -- TODO system_clock的时间有概率比time_ms小1秒，可能是因为time_ms是计算而来而不是从系统时间获取
         Test.assert(math.abs(now - Engine.time_ms()) < 2)
-        Timer.periodic(after, sec, times, timer_periodic_test)
+        Timer.periodic(after, ms, times, timer_periodic_test)
 
         Test.wait(10000)
         Timer.clear() -- 清除所有定时器，避免出错或者超时后定时器回调影响其他测试

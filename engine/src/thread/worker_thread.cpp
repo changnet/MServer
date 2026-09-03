@@ -149,9 +149,12 @@ void WorkerThread::routine()
 
         int64_t wait_time = timer_mgr_.next_interval();
 
-        wait_for(wait_time);
-
-        timing::update();
+        // 返回0表示已有定时器到期，不要睡眠
+        if (wait_time > 0)
+        {
+            wait_for(wait_time);
+            timing::update();
+        }
         timer_mgr_.update_timeout(this);
 
         dispatch_message();

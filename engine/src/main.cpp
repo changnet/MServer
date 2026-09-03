@@ -1,12 +1,51 @@
 #include "global/platform.hpp"
 #ifdef __windows__
 extern LONG __unhandled_exception_filte(_EXCEPTION_POINTERS *exception);
+
+// platform.hpp定义了WIN32_LEAN_AND_MEAN，windows.h不会自动包含多媒体相关的头文件
+// timeBeginPeriod、timeEndPeriod在timeapi.h中声明
+#include <timeapi.h>
 #endif
 
 #include "system/signal.hpp"
 #include "lpp/llib.hpp"
 #include "system/static_global.hpp"
 #include <lua.hpp>
+
+#ifdef __windows__
+/**
+ * @brief 提升windows的系统定时器精度
+ * windows默认的系统时钟粒度是15.625ms(64Hz)，Sleep、条件变量等待、WaitForSingleObject
+ * 等所有带超时的等待，到期时间都会向上取整到这个粒度的整数倍。因此一个声明为1ms精度的
+ * 定时器，实际误差可能达到十几毫秒，且误差大小取决于当时系统里有没有其他程序申请过更高的
+ * 精度（比如浏览器、播放器），表现为偶发。
+ * 调用timeBeginPeriod可以把粒度降到1ms，这是全局的（影响整个系统，会增加功耗），
+ * 因此退出时必须用timeEndPeriod还原。这里用RAII保证一定配对。
+ * https://learn.microsoft.com/en-us/windows/win32/api/timeapi/nf-timeapi-timebeginperiod
+ */
+class WinTimerResolution final
+{
+public:
+    explicit WinTimerResolution(UINT ms) : ms_(ms), ok_(false)
+    {
+        ok_ = TIMERR_NOERROR == timeBeginPeriod(ms_);
+    }
+
+    ~WinTimerResolution()
+    {
+        if (ok_) timeEndPeriod(ms_);
+    }
+
+    bool ok() const { return ok_; }
+
+    WinTimerResolution(const WinTimerResolution &) = delete;
+    WinTimerResolution &operator=(const WinTimerResolution &) = delete;
+
+private:
+    UINT ms_;
+    bool ok_;
+};
+#endif
 
 struct AppSetting
 {
@@ -48,6 +87,16 @@ static AppSetting load_setting(const char *path)
 
 int32_t main(int32_t argc, char **argv)
 {
+#ifdef __windows__
+    // 必须在任何线程启动前设置，并且在整个进程生命周期内保持有效
+    // 析构时会自动timeEndPeriod还原
+    WinTimerResolution timer_resolution(1);
+    if (!timer_resolution.ok())
+    {
+        ELOG_R("timeBeginPeriod(1) failed, timer precision is 15.625ms");
+    }
+#endif
+
     if (argc > 64)
     {
         ELOG_R("too many argument: %d", argc);

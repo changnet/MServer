@@ -1,3 +1,4 @@
+#include "global/platform.hpp"
 #include "profile.hpp"
 
 #include <cstdio>

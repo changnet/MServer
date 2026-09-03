@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <atomic>
 #include "ev/timer.hpp"
 #include "thread_context.hpp"
 

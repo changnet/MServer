@@ -170,6 +170,7 @@ if(WINDOWS)
     target_link_libraries(master PRIVATE
         Rpcrt4 # uuidCreate
         Dbghelp # MiniDumpWriteDump
+        Winmm # timeBeginPeriod，提升系统定时器精度到1ms
         ${LUA_LIBRARIES}
         OpenSSL::SSL OpenSSL::Crypto
         unofficial::libmariadb
