@@ -14,15 +14,19 @@ namespace lcpp
 template <class T> class Class; // 前置声明，lua_to_cpp要用
 
 // 参数的检测，不能直接用lua_check*，因为会触发long jump，这里用throw
-#ifdef ARGS_CHECK
-
+// 注意：不放在ARGS_CHECK里。类型不匹配这类错误即使关闭了参数检测也需要抛，
+// 否则release下会静默返回nullptr
 static inline void throw_error(lua_State *L, const char *name, int i)
 {
     char buff[256];
-    snprintf(buff, sizeof(buff), "bad argument #%d, %s expected, got %s", i,
-             name, lua_typename(L, lua_type(L, i)));
+    // 索引可能是负数（比如用-1取栈顶返回值），必须转成绝对索引，
+    // 否则错误信息里会出现 "#-1" 这种看不懂的编号
+    snprintf(buff, sizeof(buff), "bad argument #%d, %s expected, got %s",
+             lua_absindex(L, i), name, lua_typename(L, lua_type(L, i)));
     throw std::runtime_error(buff);
 }
+
+#ifdef ARGS_CHECK
     #define luaL_checkis(t)        \
         if (!lua_is##t(L, i))      \
             throw_error(L, #t, i); \
@@ -46,10 +50,12 @@ template <typename T> T lua_to_cpp(lua_State *L, int i)
     // 不是userdata这里会返回nullptr
     void *p = lua_touserdata(L, i);
 
-    using T1 = typename std::remove_pointer_t<T>;
+    // 必须去掉cv，否则 const Foo* 会实例化出 Class<const Foo>，
+    // 和注册时的 Class<Foo> 不是同一个，class_name_ 永远为空
+    using T1 = std::remove_cv_t<std::remove_pointer_t<T>>;
     if constexpr (std::is_void_v<T1>)
     {
-        return p;
+        return (T)p;
     }
     else
     {
@@ -61,10 +67,12 @@ template <typename T> T lua_to_cpp(lua_State *L, int i)
          * 这里实际上是识别不了的，用dynamic_cast也识别不了，直接assert算了
          */ 
         const char *name = Class<T1>::class_name_;
-        if (name && luaL_testudata(L, i, name)) return *((T1 **)p);
+        if (name && luaL_testudata(L, i, name)) return (T)(*((T1 **)p));
 
-        assert(false);
-        return nullptr;
+        // 未注册的类，或者传进来的userdata不是这个类。不能返回nullptr，
+        // 否则release下C++函数会拿到空指针，这种问题线上极难查
+        throw_error(L, name ? name : "unregistered userdata", i);
+        return nullptr; // 不可达，throw_error必定抛异常
     }
 }
 
@@ -181,22 +189,23 @@ template <typename T> void cpp_to_lua(lua_State *L, T v)
 {
     static_assert(std::is_pointer<T>::value, "type unknow");
 
-    // 如果声明过这个类，则以push方式推送到lua
-    using T1 = typename std::remove_pointer_t<T>;
+    // 同lua_to_cpp，必须去掉cv，否则const Foo*拿不到注册时设的class_name_
+    using T1 = std::remove_cv_t<std::remove_pointer_t<T>>;
     if constexpr (std::is_void_v<T1>)
     {
-        lua_pushlightuserdata(L, v);
+        lua_pushlightuserdata(L, const_cast<void *>((const void *)v));
     }
     else
     {
-        const char *name = Class<T1>::template class_name_;
+        // class_name_ 是数据成员不是模板，这里不能用 Class<T1>::template class_name_
+        const char *name = Class<T1>::class_name_;
         if (name)
         {
             Class<T1>::push(L, v);
         }
         else
         {
-            lua_pushlightuserdata(L, v);
+            lua_pushlightuserdata(L, const_cast<void *>((const void *)v));
         }
     }
 }
@@ -302,6 +311,35 @@ struct class_remove<Ret (T::*)(Args...)>
 // 特化为const成员函数
 template <typename T, typename Ret, typename... Args>
 struct class_remove<Ret (T::*)(Args...) const>
+    : public class_remove<Ret (T::*)(Args...)>
+{
+};
+/* C++17起noexcept是函数类型的一部分，Ret(T::*)(Args...) noexcept 匹配不到上面的特化，
+ * 会落到只声明未定义的主模板导致编译错误，必须单独特化。
+ * 引用限定同理，但只支持 & （&& 限定的成员函数无法用对象指针调用，不支持）
+ */
+template <typename Ret, typename... Args>
+struct class_remove<Ret (*)(Args...) noexcept>
+{
+    using type = Ret (*)(Args...);
+};
+template <typename T, typename Ret, typename... Args>
+struct class_remove<Ret (T::*)(Args...) noexcept>
+    : public class_remove<Ret (T::*)(Args...)>
+{
+};
+template <typename T, typename Ret, typename... Args>
+struct class_remove<Ret (T::*)(Args...) const noexcept>
+    : public class_remove<Ret (T::*)(Args...)>
+{
+};
+template <typename T, typename Ret, typename... Args>
+struct class_remove<Ret (T::*)(Args...) &>
+    : public class_remove<Ret (T::*)(Args...)>
+{
+};
+template <typename T, typename Ret, typename... Args>
+struct class_remove<Ret (T::*)(Args...) const &>
     : public class_remove<Ret (T::*)(Args...)>
 {
 };
@@ -509,6 +547,31 @@ private:
     {
     };
 
+    // 和class_remove配套，C++17起noexcept/引用限定都是函数类型的一部分
+    template <typename C, typename Ret, typename... Args>
+    class ClassRegister<Ret (C::*)(Args...) noexcept>
+        : public ClassRegister<Ret (C::*)(Args...)>
+    {
+    };
+
+    template <typename C, typename Ret, typename... Args>
+    class ClassRegister<Ret (C::*)(Args...) const noexcept>
+        : public ClassRegister<Ret (C::*)(Args...) const>
+    {
+    };
+
+    template <typename C, typename Ret, typename... Args>
+    class ClassRegister<Ret (C::*)(Args...) &>
+        : public ClassRegister<Ret (C::*)(Args...)>
+    {
+    };
+
+    template <typename C, typename Ret, typename... Args>
+    class ClassRegister<Ret (C::*)(Args...) const &>
+        : public ClassRegister<Ret (C::*)(Args...) const>
+    {
+    };
+
 public:
     virtual ~Class()
     {
@@ -530,10 +593,12 @@ public:
         lua_getfield(L, LUA_REGISTRYINDEX, LUA_LOADED_TABLE);
         assert(lua_istable(L, -1));
 
-        // 该类名已经注册过
+        // 该类名已经注册过。注意luaL_newmetatable返回0时会把已存在的metatable
+        // 留在栈顶，必须连同loaded table一起弹出，否则每次重复注册漏2个栈槽
         if (0 == luaL_newmetatable(L, class_name_))
         {
             assert(false);
+            lua_pop(L, 2); /* drop loaded table and metatable */
             return;
         }
 
@@ -626,7 +691,14 @@ public:
     static int push(lua_State *L, const T *obj, bool gc = false)
     {
         assert(obj);
-        assert(class_name_);
+        // 类未注册时class_name_为空（class_name_是thread_local的，每个虚拟机
+        // 所在的线程都要各自注册过）。这里必须拦住，否则luaL_getmetatable(nullptr)
+        // 在release下会直接崩
+        if (nullptr == class_name_)
+        {
+            assert(false);
+            return -1;
+        }
         int top = lua_gettop(L);
 
         /* 这里只是创建一个指针给lua管理
@@ -638,6 +710,8 @@ public:
         luaL_getmetatable(L, class_name_);
         if (!lua_istable(L, -1))
         {
+            // 取不到metatable时luaL_getmetatable会push一个nil，连同userdata一起弹出
+            lua_pop(L, 2); /* drop userdata and nil */
             return -1;
         }
 
@@ -845,7 +919,10 @@ private:
     }
 
 public:
-    static const char *class_name_;
+    // class_name_是static成员，多个虚拟机(本项目每个线程一个lua_State)并发注册会数据竞争。
+    // push() 又是static的、依赖这个值，所以改成thread_local：
+    // 每个线程注册自己的虚拟机、并在本线程内push，语义上正好匹配
+    static thread_local const char *class_name_;
 
 private:
     lua_State *L_;
@@ -882,11 +959,21 @@ template <lua_CFunction fp> void reg_global_func(lua_State *L, const char *name)
 }
 
 /**
- * 调用lua全局函数，无返回。错误会抛异常
+ * 调用lua全局函数。错误会抛异常
+ * @param Ret 返回类型，不指定则为void(无返回值)。必须显式指定，如call<int>(L, "func", 1, 2)
  * @param name 函数名
  * @param Args 参数
+ *
+ * 注意：这里必须用「单个函数模板 + Ret 默认void」的写法，不能拆成
+ *   template <typename... Args>            void call(lua_State*, const char*, Args...)
+ *   template <typename Ret, typename...Args> Ret call(lua_State*, const char*, Args...)
+ * 两个重载。因为 Args 是尾部变参包，写 call<int>(L, "func", 1) 时，显式给出的 int
+ * 会被第一个重载收进 Args（clang 实测推导为 Args=<int,int,int>），两个候选都精确匹配，
+ * 直接报 "call to 'call' is ambiguous"。合并成一个模板后只有一个候选，
+ * 不写显式参数时 Ret 取默认 void，写了则取指定类型，由 if constexpr 在编译期分流。
  */
-template <typename... Args> void call(lua_State *L, const char *name, Args... args)
+template <typename Ret = void, typename... Args>
+Ret call(lua_State *L, const char *name, Args... args)
 {
 #ifndef NDEBUG
     StackChecker sc(L);
@@ -900,50 +987,35 @@ template <typename... Args> void call(lua_State *L, const char *name, Args... ar
     (cpp_to_lua(L, args), ...);
 
     const size_t nargs = sizeof...(Args);
-    if (LUA_OK != lua_pcall(L, (int32_t)nargs, 0, 1))
+    if constexpr (std::is_void_v<Ret>)
     {
-        const char *lmsg = lua_tostring(L, -1);
-        std::string message("call ");
-        message = message + name + " :" + (lmsg ? lmsg : "nil");
-        lua_pop(L, 2); // pop error message and traceback
+        if (LUA_OK != lua_pcall(L, (int32_t)nargs, 0, 1))
+        {
+            const char *lmsg = lua_tostring(L, -1);
+            std::string message("call ");
+            message = message + name + " :" + (lmsg ? lmsg : "nil");
+            lua_pop(L, 2); // pop error message and traceback
 
-        throw std::runtime_error(message);
+            throw std::runtime_error(message);
+        }
+        lua_pop(L, 1); // pop traceback function
     }
-    lua_pop(L, 1); // pop traceback function
-}
-
-/**
- * 调用lua全局函数，需要指定返回类型，如call<int>("func", 1, 2, 3)。错误会抛异常
- * @param name 函数名
- * @param Args 参数
- */
-template <typename Ret, typename... Args>
-Ret call(lua_State *L, const char *name, Args... args)
-{
-#ifndef NDEBUG
-    StackChecker sc(L);
-#endif
-
-    lua_getglobal(L, "__G_C_TRACKBACK"); // 需要自己在Lua实现trace函数
-    assert(lua_isfunction(L, 1));
-    lua_getglobal(L, name);
-
-    (lcpp::cpp_to_lua(L, args), ...);
-
-    const size_t nargs = sizeof...(Args);
-    if (LUA_OK != lua_pcall(L, (int32_t)nargs, 1, 1))
+    else
     {
-        const char *lmsg = lua_tostring(L, -1);
-        std::string message("call ");
-        message = message + name + " :" + (lmsg ? lmsg : "nil");
-        lua_pop(L, 2); // pop error message and traceback
+        if (LUA_OK != lua_pcall(L, (int32_t)nargs, 1, 1))
+        {
+            const char *lmsg = lua_tostring(L, -1);
+            std::string message("call ");
+            message = message + name + " :" + (lmsg ? lmsg : "nil");
+            lua_pop(L, 2); // pop error message and traceback
 
-        throw std::runtime_error(message);
+            throw std::runtime_error(message);
+        }
+        Ret v = lua_to_cpp<Ret>(L, -1);
+        lua_pop(L, 2); // pop retturn v and traceback function
+
+        return v;
     }
-    Ret v = lua_to_cpp<Ret>(L, -1);
-    lua_pop(L, 2); // pop retturn v and traceback function
-
-    return v;
 }
 
 // 创建一个模块（本质是一个全局table），与module_end配套使用
@@ -996,4 +1068,4 @@ inline void module_end(lua_State* L)
 
 #undef luaL_checkis
 } // namespace lcpp
-template <class T> const char *lcpp::Class<T>::class_name_ = nullptr;
+template <class T> thread_local const char *lcpp::Class<T>::class_name_ = nullptr;
