@@ -581,7 +581,7 @@ static int32_t ls(lua_State *L)
     std::filesystem::recursive_directory_iterator dir_iter(path, e);
     if (e)
     {
-        luaL_error(L, "can not open directory(%s):%s", path, e.message());
+        luaL_error(L, "can not open directory(%s):%s", path, e.message().c_str());
 
         return 0;
     }

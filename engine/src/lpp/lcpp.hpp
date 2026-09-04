@@ -406,7 +406,7 @@ public:
 /**
  * @brief 用于C++类注册
  */
-template <class T> class Class
+template <class T> class Class final
 {
 private:
     // 用于C++类中的static函数注册
@@ -423,12 +423,12 @@ private:
         {
             if constexpr (std::is_void_v<Ret>)
             {
-                fp(lua_to_cpp<remove_cvref<Args>>(L, 2 + I)...);
+                fp(lua_to_cpp<remove_cvref<Args>>(L, 1 + I)...);
                 return 0;
             }
             else
             {
-                cpp_to_lua(L, fp(lua_to_cpp<remove_cvref<Args>>(L, 2 + I)...));
+                cpp_to_lua(L, fp(lua_to_cpp<remove_cvref<Args>>(L, 1 + I)...));
                 return 1;
             }
         }
@@ -573,7 +573,7 @@ private:
     };
 
 public:
-    virtual ~Class()
+    ~Class()
     {
     }
 
