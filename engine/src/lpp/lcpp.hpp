@@ -355,7 +355,7 @@ public:
         {
             return caller(L, fp, indices, tag{});
         }
-        catch (const std::runtime_error &e)
+        catch (const std::exception &e)
         {
             // 这里对象e还未释放，不可long jump
             lua_pushstring(L, e.what());
@@ -402,7 +402,7 @@ private:
             {
                 return caller<fp>(L, indices);
             }
-            catch (const std::runtime_error &e)
+            catch (const std::exception &e)
             {
                 lua_pushstring(L, e.what());
             }
@@ -483,7 +483,7 @@ private:
             {
                 return caller<fp>(L, indices);
             }
-            catch (const std::runtime_error &e)
+            catch (const std::exception &e)
             {
                 lua_pushstring(L, e.what());
             }
@@ -495,7 +495,7 @@ private:
             {
                 return pointer_caller<fp>(L, indices);
             }
-            catch (const std::runtime_error &e)
+            catch (const std::exception &e)
             {
                 lua_pushstring(L, e.what());
             }
@@ -738,7 +738,7 @@ private:
             obj = class_constructor_caller<Args...>(
                 L, std::make_index_sequence<sizeof...(Args)>{});
         }
-        catch (const std::runtime_error &e)
+        catch (const std::exception &e)
         {
             lua_pushstring(L, e.what());
         }
@@ -902,8 +902,9 @@ template <typename... Args> void call(lua_State *L, const char *name, Args... ar
     const size_t nargs = sizeof...(Args);
     if (LUA_OK != lua_pcall(L, (int32_t)nargs, 0, 1))
     {
+        const char *lmsg = lua_tostring(L, -1);
         std::string message("call ");
-        message = message + name + " :" + lua_tostring(L, -1);
+        message = message + name + " :" + (lmsg ? lmsg : "nil");
         lua_pop(L, 2); // pop error message and traceback
 
         throw std::runtime_error(message);
@@ -930,10 +931,11 @@ Ret call(lua_State *L, const char *name, Args... args)
     (lcpp::cpp_to_lua(L, args), ...);
 
     const size_t nargs = sizeof...(Args);
-    if (LUA_OK != lua_pcall(L, (int32_t)nargs, 0, 1))
+    if (LUA_OK != lua_pcall(L, (int32_t)nargs, 1, 1))
     {
+        const char *lmsg = lua_tostring(L, -1);
         std::string message("call ");
-        message = message + name + " :" + lua_tostring(L, -1);
+        message = message + name + " :" + (lmsg ? lmsg : "nil");
         lua_pop(L, 2); // pop error message and traceback
 
         throw std::runtime_error(message);
