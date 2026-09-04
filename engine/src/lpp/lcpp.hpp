@@ -295,113 +295,149 @@ inline void cpp_to_lua(lua_State *L, const std::string &v)
 template <typename T>
 using remove_cvref = typename std::remove_cv_t<typename std::remove_reference_t<T>>;
 
-// 前置声明
-template <typename T> struct class_remove;
-// 特化为static函数或全局函数
+/* C++17 起 const / noexcept / & 都是函数类型的一部分，同一个成员函数因限定符不同
+ * 会得到不同的类型，无法互相匹配。这里把限定符统一剥掉，归一化成
+ *   Ret (*)(Args...)            （全局/静态函数）
+ *   Ret (T::*)(Args...)         （成员函数）
+ * 两种基础形式，供 class_remove / FuncRegister / ClassRegister 在使用点调用。
+ * 限定符清单只在这里维护一份。&& 限定符不剥：&& 限定的成员函数无法通过对象指针调用，
+ * 保留原类型让它匹配不到任何特化、报出明确的编译错误。
+ */
+template <typename F> struct func_strip
+{
+    using type = F;
+};
+template <typename Ret, typename... Args>
+struct func_strip<Ret (*)(Args...) noexcept>
+{
+    using type = Ret (*)(Args...);
+};
+template <typename T, typename Ret, typename... Args>
+struct func_strip<Ret (T::*)(Args...) const>
+{
+    using type = Ret (T::*)(Args...);
+};
+template <typename T, typename Ret, typename... Args>
+struct func_strip<Ret (T::*)(Args...) noexcept>
+{
+    using type = Ret (T::*)(Args...);
+};
+template <typename T, typename Ret, typename... Args>
+struct func_strip<Ret (T::*)(Args...) const noexcept>
+{
+    using type = Ret (T::*)(Args...);
+};
+template <typename T, typename Ret, typename... Args>
+struct func_strip<Ret (T::*)(Args...) &>
+{
+    using type = Ret (T::*)(Args...);
+};
+template <typename T, typename Ret, typename... Args>
+struct func_strip<Ret (T::*)(Args...) const &>
+{
+    using type = Ret (T::*)(Args...);
+};
+template <typename T, typename Ret, typename... Args>
+struct func_strip<Ret (T::*)(Args...) & noexcept>
+{
+    using type = Ret (T::*)(Args...);
+};
+template <typename T, typename Ret, typename... Args>
+struct func_strip<Ret (T::*)(Args...) const & noexcept>
+{
+    using type = Ret (T::*)(Args...);
+};
+template <typename F> using func_strip_t = typename func_strip<F>::type;
+
+// 把函数类型映射到对应的 lua_CFunction 形态的返回类型：int (*)(lua_State *)
+template <typename F> struct class_remove;
+// 全局/静态函数
 template <typename Ret, typename... Args> struct class_remove<Ret (*)(Args...)>
 {
     using type = Ret (*)(Args...);
 };
-// 特化为成员函数
+// 成员函数
 template <typename T, typename Ret, typename... Args>
 struct class_remove<Ret (T::*)(Args...)>
 {
     using type = Ret (*)(Args...);
 };
-// 特化为const成员函数
-template <typename T, typename Ret, typename... Args>
-struct class_remove<Ret (T::*)(Args...) const>
-    : public class_remove<Ret (T::*)(Args...)>
-{
-};
-/* C++17起noexcept是函数类型的一部分，Ret(T::*)(Args...) noexcept 匹配不到上面的特化，
- * 会落到只声明未定义的主模板导致编译错误，必须单独特化。
- * 引用限定同理，但只支持 & （&& 限定的成员函数无法用对象指针调用，不支持）
- */
-template <typename Ret, typename... Args>
-struct class_remove<Ret (*)(Args...) noexcept>
-{
-    using type = Ret (*)(Args...);
-};
-template <typename T, typename Ret, typename... Args>
-struct class_remove<Ret (T::*)(Args...) noexcept>
-    : public class_remove<Ret (T::*)(Args...)>
-{
-};
-template <typename T, typename Ret, typename... Args>
-struct class_remove<Ret (T::*)(Args...) const noexcept>
-    : public class_remove<Ret (T::*)(Args...)>
-{
-};
-template <typename T, typename Ret, typename... Args>
-struct class_remove<Ret (T::*)(Args...) &>
-    : public class_remove<Ret (T::*)(Args...)>
-{
-};
-template <typename T, typename Ret, typename... Args>
-struct class_remove<Ret (T::*)(Args...) const &>
-    : public class_remove<Ret (T::*)(Args...)>
-{
-};
 
 template <typename T>
 inline constexpr bool is_lua_func =
-    std::is_same<typename class_remove<T>::type, lua_CFunction>::value;
+    std::is_same<typename class_remove<func_strip_t<T>>::type, lua_CFunction>::value;
+
+namespace detail
+{
+
+/**
+ * 统一的「从Lua栈解包参数 → 调用 → 处理返回值」逻辑。
+ * 此前 Register / StaticRegister / ClassRegister::caller / pointer_caller 各抄了一份，
+ * 这里合并成一份，由调用点用 lambda 提供真正发起调用的动作。
+ * @param Ret    被调函数返回类型（由偏特化层提供）
+ * @param Offset 第1个参数在Lua栈上的索引（全局/静态函数为1，成员函数为2）
+ * @param fn     发起调用的可调用物
+ */
+template <typename Ret, size_t Offset, typename... Args, typename Fn, size_t... I>
+int unpack_call(lua_State *L, Fn &&fn, const std::index_sequence<I...> &)
+{
+    if constexpr (std::is_void_v<Ret>)
+    {
+        fn(lua_to_cpp<remove_cvref<Args>>(L, Offset + I)...);
+        return 0;
+    }
+    else
+    {
+        cpp_to_lua(L, fn(lua_to_cpp<remove_cvref<Args>>(L, Offset + I)...));
+        return 1;
+    }
+}
+
+/**
+ * 统一的异常保护：捕获C++异常转成lua错误。
+ * 注意long jump不能发生在还有非平凡对象存活时，因此必须在catch块结束、
+ * 异常对象已析构之后才能lua_error。
+ */
+template <typename Fn> int protect(lua_State *L, Fn &&fn)
+{
+    try
+    {
+        return fn();
+    }
+    catch (const std::exception &e)
+    {
+        // 这里对象e还未释放，不可long jump
+        lua_pushstring(L, e.what());
+    }
+    catch (...)
+    {
+        lua_pushstring(L, "unknow cpp error");
+    }
+    // 到了这里，本次调用所有的C++对象应该都已释放，可以安全long jump了
+    return lua_error(L);
+}
 
 /**
  * @brief 用于全局函数、static函数注册
  */
-template <class T> class Register;
-template <typename Ret, typename... Args> class Register<Ret (*)(Args...)>
+template <class T> class FuncRegister;
+template <typename Ret, typename... Args> class FuncRegister<Ret (*)(Args...)>
 {
-private:
-    static constexpr auto indices = std::make_index_sequence<sizeof...(Args)>{};
-
-    // 辅助标签
-    struct void_tag
-    {
-    };
-    struct non_void_tag
-    {
-    };
-
-    // 根据返回类型选择 tag
-    using tag = std::conditional_t<std::is_void_v<Ret>, void_tag, non_void_tag>;
-
-    template <size_t... I>
-    static int caller(lua_State *L, Ret (*fp)(Args...),
-                           const std::index_sequence<I...> &, non_void_tag)
-    {
-        cpp_to_lua(L, fp(lua_to_cpp<remove_cvref<Args>>(L, 1 + I)...));
-        return 1;
-    }
-
-    template <size_t... I>
-    static int caller(lua_State *L, Ret (*fp)(Args...),
-                           const std::index_sequence<I...> &, void_tag)
-    {
-        fp(lua_to_cpp<remove_cvref<Args>>(L, 1 + I)...);
-        (void)L; // warning: parameter ‘L’ set but not used
-        return 0;
-    }
-
-
 public:
     template <auto fp> static int reg(lua_State *L)
     {
-        try
-        {
-            return caller(L, fp, indices, tag{});
-        }
-        catch (const std::exception &e)
-        {
-            // 这里对象e还未释放，不可long jump
-            lua_pushstring(L, e.what());
-        }
-        // 到了这里，本次调用所有的C++对象应该都已释放，可以安全long jump了
-        return lua_error(L);
+        return protect(L, [L]() {
+            return unpack_call<Ret, 1, Args...>(
+                L,
+                [](auto &&... a) -> decltype(auto) {
+                    return fp(std::forward<decltype(a)>(a)...);
+                },
+                std::make_index_sequence<sizeof...(Args)>{});
+        });
     }
 };
+
+} // namespace detail
 
 /**
  * @brief 用于C++类注册
@@ -409,56 +445,15 @@ public:
 template <class T> class Class final
 {
 private:
-    // 用于C++类中的static函数注册
-    template <class C> class StaticRegister;
-    template <typename Ret, typename... Args>
-    class StaticRegister<Ret (*)(Args...)>
-    {
-    private:
-        static constexpr auto indices =
-            std::make_index_sequence<sizeof...(Args)>{};
-
-        template <auto fp, size_t... I>
-        static int caller(lua_State *L, const std::index_sequence<I...> &)
-        {
-            if constexpr (std::is_void_v<Ret>)
-            {
-                fp(lua_to_cpp<remove_cvref<Args>>(L, 1 + I)...);
-                return 0;
-            }
-            else
-            {
-                cpp_to_lua(L, fp(lua_to_cpp<remove_cvref<Args>>(L, 1 + I)...));
-                return 1;
-            }
-        }
-
-    public:
-        template <auto fp> static int reg(lua_State *L)
-        {
-            try
-            {
-                return caller<fp>(L, indices);
-            }
-            catch (const std::exception &e)
-            {
-                lua_pushstring(L, e.what());
-            }
-            return lua_error(L);
-        }
-    };
-
-    // 普通C++类注册
+    /* 普通C++类注册（静态函数已合并进 detail::FuncRegister）。
+     * 限定符 const/noexcept/& 不再各写一个偏特化，由使用点先经 func_strip 归一化。
+     */
     template <typename C> class ClassRegister;
     template <typename C, typename Ret, typename... Args>
     class ClassRegister<Ret (C::*)(Args...)>
     {
     private:
-        static constexpr auto indices =
-            std::make_index_sequence<sizeof...(Args)>{};
-
-        template <auto fp, size_t... I>
-        static int caller(lua_State *L, const std::index_sequence<I...> &)
+        template <auto fp> static int caller(lua_State *L)
         {
             T **ptr = (T **)luaL_checkudata(L, 1, class_name_);
             if (ptr == nullptr || *ptr == nullptr)
@@ -467,25 +462,16 @@ private:
                                   class_name_);
             }
 
-            // 使用if constexpr替换多个模板好维护一些
-            // template <size_t... I, typename = std::enable_if_t<!std::is_void<Ret>::value>>
-
-            if constexpr (std::is_void_v<Ret>)
-            {
-                ((*ptr)->*fp)(lua_to_cpp<remove_cvref<Args>>(L, 2 + I)...);
-                return 0;
-            }
-            else
-            {
-                cpp_to_lua(L, ((*ptr)->*fp)(
-                                  lua_to_cpp<remove_cvref<Args>>(L, 2 + I)...));
-                return 1;
-            }
+            return detail::unpack_call<Ret, 2, Args...>(
+                L,
+                [ptr](auto &&... a) -> decltype(auto) {
+                    return ((*ptr)->*fp)(std::forward<decltype(a)>(a)...);
+                },
+                std::make_index_sequence<sizeof...(Args)>{});
         }
 
         // 允许一个lightuser指针直接调用成员函数，无法校验指针类型，慎用！！！
-        template <auto fp, size_t... I>
-        static int pointer_caller(lua_State *L, const std::index_sequence<I...> &)
+        template <auto fp> static int pointer_caller(lua_State *L)
         {
             if (!lua_islightuserdata(L, 1))
             {
@@ -498,78 +484,23 @@ private:
                 return luaL_error(L, "calling method with null pointer");
             }
 
-            // 使用if constexpr替换多个模板好维护一些
-            // template <size_t... I, typename = std::enable_if_t<!std::is_void<Ret>::value>>
-
-            if constexpr (std::is_void_v<Ret>)
-            {
-                (ptr->*fp)(lua_to_cpp<remove_cvref<Args>>(L, 2 + I)...);
-                return 0;
-            }
-            else
-            {
-                cpp_to_lua(L, (ptr->*fp)(
-                                  lua_to_cpp<remove_cvref<Args>>(L, 2 + I)...));
-                return 1;
-            }
+            return detail::unpack_call<Ret, 2, Args...>(
+                L,
+                [ptr](auto &&... a) -> decltype(auto) {
+                    return (ptr->*fp)(std::forward<decltype(a)>(a)...);
+                },
+                std::make_index_sequence<sizeof...(Args)>{});
         }
 
     public:
         template <auto fp> static int reg(lua_State *L)
         {
-            try
-            {
-                return caller<fp>(L, indices);
-            }
-            catch (const std::exception &e)
-            {
-                lua_pushstring(L, e.what());
-            }
-            return lua_error(L);
+            return detail::protect(L, [L]() { return caller<fp>(L); });
         }
         template <auto fp> static int reg_pointer(lua_State *L)
         {
-            try
-            {
-                return pointer_caller<fp>(L, indices);
-            }
-            catch (const std::exception &e)
-            {
-                lua_pushstring(L, e.what());
-            }
-            return lua_error(L);
+            return detail::protect(L, [L]() { return pointer_caller<fp>(L); });
         }
-    };
-
-    template <typename C, typename Ret, typename... Args>
-    class ClassRegister<Ret (C::*)(Args...) const>
-        : public ClassRegister<Ret (C::*)(Args...)>
-    {
-    };
-
-    // 和class_remove配套，C++17起noexcept/引用限定都是函数类型的一部分
-    template <typename C, typename Ret, typename... Args>
-    class ClassRegister<Ret (C::*)(Args...) noexcept>
-        : public ClassRegister<Ret (C::*)(Args...)>
-    {
-    };
-
-    template <typename C, typename Ret, typename... Args>
-    class ClassRegister<Ret (C::*)(Args...) const noexcept>
-        : public ClassRegister<Ret (C::*)(Args...) const>
-    {
-    };
-
-    template <typename C, typename Ret, typename... Args>
-    class ClassRegister<Ret (C::*)(Args...) &>
-        : public ClassRegister<Ret (C::*)(Args...)>
-    {
-    };
-
-    template <typename C, typename Ret, typename... Args>
-    class ClassRegister<Ret (C::*)(Args...) const &>
-        : public ClassRegister<Ret (C::*)(Args...) const>
-    {
     };
 
 public:
@@ -753,7 +684,7 @@ public:
         }
         else if constexpr (!std::is_member_function_pointer_v<decltype(fp)>)
         {
-            cfp = StaticRegister<decltype(fp)>::template reg<fp>;
+            cfp = detail::FuncRegister<func_strip_t<decltype(fp)>>::template reg<fp>;
         }
         else if constexpr (is_lua_func<decltype(fp)>)
         {
@@ -761,7 +692,7 @@ public:
         }
         else
         {
-            cfp = ClassRegister<decltype(fp)>::template reg<fp>;
+            cfp = ClassRegister<func_strip_t<decltype(fp)>>::template reg<fp>;
         }
 
         luaL_getmetatable(L_, class_name_);
@@ -774,7 +705,8 @@ public:
     // 注册一个通过lightuserdata调用成员函数的方法，无法校验指针正确性，慎用。
     template <auto fp> void def_pointer_call(const char *name)
     {
-        lua_CFunction cfp = ClassRegister<decltype(fp)>::template reg_pointer<fp>;
+        lua_CFunction cfp =
+            ClassRegister<func_strip_t<decltype(fp)>>::template reg_pointer<fp>;
 
         luaL_getmetatable(L_, class_name_);
 
@@ -950,7 +882,8 @@ template <auto fp,
           typename = std::enable_if_t<!std::is_same_v<decltype(fp), lua_CFunction>>>
 void reg_global_func(lua_State *L, const char *name)
 {
-    lua_register(L, name, Register<decltype(fp)>::template reg<fp>);
+    lua_register(L, name,
+                 detail::FuncRegister<func_strip_t<decltype(fp)>>::template reg<fp>);
 }
 
 template <lua_CFunction fp> void reg_global_func(lua_State *L, const char *name)
@@ -1047,7 +980,8 @@ void module_function(lua_State *L, const char *name)
 {
     assert(lua_istable(L, -1));
 
-    lua_pushcfunction(L, Register<decltype(fp)>::template reg<fp>);
+    lua_pushcfunction(L,
+                      detail::FuncRegister<func_strip_t<decltype(fp)>>::template reg<fp>);
     lua_setfield(L, -2, name);
 }
 
