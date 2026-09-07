@@ -193,11 +193,15 @@ end
 local function timer_dispatch(src, udata, timer_id)
     local timer = this.timer[timer_id]
     if not timer then
-        eprintf("timer no callback found,abort %d", timer_id)
-
-        -- 应该不会出现。数据没了无法知道是何种类型的定时器，只能都尝试
-        g_thread:periodic_stop(timer_id)
-        g_thread:timer_stop(timer_id)
+        --数据没了无法知道是何种类型的定时器，只能都尝试，这有两种情况：
+        -- 1. 逻辑出bug了，定时器数据丢了
+        -- 2. 定时器已经触发放到了消息队列，但在这之前其他逻辑移除了定时器
+        -- 只能通过底层定时器是否还存在判断出错
+        local r0 = g_thread:periodic_stop(timer_id)
+        local r1 = g_thread:timer_stop(timer_id)
+        if 0 == r0 or 0 == r1 then
+            eprintf("timer no callback found,abort %d", timer_id)
+        end
         return
     end
 
