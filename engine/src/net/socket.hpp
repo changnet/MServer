@@ -138,6 +138,22 @@ public:
      */
     int32_t connect(int32_t addr, const char *host, int32_t port);
     /**
+     * @brief 监听udp端口
+     * @param addr worker的地址
+     * @param host 监听的ip
+     * @param port 监听的端口
+     * @return 文件描述符，错误返回-1
+     */
+    int32_t udp_listen(int32_t addr, const char *host, int32_t port);
+    /**
+     * @brief 发起udp连接，udp的connect只是设置一个默认地址，并不会真正连接
+     * @param addr worker的地址
+     * @param host 连接的ip
+     * @param port 连接的端口
+     * @return 文件描述符，错误返回-1
+     */
+    int32_t udp_connect(int32_t addr, const char *host, int32_t port);
+    /**
      * 尝试接受一个fd
      * @return 成功返回fd，失败返回-1
      */
@@ -221,6 +237,16 @@ public:
 
     // 发送原始数据
     int32_t send_pkt(lua_State *L);
+    /**
+     * @brief 发送一个udp数据包，参数为 addr_key, payload[, size]
+     * @return true
+     */
+    int32_t send_udp(lua_State *L);
+    /**
+     * @brief 把unpack返回的20字节地址解析成ip和port
+     * @return ip地址, 端口
+     */
+    int32_t get_udp_addr(lua_State *L);
     // 打包前端发往后端的数据
     int32_t send_clt(lua_State *L);
     // 打包后端发往前端的数据
@@ -244,6 +270,7 @@ private:
     int32_t fd_; /// 当前socket的文件描述符
     int32_t socket_id_; // 唯一id，用于回调到C++时区分连接。用fd或者指针地址，都存在复用可能会重复的问题
     int32_t ip_version_; // ipv4还是ipv6
+    int32_t io_type_; // 当前的io类型，IO::IOType
 
     EVIO *w_; /// io事件监视器
     Packet *packet_;

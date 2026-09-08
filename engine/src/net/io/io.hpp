@@ -2,30 +2,26 @@
 
 #include "global/global.hpp"
 
-#include <mutex>
-#include <deque>
 #include "ev/ev_def.hpp"
 #include "net/buffer.hpp"
 
 class EVIO;
 class Buffer;
 
-struct AcceptBuffer
-{
-    int32_t reserve_fd_; // 预留的文件描述符
-    std::mutex mutex_;
-    std::deque<int64_t> fd_queue_;
-};
-
-/* socket input output control */
+/* socket input output control
+ * 这里只定义与传输层无关的公共部分（缓冲区、ssl握手等），
+ * 具体的数据收发由 TcpIO / UdpIO / SSLIO 实现。
+ * accept相关的数据只在tcp下有意义，已下沉到 TcpIO。
+ */
 class IO
 {
 public:
     /// io类型
     enum IOType
     {
-        IOT_NONE = 0, // 默认IO类型，无特别处理
+        IOT_NONE = 0, // 默认IO类型，无特别处理(tcp)
         IOT_SSL  = 1, // 使用SSL加密
+        IOT_UDP  = 2, // udp，数据收发以datagram为单位
 
         IOT_MAX // IO类型最大值
     };
@@ -38,12 +34,12 @@ public:
      * 接收数据（此函数在io线程执行）
      * @return int32_t
      */
-    virtual int32_t recv(EVIO *w);
+    virtual int32_t recv(EVIO *w) = 0;
     /**
      * 发送数据（此函数在io线程执行）
      * @return int32_t
      */
-    virtual int32_t send(EVIO *w);
+    virtual int32_t send(EVIO *w) = 0;
     /**
      * @brief 执行ssl握手（必须已初始化）
      */
@@ -51,14 +47,6 @@ public:
     {
         return 0;
     }
-    /**
-     * 接受新连接
-     */
-    virtual int32_t accept(EVIO *w);
-    // 初始化accept所需要数据
-    void init_accept_buffer();
-    // 从accept buffer获取一个新的fd
-    int64_t pop_accept_fd();
     /**
      * 执行初始化接受的连接
      * @return int32_t
@@ -127,5 +115,4 @@ public:
 protected:
     Buffer recv_; // 接收缓冲区，由io线程写，主线程读取并处理数据
     Buffer send_; // 发送缓冲区，由主线程写，io线程发送
-    AcceptBuffer *accept_; // accept缓冲区（多数socket用不到，因此用指针，用到才分配）
 };

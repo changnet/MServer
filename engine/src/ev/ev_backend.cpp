@@ -3,6 +3,7 @@
 #include "poll_backend.hpp"
 #include "epoll_backend.hpp"
 #include "system/static_global.hpp"
+#include "net/io/tcp_io.hpp"
 #include "time.hpp"
 
 #ifdef __windows__
@@ -393,7 +394,8 @@ void EVBackend::do_kernel_event(EVIO *w, int32_t revents)
             else if (b_kevents & EV_ACCEPT)
             {
                 events |= EV_ACCEPT;
-                auto status = w->io_->accept(w);
+                // accept只有tcp才有，这里的socket必然是监听socket
+                auto status = static_cast<TcpIO *>(w->io_)->accept(w);
                 do_io_status(w, EV_ACCEPT, status, events, kevents);
             }
             else if (unlikely(b_kevents & EV_INIT_ACPT))

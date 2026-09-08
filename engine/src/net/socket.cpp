@@ -1,9 +1,13 @@
 
 #include "socket.hpp"
 #include "net_compat.hpp"
+#include "udp_addr.hpp"
 #include "io/ssl_io.hpp"
+#include "io/tcp_io.hpp"
+#include "io/udp_io.hpp"
 #include "packet/http_packet.hpp"
 #include "packet/ss_stream_packet.hpp"
+#include "packet/udp_packet.hpp"
 #include "packet/websocket_packet.hpp"
 #include "packet/ws_stream_packet.hpp"
 #include "system/static_global.hpp"
@@ -52,6 +56,7 @@ Socket::Socket(int32_t socket_id)
 
     socket_id_  = socket_id;
     ip_version_ = IPV4;
+    io_type_    = IO::IOT_NONE;
 }
 
 Socket::~Socket()
@@ -92,6 +97,41 @@ int32_t Socket::send_pkt(lua_State *L)
 
     send(data, size);
     return 0;
+}
+
+int32_t Socket::send_udp(lua_State *L)
+{
+    /* 在脚本报错的情况下，可能无法设置 io和packet */
+    if (unlikely(!packet_)) return luaL_error(L, "socket no packet");
+    if (unlikely(Packet::PT_UDPSTREAM != packet_->type()))
+    {
+        return luaL_error(L, "socket packet is not udp");
+    }
+
+    // 1是socket本身，数据从2开始：addr_key, payload[, size]
+    packet_->pack_clt(L, 2);
+
+    lua_pushboolean(L, 1);
+    return 1;
+}
+
+int32_t Socket::get_udp_addr(lua_State *L)
+{
+    size_t len         = 0;
+    const char *str    = luaL_checklstring(L, 2, &len); // 索引1是self
+    if (len != sizeof(UdpAddr))
+    {
+        return luaL_error(L, "invalid udp addr length: %d", (int32_t)len);
+    }
+
+    UdpAddr addr;
+    memcpy(&addr, str, sizeof(UdpAddr)); // ★ memcpy，不reinterpret_cast
+
+    char buf[INET6_ADDRSTRLEN];
+    lua_pushstring(L, addr.to_string(buf, sizeof(buf)));
+    lua_pushinteger(L, ntohs(addr.port_));
+
+    return 2;
 }
 
 void Socket::append(const void *data, size_t len)
@@ -447,6 +487,191 @@ int32_t Socket::connect(int32_t addr, const char *host, int32_t port)
     return fd;
 }
 
+// 创建udp socket并解析地址，成功返回fd，失败返回-1
+// @param host 需要解析的ip
+// @param port 端口
+// @param addr_size 返回地址长度
+// @param sock_addr 返回地址
+static int32_t udp_socket_addr(int32_t ip_version, const char *host,
+                               int32_t port, size_t &addr_size,
+                               struct sockaddr *&sock_addr,
+                               struct sockaddr_in &host_addr_v4,
+                               struct sockaddr_in6 &host_addr_v6)
+{
+    int32_t fd = (int32_t)::socket(ip_version == Socket::IPV4 ? AF_INET
+                                                              : AF_INET6,
+                                   SOCK_DGRAM, IPPROTO_UDP);
+    if (fd == netcompat::INVALID)
+    {
+        ELOG("udp socket create %s:%d fail", host, port);
+        return -1;
+    }
+
+    if (Socket::set_nonblock(fd, 0) < 0)
+    {
+        int32_t e = netcompat::errorno();
+        ELOG("udp socket set_nonblock %s:%d %s(%d)", host, port,
+             netcompat::strerror(e), e);
+        netcompat::close(fd);
+        return -1;
+    }
+
+    int32_t ok = 0;
+    if (Socket::IPV4 == ip_version)
+    {
+        memset(&host_addr_v4, 0, sizeof(host_addr_v4));
+        host_addr_v4.sin_family = AF_INET;
+        host_addr_v4.sin_port   = htons((uint16_t)port);
+        ok                      = inet_pton(AF_INET, host, &host_addr_v4.sin_addr);
+        addr_size               = sizeof(host_addr_v4);
+        sock_addr               = (struct sockaddr *)&host_addr_v4;
+    }
+    else
+    {
+        memset(&host_addr_v6, 0, sizeof(host_addr_v6));
+        host_addr_v6.sin6_family = AF_INET6;
+        host_addr_v6.sin6_port   = htons((uint16_t)port);
+        ok        = inet_pton(AF_INET6, host, &host_addr_v6.sin6_addr);
+        addr_size = sizeof(host_addr_v6);
+        sock_addr = (struct sockaddr *)&host_addr_v6;
+    }
+
+    // https://man7.org/linux/man-pages/man3/inet_pton.3.html
+    // AF_INET6 does not recognize IPv4 addresses.  An explicit IPv4-mapped
+    // IPv6 address must be supplied in src instead
+    if (0 == ok)
+    {
+        ELOG("udp invalid host format: %s", host);
+        netcompat::close(fd);
+        return -1;
+    }
+    else if (ok < 0)
+    {
+        int32_t e = netcompat::errorno();
+        ELOG("udp host error %s: %s", host, netcompat::strerror(e));
+        netcompat::close(fd);
+        return -1;
+    }
+
+    return fd;
+}
+
+int32_t Socket::udp_listen(int32_t addr, const char *host, int32_t port)
+{
+    if (fd_ != netcompat::INVALID)
+    {
+        ELOG("socket udp_listen already have fd: %d", fd_);
+        return -1;
+    }
+    if (!host)
+    {
+        ELOG("socket udp_listen host is null");
+        return -1;
+    }
+
+    size_t addr_size;
+    struct sockaddr *sock_addr;
+    struct sockaddr_in host_addr_v4;
+    struct sockaddr_in6 host_addr_v6;
+
+    int32_t fd = udp_socket_addr(ip_version_, host, port, addr_size, sock_addr,
+                                 host_addr_v4, host_addr_v6);
+    if (fd < 0) return -1;
+
+    /*
+     * enable address reuse.it will help when the socket is in TIME_WAIT status.
+     * 注意，win下是允许多个进程绑定到同个端口，没有返回错误
+     */
+    int32_t optval = 1;
+    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)&optval,
+                   sizeof(optval))
+        < 0)
+    {
+        netcompat::close(fd);
+        return -1;
+    }
+
+    // 如果使用ip v6，把ipv6 only关掉，这样允许v4的连接以 IPv4-mapped IPv6 的形式连进来
+    if (set_ipv6only(fd))
+    {
+        netcompat::close(fd);
+        return -1;
+    }
+
+    if (::bind(fd, sock_addr, (int32_t)addr_size) < 0)
+    {
+        int32_t e = netcompat::errorno();
+        ELOG("udp bind %s:%d %s(%d)", host, port, netcompat::strerror(e), e);
+        netcompat::close(fd);
+        return -1;
+    }
+
+    if (!w_->io_)
+    {
+        io_type_ = IO::IOT_UDP;
+        w_->set_io(new UdpIO());
+    }
+
+    // udp没有accept，监听的socket自己收发数据
+    start(addr, fd, EV_READ);
+
+    return fd;
+}
+
+int32_t Socket::udp_connect(int32_t addr, const char *host, int32_t port)
+{
+    if (fd_ != netcompat::INVALID)
+    {
+        ELOG("socket udp_connect already have fd: %d", fd_);
+        return -1;
+    }
+    if (!host)
+    {
+        ELOG("socket udp_connect host is null");
+        return -1;
+    }
+
+    size_t addr_size;
+    struct sockaddr *sock_addr;
+    struct sockaddr_in host_addr_v4;
+    struct sockaddr_in6 host_addr_v6;
+
+    int32_t fd = udp_socket_addr(ip_version_, host, port, addr_size, sock_addr,
+                                 host_addr_v4, host_addr_v6);
+    if (fd < 0) return -1;
+
+    if (set_ipv6only(fd))
+    {
+        netcompat::close(fd);
+        return -1;
+    }
+
+    // udp的connect只是设置一个默认地址，不会发起真正的连接，因此也不会异步等待
+    if (0 != ::connect(fd, sock_addr, (int32_t)addr_size))
+    {
+        int32_t e = netcompat::errorno();
+        if (netcompat::iserror(e))
+        {
+            netcompat::close(fd);
+            ELOG("udp connect %s:%d %s(%d)", host, port, netcompat::strerror(e),
+                 e);
+
+            return -1;
+        }
+    }
+
+    if (!w_->io_)
+    {
+        io_type_ = IO::IOT_UDP;
+        w_->set_io(new UdpIO());
+    }
+
+    // udp没有连接握手，也没有EV_CONNECT，直接监听读事件
+    start(addr, fd, EV_READ);
+
+    return fd;
+}
+
 int32_t Socket::validate()
 {
     int32_t err   = 0;
@@ -459,27 +684,25 @@ int32_t Socket::validate()
     return err;
 }
 
-int32_t Socket::address(lua_State *L) const
+// 获取socket的地址，peer为true取对端地址，否则取本地地址
+// @return < 0 失败，否则为push到lua的变量数量
+static int32_t push_socket_addr(lua_State *L, int32_t fd, int32_t ip_version,
+                               bool peer)
 {
-    if (fd_ == netcompat::INVALID) return 0;
-
-    const char *ret;
-    int32_t port;
+    const char *ret  = nullptr;
+    int32_t port     = 0;
     char buf[INET6_ADDRSTRLEN]; // must be at least INET6_ADDRSTRLEN bytes long
-    if (ip_version_ == IPV4)
+
+    if (Socket::IPV4 == ip_version)
     {
         struct sockaddr_in addr;
 
         memset(&addr, 0, sizeof(addr));
         socklen_t addr_len = sizeof(addr);
 
-        if (getpeername(fd_, (struct sockaddr *)&addr, &addr_len) < 0)
-        {
-            int32_t e = netcompat::errorno();
-            ELOG("socket::address getpeername error: %s\n",
-                 netcompat::strerror(e));
-            return 0;
-        }
+        int32_t ok = peer ? getpeername(fd, (struct sockaddr *)&addr, &addr_len)
+                          : getsockname(fd, (struct sockaddr *)&addr, &addr_len);
+        if (ok < 0) return -1;
 
         port = ntohs(addr.sin_port);
         ret  = inet_ntop(AF_INET, &addr.sin_addr, buf, (socklen_t)sizeof(buf));
@@ -491,29 +714,41 @@ int32_t Socket::address(lua_State *L) const
         memset(&addr, 0, sizeof(addr));
         socklen_t addr_len = sizeof(addr);
 
-        if (getpeername(fd_, (struct sockaddr *)&addr, &addr_len) < 0)
-        {
-            int32_t e = netcompat::errorno();
-            ELOG("socket::address getpeername error: %s\n",
-                 netcompat::strerror(e));
-            return 0;
-        }
+        int32_t ok = peer ? getpeername(fd, (struct sockaddr *)&addr, &addr_len)
+                          : getsockname(fd, (struct sockaddr *)&addr, &addr_len);
+        if (ok < 0) return -1;
 
         port = ntohs(addr.sin6_port);
         ret = inet_ntop(AF_INET6, &addr.sin6_addr, buf, (socklen_t)sizeof(buf));
     }
 
-    if (!ret)
-    {
-        int32_t e = netcompat::errorno();
-        ELOG("socket::address inet_ntop error: %s\n", netcompat::strerror(e));
-        return 0;
-    }
+    if (!ret) return -1;
 
     lua_pushstring(L, buf);
     lua_pushinteger(L, port);
 
     return 2;
+}
+
+int32_t Socket::address(lua_State *L) const
+{
+    if (fd_ == netcompat::INVALID) return 0;
+
+    int32_t ret = push_socket_addr(L, fd_, ip_version_, true);
+    if (ret < 0 && IO::IOT_UDP == io_type_)
+    {
+        // 未connect的udp socket没有对端地址，getpeername会失败，改取本地监听地址
+        ret = push_socket_addr(L, fd_, ip_version_, false);
+    }
+
+    if (ret < 0)
+    {
+        int32_t e = netcompat::errorno();
+        ELOG("socket::address error: %s\n", netcompat::strerror(e));
+        return 0;
+    }
+
+    return ret;
 }
 
 int32_t Socket::listen(int32_t addr, const char *host, int32_t port)
@@ -607,8 +842,11 @@ int32_t Socket::listen(int32_t addr, const char *host, int32_t port)
 
     if (!w_->io_)
     {
-        w_->io_ = new IO();
-        w_->io_->init_accept_buffer();
+        TcpIO *io = new TcpIO();
+        io->init_accept_buffer();
+
+        io_type_ = IO::IOT_NONE;
+        w_->set_io(io);
     }
     start(addr, fd, EV_ACCEPT);
 
@@ -664,7 +902,8 @@ int32_t Socket::accept(lua_State *L)
 {
     if (!w_->io_) return push_accept_error(L, -1, "no io set");
 
-    int64_t mask = w_->io_->pop_accept_fd();
+    // accept只有tcp才有，udp的socket不会收到EV_ACCEPT事件
+    int64_t mask = static_cast<TcpIO *>(w_->io_)->pop_accept_fd();
 
     int32_t fd = (int32_t)(mask & 0xFFFFFFFF);
     int32_t no = (int32_t)(mask >> 32);
@@ -753,14 +992,16 @@ void *Socket::set_io(int32_t io_type, TlsCtx *tls_ctx)
     IO *io;
     switch (io_type)
     {
-    case IO::IOT_NONE: io = new IO(); break;
+    case IO::IOT_NONE: io = new TcpIO(); break;
     case IO::IOT_SSL:
         if (!tls_ctx) return nullptr;
         io = new SSLIO(tls_ctx);
         break;
+    case IO::IOT_UDP: io = new UdpIO(); break;
     default: return nullptr;
     }
 
+    io_type_ = io_type;
     w_->set_io(io);
 
     return io;
@@ -778,6 +1019,7 @@ int32_t Socket::set_packet(int32_t packet_type)
     case Packet::PT_SSSTREAM: packet_ = new SsStreamPacket(this); break;
     case Packet::PT_WEBSOCKET: packet_ = new WebsocketPacket(this); break;
     case Packet::PT_WSSTREAM: packet_ = new WSStreamPacket(this); break;
+    case Packet::PT_UDPSTREAM: packet_ = new UdpPacket(this); break;
     default: return -1;
     }
     return 0;

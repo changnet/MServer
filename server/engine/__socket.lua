@@ -6,6 +6,7 @@ Socket.PT_HTTP = 1
 Socket.PT_SSSTREAM = 2
 Socket.PT_WEBSOCKET = 3
 Socket.PT_WSSTREAM = 4
+Socket.PT_UDPSTREAM = 6
 
 function Socket:fd()
 end
@@ -37,6 +38,22 @@ end
 ---@param port 连接的端口
 ---@return 文件描述符，错误返回-1
 function Socket:connect(addr, host, port)
+end
+
+---@brief 监听udp端口
+---@param addr worker的地址
+---@param host 监听的ip
+---@param port 监听的端口
+---@return 文件描述符，错误返回-1
+function Socket:udp_listen(addr, host, port)
+end
+
+---@brief 发起udp连接，udp的connect只是设置一个默认地址，并不会真正连接
+---@param addr worker的地址
+---@param host 连接的ip
+---@param port 连接的端口
+---@return 文件描述符，错误返回-1
+function Socket:udp_connect(addr, host, port)
 end
 
 --- 尝试接受一个fd
@@ -93,6 +110,16 @@ end
 
 --- 发送原始数据
 function Socket:send_pkt()
+end
+
+---@brief 发送一个udp数据包，参数为 addr_key, payload[, size]
+---@return true
+function Socket:send_udp()
+end
+
+---@brief 把unpack返回的20字节地址解析成ip和port
+---@return ip地址, 端口
+function Socket:get_udp_addr()
 end
 
 --- 打包前端发往后端的数据

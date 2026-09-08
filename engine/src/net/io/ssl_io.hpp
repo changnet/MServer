@@ -2,11 +2,11 @@
 
 #include <openssl/ssl.h>
 
-#include "io.hpp"
+#include "tcp_io.hpp"
 
 class TlsCtx;
 
-class SSLIO final: public IO
+class SSLIO final: public TcpIO
 {
 public:
     ~SSLIO();

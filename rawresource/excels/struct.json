@@ -1,0 +1,625 @@
+{
+    "version": 2,
+    "configs": [
+        {
+            "name": "ai_base_conf",
+            "type_name": "conf.ai_base_conf",
+            "index_count": 1,
+            "index_fields": [
+                {
+                    "name": "id",
+                    "type": "int",
+                    "comment": "唯一id"
+                }
+            ],
+            "fields": [
+                {
+                    "name": "isReturn",
+                    "type": "int",
+                    "side": "s",
+                    "comment": "是否返回出生点"
+                },
+                {
+                    "name": "maxDist",
+                    "type": "int",
+                    "side": "s",
+                    "comment": "离开出生点距离"
+                },
+                {
+                    "name": "param",
+                    "type": "map<str, int>",
+                    "side": "s",
+                    "comment": "其他AI参数"
+                },
+                {
+                    "name": "type",
+                    "type": "int",
+                    "side": "s",
+                    "comment": "AI类型"
+                }
+            ]
+        },
+        {
+            "name": "attr_base_conf",
+            "type_name": "conf.attr_base_conf",
+            "index_count": 1,
+            "index_fields": [
+                {
+                    "name": "id",
+                    "type": "int",
+                    "comment": "属性类型"
+                }
+            ],
+            "fields": [
+                {
+                    "name": "factor",
+                    "type": "double",
+                    "side": "sc",
+                    "comment": "战力系数"
+                },
+                {
+                    "name": "name",
+                    "type": "str",
+                    "side": "sc",
+                    "comment": "属性名字"
+                }
+            ]
+        },
+        {
+            "name": "dungeon/area_conf",
+            "type_name": "conf.dungeon.area_conf",
+            "index_count": 1,
+            "index_fields": [
+                {
+                    "name": "id",
+                    "type": "int",
+                    "comment": "区域属性id"
+                }
+            ],
+            "fields": [
+                {
+                    "name": "max_x",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "区域右下角x"
+                },
+                {
+                    "name": "max_y",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "区域右下角y"
+                },
+                {
+                    "name": "min_x",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "区域左上角x"
+                },
+                {
+                    "name": "min_y",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "区域左上角y"
+                },
+                {
+                    "name": "param",
+                    "type": "array<int>",
+                    "side": "sc",
+                    "comment": "区域属性参数"
+                },
+                {
+                    "name": "type",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "区域属性类型"
+                }
+            ]
+        },
+        {
+            "name": "dungeon/base_conf",
+            "type_name": "conf.dungeon.base_conf",
+            "index_count": 1,
+            "index_fields": [
+                {
+                    "name": "id",
+                    "type": "int",
+                    "comment": "副本id"
+                }
+            ],
+            "fields": [
+                {
+                    "name": "name",
+                    "type": "str",
+                    "side": "c",
+                    "comment": "副本名字"
+                },
+                {
+                    "name": "scene",
+                    "type": "array<int>",
+                    "side": "sc",
+                    "comment": "场景列表"
+                }
+            ]
+        },
+        {
+            "name": "dungeon/refresh_conf",
+            "type_name": "conf.dungeon.refresh_conf",
+            "index_count": 1,
+            "index_fields": [
+                {
+                    "name": "id",
+                    "type": "int",
+                    "comment": "刷怪配置id"
+                }
+            ],
+            "fields": [
+                {
+                    "name": "count",
+                    "type": "int",
+                    "side": "s",
+                    "comment": "刷怪数量"
+                },
+                {
+                    "name": "max_x",
+                    "type": "int",
+                    "side": "s",
+                    "comment": "刷怪右下角x"
+                },
+                {
+                    "name": "max_y",
+                    "type": "int",
+                    "side": "s",
+                    "comment": "刷怪右下角y"
+                },
+                {
+                    "name": "min_x",
+                    "type": "int",
+                    "side": "s",
+                    "comment": "刷怪左上角x"
+                },
+                {
+                    "name": "min_y",
+                    "type": "int",
+                    "side": "s",
+                    "comment": "刷怪左上角y"
+                }
+            ]
+        },
+        {
+            "name": "dungeon/scene_conf",
+            "type_name": "conf.dungeon.scene_conf",
+            "index_count": 1,
+            "index_fields": [
+                {
+                    "name": "id",
+                    "type": "int",
+                    "comment": "场景id"
+                }
+            ],
+            "fields": [
+                {
+                    "name": "area",
+                    "type": "array<int>",
+                    "side": "sc",
+                    "comment": "区域属性"
+                },
+                {
+                    "name": "born_x",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "出生点x像素"
+                },
+                {
+                    "name": "born_y",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "出生点y像素"
+                },
+                {
+                    "name": "map",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "地图数据id"
+                },
+                {
+                    "name": "name",
+                    "type": "str",
+                    "side": "c",
+                    "comment": "场景名字"
+                },
+                {
+                    "name": "refresh",
+                    "type": "array<int>",
+                    "side": "sc",
+                    "comment": "自动刷怪配置"
+                }
+            ]
+        },
+        {
+            "name": "equip_weapon_conf",
+            "type_name": "conf.equip_weapon_conf",
+            "index_count": 1,
+            "index_fields": [
+                {
+                    "name": "id",
+                    "type": "int",
+                    "comment": "唯一id"
+                }
+            ],
+            "fields": [
+                {
+                    "name": "attack",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "攻击力"
+                },
+                {
+                    "name": "attackSpeed",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "攻击速度"
+                },
+                {
+                    "name": "crit",
+                    "type": "double",
+                    "side": "sc",
+                    "comment": "暴击"
+                },
+                {
+                    "name": "defense",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "防御"
+                },
+                {
+                    "name": "desc",
+                    "type": "str",
+                    "side": "sc",
+                    "comment": "描述"
+                },
+                {
+                    "name": "hp",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "血量"
+                },
+                {
+                    "name": "iconId",
+                    "type": "str",
+                    "side": "sc",
+                    "comment": "图标"
+                },
+                {
+                    "name": "moveSpeed",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "移动速度"
+                },
+                {
+                    "name": "mp",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "魔法值"
+                },
+                {
+                    "name": "name",
+                    "type": "str",
+                    "side": "sc",
+                    "comment": "名字"
+                }
+            ]
+        },
+        {
+            "name": "item_conf",
+            "type_name": "conf.item_conf",
+            "index_count": 1,
+            "index_fields": [
+                {
+                    "name": "id",
+                    "type": "int",
+                    "comment": "唯一id"
+                }
+            ],
+            "fields": [
+                {
+                    "name": "bag_id",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "背包类型id"
+                },
+                {
+                    "name": "desc",
+                    "type": "str",
+                    "side": "sc",
+                    "comment": "描述"
+                },
+                {
+                    "name": "iconId",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "图标"
+                },
+                {
+                    "name": "name",
+                    "type": "str",
+                    "side": "sc",
+                    "comment": "名字"
+                },
+                {
+                    "name": "pile",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "最大可堆叠数量"
+                },
+                {
+                    "name": "sell",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "出售价格"
+                },
+                {
+                    "name": "type",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "类型"
+                }
+            ]
+        },
+        {
+            "name": "mail_conf",
+            "type_name": "conf.mail_conf",
+            "index_count": 1,
+            "index_fields": [
+                {
+                    "name": "id",
+                    "type": "int",
+                    "comment": "唯一id"
+                }
+            ],
+            "fields": [
+                {
+                    "name": "text",
+                    "type": "str",
+                    "side": "sc",
+                    "comment": "内容"
+                },
+                {
+                    "name": "title",
+                    "type": "str",
+                    "side": "sc",
+                    "comment": "标题"
+                },
+                {
+                    "name": "type",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "类型"
+                }
+            ]
+        },
+        {
+            "name": "player/hero_conf",
+            "type_name": "conf.player.hero_conf",
+            "index_count": 1,
+            "index_fields": [
+                {
+                    "name": "id",
+                    "type": "int",
+                    "comment": "英雄id"
+                }
+            ],
+            "fields": [
+                {
+                    "name": "agility",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "敏捷"
+                },
+                {
+                    "name": "asset_id",
+                    "type": "str",
+                    "side": "sc",
+                    "comment": "资源id"
+                },
+                {
+                    "name": "attack",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "攻击力"
+                },
+                {
+                    "name": "attack_range",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "攻击范围"
+                },
+                {
+                    "name": "attack_speed",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "攻击速度"
+                },
+                {
+                    "name": "crit",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "暴击"
+                },
+                {
+                    "name": "crit_damage",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "暴击伤害"
+                },
+                {
+                    "name": "death_sound",
+                    "type": "str",
+                    "side": "sc",
+                    "comment": "死亡音效"
+                },
+                {
+                    "name": "defense",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "防御力"
+                },
+                {
+                    "name": "exp",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "掉落经验"
+                },
+                {
+                    "name": "hit_effect_bone",
+                    "type": "str",
+                    "side": "sc",
+                    "comment": "攻击特效"
+                },
+                {
+                    "name": "hit_sound",
+                    "type": "str",
+                    "side": "sc",
+                    "comment": "攻击音效"
+                },
+                {
+                    "name": "hp",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "血量"
+                },
+                {
+                    "name": "intelligence",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "智力"
+                },
+                {
+                    "name": "level",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "等级"
+                },
+                {
+                    "name": "move_speed",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "移动速度"
+                },
+                {
+                    "name": "mp",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "法力值"
+                },
+                {
+                    "name": "name",
+                    "type": "str",
+                    "side": "sc",
+                    "comment": "名字"
+                },
+                {
+                    "name": "prime_attribute",
+                    "type": "str",
+                    "side": "sc",
+                    "comment": "天赋属性"
+                },
+                {
+                    "name": "scale_ratio",
+                    "type": "double",
+                    "side": "sc"
+                },
+                {
+                    "name": "skill",
+                    "type": "array<int>",
+                    "side": "sc",
+                    "comment": "技能"
+                },
+                {
+                    "name": "strength",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "力量"
+                },
+                {
+                    "name": "upgrade_id",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "升级后英雄id"
+                }
+            ]
+        },
+        {
+            "name": "player/levelup_conf",
+            "type_name": "conf.player.levelup_conf",
+            "index_count": 0,
+            "index_fields": [],
+            "fields": [
+                {
+                    "name": "attr",
+                    "type": "array<array<int>>",
+                    "side": "sc",
+                    "comment": "等级属性"
+                },
+                {
+                    "name": "bagGrid",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "背包空格"
+                },
+                {
+                    "name": "level",
+                    "type": "int",
+                    "side": "sc",
+                    "comment": "等级"
+                }
+            ]
+        },
+        {
+            "name": "player/welcome_conf",
+            "type_name": "conf.player.welcome_conf",
+            "index_count": -1,
+            "index_fields": [],
+            "fields": [
+                {
+                    "name": "attachment",
+                    "type": "array<array<int>>",
+                    "side": "s",
+                    "comment": "新手邮件附件"
+                },
+                {
+                    "name": "mail_ctx",
+                    "type": "str",
+                    "side": "s",
+                    "comment": "邮件内容"
+                },
+                {
+                    "name": "resources",
+                    "type": "array<array<int>>",
+                    "side": "s",
+                    "comment": "新手道具"
+                }
+            ]
+        },
+        {
+            "name": "skill/base_conf",
+            "type_name": "conf.skill.base_conf",
+            "index_count": 1,
+            "index_fields": [
+                {
+                    "name": "id",
+                    "type": "int",
+                    "comment": "技能id"
+                }
+            ],
+            "fields": [
+                {
+                    "name": "icon",
+                    "type": "str",
+                    "side": "c",
+                    "comment": "图标"
+                }
+            ]
+        }
+    ],
+    "structs": []
+}

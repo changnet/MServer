@@ -17,6 +17,7 @@ public:
         PT_WEBSOCKET = 3, // 协议打包类型，标准websocket方式
         PT_WSSTREAM  = 4, // 协议打包类型，websocket + 二进制流
         PT_SCSTREAM  = 5, // 协议打包类型，服务器与客户端二进制流通信
+        PT_UDPSTREAM = 6, // 协议打包类型，udp二进制流通信
 
         PKT_MAX ///< 协议打包类型最大值
     } PacketType;
