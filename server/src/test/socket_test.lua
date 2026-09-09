@@ -276,6 +276,74 @@ Test.describe("socket test", function()
         Test.wait(4000)
     end)
 
+    Test.it("udp socket test", function()
+        local count = 10
+        local udp_mgr = {}
+        local UdpSocket = require "network.udp_socket"
+
+        local udp_srv = UdpSocket()
+        udp_srv:listen(local_host, ss_port)
+        udp_srv.on_message = function(self, addr, ud, size)
+            local clt = udp_mgr[addr]
+            if not clt then
+                clt = UdpSocket(addr, self)
+                udp_mgr[addr] = clt
+
+                local ip, port = clt:address()
+                print(string.format("new udp client %s:%d", ip, port))
+            end
+            clt:send_pkt(ud, size)
+        end
+
+        local function clt_send(clt, prefix)
+            local last_send = "prefix" .. tostring(math.random(10000, 1000000))
+
+            clt.last_send = last_send
+            clt:send_pkt(last_send, string.len(last_send))
+        end
+
+        local count1 = 0
+        local count2 = 0
+        local udp_clt1 = UdpSocket()
+        local udp_clt2 = UdpSocket()
+
+        local function check_done()
+            if count1 == count and count2 == count then
+                Test.done()
+            end
+            udp_srv:close()
+            udp_clt1:close()
+            udp_clt2:close()
+        end
+
+        udp_clt1:connect(local_host, ss_port)
+        udp_clt1.on_message = function(self, addr, ud, size)
+            local str = Buffer.lightud_tostring(ud, size)
+            Test.equal(str, self.last_send)
+            count1 = count1 + 1
+            if count1 == count then
+                return check_done()
+            end
+            print("udp_clt1 recv", str)
+            clt_send(self, "clt1")
+        end
+
+        udp_clt2:connect(local_host, ss_port)
+        udp_clt1.on_message = function(self, addr, ud, size)
+            Test.equal(Buffer.lightud_tostring(ud, size), self.last_send)
+            count1 = count1 + 1
+            if count1 == count then
+                return check_done()
+            end
+            clt_send(self, "clt2")
+        end
+
+        clt_send(udp_clt1, "clt1")
+        clt_send(udp_clt2, "clt2")
+
+        Test.wait(4000)
+    end)
+
     Test.after(function()
         if sc_clt then sc_clt:close() end
         if sc_srv then sc_srv:close() end
