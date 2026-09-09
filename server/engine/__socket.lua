@@ -186,5 +186,5 @@ end
 
 ---@brief 设置当前socket的版本
 ---@param version 0=ipv4，1=ipv6，2=ipv6双栈
-function Socket:set_ip_version(version)
+function Socket:set_af_type(version)
 end

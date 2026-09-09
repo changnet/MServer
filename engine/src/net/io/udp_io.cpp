@@ -11,7 +11,7 @@
 #endif
 
 /**
- * ICMP port unreachable：上一个sendto打到了一个已关闭的对端
+ * ICMP port unreachable：上一个sendto发送到了一个已关闭的对端
  * windows下是WSAECONNRESET，linux下是ECONNREFUSED。这不是错误，
  * 必须忽略，否则udp连接会被误判为出错并关闭
  */

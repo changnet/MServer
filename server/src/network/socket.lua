@@ -11,6 +11,16 @@ local OPENED = SocketMgr.OPENED
 local OPENING = SocketMgr.OPENING
 local CLOSING = SocketMgr.CLOSING
 
+-- 下面这几个值，在不同系统值是不一样的，因此必须用宏
+local AF_INET = EngineSocket.AF_INET
+local AF_INET6 = EngineSocket.AF_INET6
+local SOCK_STREAM = EngineSocket.SOCK_STREAM
+local SOCK_DGRAM = EngineSocket.SOCK_DGRAM
+
+local IOT_TCP = EngineSocket.IOT_TCP
+local IOT_SSL = EngineSocket.IOT_SSL
+local IOT_UDP = EngineSocket.IOT_UDP
+
 local ADDR = LOCAL_ADDR
 
 -- 网络连接基类
@@ -37,10 +47,10 @@ function Socket:__init()
     SocketMgr.add(self)
 end
 
--- 读写方式，是否使用SSL
-function Socket:set_io()
+-- 根据配置信息自动设置io读写（TCP、SSL、UDP）
+function Socket:auto_set_io()
     if self.ssl then
-        local pio = self.s:set_io(1, self.ssl)
+        local pio = self.s:set_io(IOT_SSL, self.ssl)
         assert(pio)
 
         local sni = self.sni or self.host
@@ -52,7 +62,9 @@ function Socket:set_io()
         local mode = self.verify_mode
         if mode then EngineIO.set_ssl_verify_mode(pio, mode) end
     else
-        local pio = self.s:set_io(0)
+        local params = self.default_param
+        local io_type = params.io_type or IOT_TCP
+        local pio = self.s:set_io(io_type)
         assert(pio)
     end
 end
@@ -69,7 +81,7 @@ function Socket:set_param()
     ]]
 
 
-    self:set_io()
+    self:auto_set_io()
     local param = self.default_param
 
     -- 打包方式，如http、自定义的tcp打包、websocket打包
@@ -105,7 +117,7 @@ function Socket:on_accepting(fd)
 
     -- 必须在继承后设置参数，不然用些初始化的参数就会不对
     socket:set_param()
-    socket:set_ip_version(self.listen_ip)
+    socket:auto_set_af_type(self.listen_ip)
 
     -- 必须在设置好各种io参数后才能启动
     -- 不然backend线程在set_param完成之前触发读写事件就会出错
@@ -174,16 +186,18 @@ function Socket:on_accepted()
 end
 
 -- 根据ip自动设置ip版本
-function Socket:set_ip_version(ip)
-    local ipv = self.ip_version
-    if not ipv then
+function Socket:auto_set_af_type(ip)
+    local af_type = self.af_type
+    if not af_type then
+        local io_type = self.default_param.io_type
+        local sock = (io_type == IOT_UDP and SOCK_DGRAM or SOCK_STREAM)
         if ip:find(":") then
-            ipv = 2 -- ipv6 dual stack
+            af_type = (AF_INET6 << 16) | (sock << 8) -- ipv6 dual stack
         else
-            ipv = 0 -- ipv4 only
+            af_type = (AF_INET << 16) | (sock << 8)  -- ipv4 only
         end
     end
-    self.s:set_ip_version(ipv)
+    self.s:set_af_type(af_type)
 end
 
 -- 连接到其他服务器
@@ -191,7 +205,10 @@ end
 -- @param port 目标服务器端口
 -- @param ip 目标服务器的ip，如果不传从则host解析
 function Socket:connect(host, port, ip)
-    if not ip then ip = util.get_addr_info(host, 0 == self.ip_version) end
+    if not ip then
+        ip = util.get_addr_info(host, AF_INET == (self.af_type >> 16))
+    end
+
     -- 这个host需要注意，对于http、ws，需要传域名而不是ip地址
     -- 这个会影响http头里的host字段
     -- 对www.example.com请求时，如果host为一个ip，是会返回404的
@@ -199,7 +216,7 @@ function Socket:connect(host, port, ip)
     self.host = host
     self.port = port
 
-    self:set_ip_version(ip)
+    self:auto_set_af_type(ip)
     local fd = self.s:connect(ADDR, ip, port)
 
     self.status = OPENING
@@ -231,7 +248,7 @@ function Socket:reconnect()
     self.s = EngineSocket(self.socket_id)
     SocketMgr.add(self)
 
-    self:set_ip_version(ip)
+    self:auto_set_af_type(ip)
     local fd = self.s:connect(ADDR, ip, self.port)
 
     self.status = OPENING
@@ -257,7 +274,8 @@ function Socket:listen(ip, port)
     self.listen_ip = ip
     self.listen_port = port
 
-    self:set_ip_version(ip)
+    self:auto_set_af_type(ip)
+    self:auto_set_io()
     local fd = self.s:listen(ADDR, ip, port)
     if fd > 0 then
         self.status = OPENED -- 对于监听的socket，不会触io_ready，这里直接设置状态

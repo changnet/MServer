@@ -197,8 +197,6 @@ static void luaopen_socket(lua_State *L)
     lc.def<&Socket::stop>("stop");
     lc.def<&Socket::listen>("listen");
     lc.def<&Socket::connect>("connect");
-    lc.def<&Socket::udp_listen>("udp_listen");
-    lc.def<&Socket::udp_connect>("udp_connect");
     lc.def<&Socket::accept>("accept");
     lc.def<&Socket::get_event>("get_event");
     lc.def<&Socket::set_event>("set_event");
@@ -211,7 +209,6 @@ static void luaopen_socket(lua_State *L)
     lc.def<&Socket::io_init_accept>("io_init_accept");
     lc.def<&Socket::io_init_connect>("io_init_connect");
     lc.def<&Socket::send_pkt>("send_pkt");
-    lc.def<&Socket::send_udp>("send_udp");
     lc.def<&Socket::get_udp_addr>("get_udp_addr");
     lc.def<&Socket::send_clt>("send_clt");
     lc.def<&Socket::send_srv>("send_srv");
@@ -226,13 +223,21 @@ static void luaopen_socket(lua_State *L)
     lc.def<&Socket::set_user_timeout>("set_user_timeout");
     lc.def<&Socket::set_nodelay>("set_nodelay");
     lc.def<&Socket::set_watcher_event>("set_watcher_event");
-    lc.def<&Socket::set_ip_version>("set_ip_version");
+    lc.def<&Socket::set_af_type>("set_af_type");
 
     lc.set(Packet::PT_HTTP, "PT_HTTP");
     lc.set(Packet::PT_SSSTREAM, "PT_SSSTREAM");
     lc.set(Packet::PT_WEBSOCKET, "PT_WEBSOCKET");
     lc.set(Packet::PT_WSSTREAM, "PT_WSSTREAM");
     lc.set(Packet::PT_UDPSTREAM, "PT_UDPSTREAM");
+    lc.set(IO::IOT_TCP, "IOT_TCP");
+    lc.set(IO::IOT_SSL, "IOT_SSL");
+    lc.set(IO::IOT_UDP, "IOT_UDP");
+
+    lc.set(AF_INET, "AF_INET");
+    lc.set(AF_INET6, "AF_INET6");
+    lc.set(SOCK_STREAM, "SOCK_STREAM");
+    lc.set(SOCK_DGRAM, "SOCK_DGRAM");
 }
 
 static void luaopen_socket_io(lua_State *L)

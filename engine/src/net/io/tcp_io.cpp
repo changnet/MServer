@@ -101,12 +101,14 @@ int32_t TcpIO::send(EVIO *w)
     return EV_ERROR;
 }
 
-void TcpIO::init_accept_buffer()
+int32_t TcpIO::prepare_accept()
 {
-    if (accept_) return;
+    if (accept_) return EV_ACCEPT;
 
     accept_              = new AcceptBuffer();
     accept_->reserve_fd_ = dup(1);
+
+    return EV_ACCEPT;
 }
 
 int32_t TcpIO::accept(EVIO *w)

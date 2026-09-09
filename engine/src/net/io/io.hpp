@@ -1,6 +1,7 @@
 #pragma once
 
 #include "global/global.hpp"
+#include "net/net_compat.hpp"
 
 #include "ev/ev_def.hpp"
 #include "net/buffer.hpp"
@@ -19,11 +20,9 @@ public:
     /// io类型
     enum IOType
     {
-        IOT_NONE = 0, // 默认IO类型，无特别处理(tcp)
-        IOT_SSL  = 1, // 使用SSL加密
-        IOT_UDP  = 2, // udp，数据收发以datagram为单位
-
-        IOT_MAX // IO类型最大值
+        IOT_TCP = 1, // 默认IO类型，无特别处理(tcp)
+        IOT_SSL = 2, // 使用SSL加密的TCP
+        IOT_UDP = 3, // udp
     };
 
 public:
@@ -53,7 +52,6 @@ public:
      */
     virtual int32_t do_init_accept(EVIO *w)
     {
-        assert(false);
         return EV_NONE;
     };
     /**
@@ -111,6 +109,17 @@ public:
     {
         return 0;
     }
+
+    // 准备accept所需要数据
+    virtual int32_t prepare_accept() = 0;
+    // 准备connect所需要数据
+    virtual int32_t prepare_connect() = 0;
+
+    // 从accept buffer获取一个新的fd
+    virtual int64_t pop_accept_fd()
+    {
+        return ((int64_t)EINVAL << 32) | (uint32_t)netcompat::INVALID;
+    };
 
 protected:
     Buffer recv_; // 接收缓冲区，由io线程写，主线程读取并处理数据

@@ -37,9 +37,14 @@ public:
      */
     int32_t accept(EVIO *w);
     // 初始化accept所需要数据
-    void init_accept_buffer();
+    int32_t prepare_accept() override;
     // 从accept buffer获取一个新的fd
-    int64_t pop_accept_fd();
+    int64_t pop_accept_fd() override;
+    // 准备connect所需要数据
+    int32_t prepare_connect() override
+    {
+        return EV_CONNECT;
+    };
 
 protected:
     AcceptBuffer *accept_; // accept缓冲区（多数socket用不到，因此用指针，用到才分配）
