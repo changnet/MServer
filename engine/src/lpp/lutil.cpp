@@ -29,7 +29,7 @@
 static int32_t get_addr_info(lua_State *L)
 {
     const char *name = luaL_checkstring(L, 1);
-    if (!name) return luaL_error(L, "gethost illegal argument");
+    if (!name) return luaL_error(L, "illegal argument");
 
     bool v4 = lua_toboolean(L, 2);
 

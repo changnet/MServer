@@ -95,7 +95,7 @@ public:
      */
     int32_t close();
     // 校验当前socket是否有效
-    int32_t validate();
+    int32_t validate() const;
     // 获取当前socket的事件
     int32_t get_event();
     /**
@@ -219,7 +219,7 @@ public:
      * @brief 把unpack返回的20字节地址解析成ip和port
      * @return ip地址, 端口
      */
-    int32_t get_udp_addr(lua_State *L);
+    static int32_t get_udp_addr(lua_State *L);
     // 打包前端发往后端的数据
     int32_t send_clt(lua_State *L);
     // 打包后端发往前端的数据

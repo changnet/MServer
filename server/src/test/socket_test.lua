@@ -13,6 +13,8 @@ sc_param.recv_byte_max = 64 * 1024 * 1024
 cs_param.send_byte_max = 64 * 1024 * 1024
 cs_param.recv_byte_max = 64 * 1024 * 1024
 
+local TEST_IPV4 = false
+
 Test.describe("socket test", function()
     local sc_srv = nil
     local sc_clt = nil
@@ -23,7 +25,7 @@ Test.describe("socket test", function()
 
     local ss_port = 2098
     local sc_port = 2099
-    local local_host = IPV4 and "127.0.0.1" or "::1"
+    local local_host = TEST_IPV4 and "127.0.0.1" or "::1"
 
     local Buffer = require "engine.Buffer"
 

@@ -17,10 +17,12 @@ Test.describe("websocket test", function()
     local exp_host = "ws.postman-echo.com"
     local exp_url = "/raw"
 
+    local TEST_IPV4 = false
+
     local local_port = 8083
     local local_port_s = 8084
     local local_host = "::1"
-    if IPV4 then local_host = "127.0.0.1" end
+    if TEST_IPV4 then local_host = "127.0.0.1" end
 
     local clt_ssl
     local srv_ssl

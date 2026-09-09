@@ -422,7 +422,7 @@ int32_t Socket::connect(int32_t addr, const char *host, int32_t port)
     {
         int32_t e = netcompat::errorno();
         ELOG("Socket ipv6 %s:%d %s(%d)", host, port, netcompat::strerror(e), e);
-        return -1;
+        goto FAIL;
     }
 
     int32_t ok = -1;
@@ -456,15 +456,13 @@ int32_t Socket::connect(int32_t addr, const char *host, int32_t port)
     if (0 == ok)
     {
         ELOG("invalid host format: %s", host);
-        netcompat::close(fd);
-        return -1;
+        goto FAIL;
     }
     else if (ok < 0)
     {
         int32_t e = netcompat::errorno();
         ELOG("host error %s: %s", host, netcompat::strerror(e));
-        netcompat::close(fd);
-        return -1;
+        goto FAIL;
     }
 
     // 异步连接，连接成功回调到connect_cb
@@ -476,27 +474,30 @@ int32_t Socket::connect(int32_t addr, const char *host, int32_t port)
         int32_t e = netcompat::errorno();
         if (netcompat::iserror(e))
         {
-            netcompat::close(fd);
             ELOG("Socket connect %s:%d %s(%d)", host, port,
                  netcompat::strerror(e));
 
-            return -1;
+            goto FAIL;
         }
     }
 
     int32_t ev = w_->io_->prepare_connect();
     if (ev < 0)
     {
-        netcompat::close(fd);
         ELOG("Socket connect prepare_connect fail");
-        return -1;
+        goto FAIL;
     }
     start(addr, fd, ev);
 
     return fd;
+
+FAIL:
+    netcompat::close(fd);
+    fd = netcompat::INVALID;
+    return -1;
 }
 
-int32_t Socket::validate()
+int32_t Socket::validate() const
 {
     int32_t err   = 0;
     socklen_t len = sizeof(err);

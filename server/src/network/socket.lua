@@ -80,8 +80,6 @@ function Socket:set_param()
         }
     ]]
 
-
-    self:auto_set_io()
     local param = self.default_param
 
     -- 打包方式，如http、自定义的tcp打包、websocket打包
@@ -116,6 +114,7 @@ function Socket:on_accepting(fd)
     socket.default_param = rawget(self, "default_param")
 
     -- 必须在继承后设置参数，不然用些初始化的参数就会不对
+    socket:auto_set_io()
     socket:set_param()
     socket:auto_set_af_type(self.listen_ip)
 
@@ -185,17 +184,29 @@ end
 function Socket:on_accepted()
 end
 
+-- 简单计算ip属于ipv4还是ipv6(并不百分百准确)
+-- @retturn AF_INET、AF_INET6、nil表示无法判断
+function Socket:find_ip_version(ip)
+    if ip:find(":") then
+        return AF_INET6
+    end
+
+    local a, b, c, d = ip:match("^(%d+)%.(%d+)%.(%d+)%.(%d+)$")
+    if a and b and c and d then
+        return AF_INET
+    end
+end
+
 -- 根据ip自动设置ip版本
 function Socket:auto_set_af_type(ip)
     local af_type = self.af_type
     if not af_type then
         local io_type = self.default_param.io_type
         local sock = (io_type == IOT_UDP and SOCK_DGRAM or SOCK_STREAM)
-        if ip:find(":") then
-            af_type = (AF_INET6 << 16) | (sock << 8) -- ipv6 dual stack
-        else
-            af_type = (AF_INET << 16) | (sock << 8)  -- ipv4 only
-        end
+        local af = self:find_ip_version(ip) or AF_INET
+
+        -- 如果是ipv6，那默认是ipv6 dual stack
+        af_type = (af << 16) | (sock << 8)
     end
     self.s:set_af_type(af_type)
 end
@@ -206,7 +217,8 @@ end
 -- @param ip 目标服务器的ip，如果不传从则host解析
 function Socket:connect(host, port, ip)
     if not ip then
-        ip = util.get_addr_info(host, AF_INET == (self.af_type >> 16))
+        local af = self:find_ip_version(host) or AF_INET
+        ip = util.get_addr_info(host, af == AF_INET)
     end
 
     -- 这个host需要注意，对于http、ws，需要传域名而不是ip地址
@@ -217,6 +229,7 @@ function Socket:connect(host, port, ip)
     self.port = port
 
     self:auto_set_af_type(ip)
+    self:auto_set_io()
     local fd = self.s:connect(ADDR, ip, port)
 
     self.status = OPENING

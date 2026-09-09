@@ -38,6 +38,15 @@ function Socket:close(flush)
     end
 end
 
+-- 获取当前连接的ip地址和端口
+-- @return ip, port
+function Socket:address()
+    local addr = self.addr
+    if not addr then return nil end
+
+    return EngineSocket.get_udp_address(addr)
+end
+
 -- 发送数据的实际实现
 -- @param ud string或者lightuserdata
 -- @param size ud的长度，ud为string时可不填
