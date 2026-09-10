@@ -1,48 +1,23 @@
 #include "buffer.hpp"
 #include "system/static_global.hpp"
+#include "thread/thread_local_buf.hpp"
 
-struct ThreadBuffer
-{
-    size_t len_;
-    char *buffer_;
-
-    ThreadBuffer()
-    {
-        len_    = 0;
-        buffer_ = nullptr;
-    }
-    ~ThreadBuffer()
-    {
-        // delete一个nullptr是安全的，但dbg_mem.cpp那边计数会出错
-        if (buffer_) delete[] buffer_;
-    }
-    char* resize(size_t size)
-    {
-        // 最小256kb，保证系统用mmap分配内存不会造成碎片
-        // 256kb足够应付绝大多数情况，偶尔发送大数据时，后续要释放重新分配
-        // 不然发个50M的数据，一台机子开20个服，200多线程，内存就直接没了
-
-        static constexpr int64_t min_size = 256 * 1024;
-        static constexpr int64_t max_size = 1024 * 1024;
-
-        if (len_ < size || (size < max_size && len_ > max_size))
-        {
-            if (buffer_) delete[] buffer_;
-            len_    = size > min_size ? size : min_size;
-            buffer_ = new char[len_];
-        }
-        return buffer_;
-    }
-};
+/* 跨chunk读写时需要一块连续的临时缓冲。下限取128KB：glibc的mmap阈值是128KB，
+ * 大于等于它的分配free时直接munmap归还系统，不会在堆上留下碎片；小于它走brk，
+ * 反复new/delete容易把堆打碎。
+ *
+ * 原来这里固定256KB起步，peek_buffer(20)也要吃满256KB且几乎不释放，
+ * 现在交给ThreadLocal托管：不够才扩、超过4倍用量才缩。
+ */
+static constexpr size_t MIN_SCRATCH = 128 * 1024;
+static constexpr size_t MAX_SCRATCH = 1024 * 1024;
 
 // @param rwflag 1读，2写，一个线程读写可能会同时存在
 static char *get_thread_buffer(int64_t size, int32_t rwflag)
 {
-    thread_local ThreadBuffer tb[2];
+    thread_local ThreadLocalBuf<MIN_SCRATCH, MAX_SCRATCH> tb[2];
 
-    ThreadBuffer &b = 1 == rwflag ? tb[0] : tb[1];
-
-    return b.resize(size);
+    return tb[1 == rwflag ? 0 : 1].get((size_t)size);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

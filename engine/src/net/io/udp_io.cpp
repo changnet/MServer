@@ -4,6 +4,7 @@
 
 #include "ev/ev_watcher.hpp"
 #include "net/net_compat.hpp"
+#include "thread/thread_local_buf.hpp"
 
 #ifdef __windows__
     #include <winsock2.h>
@@ -39,9 +40,12 @@ int32_t UdpIO::recv(EVIO *w)
     int32_t fd = w->fd_;
     assert(fd != netcompat::INVALID);
 
-    // 预留UDP_FRAME_HEAD字节帧头，recvfrom直接把数据写到payload区
-    static thread_local char buf[UDP_FRAME_HEAD + UDP_MAX_DGRAM];
+    // 预留UDP_FRAME_HEAD字节帧头，recvfrom直接把数据写到payload区。
+    // 用ThreadLocal而不是裸的thread_local数组：后者会进.tbss，进程里每个线程
+    // 创建时就白吃64KB，而这里只有一个backend线程会执行到
+    thread_local ThreadLocalBuf<UDP_FRAME_HEAD + UDP_MAX_DGRAM> buf;
 
+    char *pbuf = buf.get();
     for (int32_t i = 0; i < MAX_RECV_PER_EVENT; i++)
     {
         if (recv_.is_overflow()) return EV_BUSY;
@@ -49,7 +53,7 @@ int32_t UdpIO::recv(EVIO *w)
         struct sockaddr_storage from;
         socklen_t from_len = sizeof(from);
 
-        int32_t n = (int32_t)::recvfrom(fd, buf + UDP_FRAME_HEAD,
+        int32_t n = (int32_t)::recvfrom(fd, pbuf + UDP_FRAME_HEAD,
                                         UDP_MAX_DGRAM, 0,
                                         (struct sockaddr *)&from, &from_len);
         if (n < 0)
@@ -69,10 +73,10 @@ int32_t UdpIO::recv(EVIO *w)
 
         // 地址和帧头不会被发送出去，不需要考虑字节序
         uint32_t size = (uint32_t)(UDP_FRAME_HEAD + n);
-        memcpy(buf, &size, sizeof(size));
-        memcpy(buf + sizeof(size), &addr, sizeof(addr));
+        memcpy(pbuf, &size, sizeof(size));
+        memcpy(pbuf + sizeof(size), &addr, sizeof(addr));
 
-        recv_.append(buf, size); // 一次append整帧
+        recv_.append(pbuf, size); // 一次append整帧
     }
 
     return EV_NONE;

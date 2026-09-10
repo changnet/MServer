@@ -8,6 +8,7 @@
 
 #include "config.hpp"
 #include "global/types.hpp"
+#include "thread/thread_local_buf.hpp"
 
 namespace log_util
 {
@@ -28,11 +29,14 @@ void __async_log(int32_t type, const char *str, int32_t len);
 template<typename... Args>
 const char *fmt_log_buffer(int32_t &len, Args&&... args)
 {
-    thread_local char buffer[20480];
-    len = snprintf(buffer, sizeof(buffer), std::forward<Args>(args)...);
-    if (len >= (int32_t)sizeof(buffer)) len = (int32_t)sizeof(buffer) - 1;
+    static const int32_t size = 20480;
+    thread_local ThreadLocalBuf<size> buffer;
 
-    return buffer;
+    char *pbuf = buffer.get();
+    len = snprintf(pbuf, size, std::forward<Args>(args)...);
+    if (len >= size) len = size - 1;
+
+    return pbuf;
 }
 
 template<typename... Args> void sync_log(int32_t type, Args&&... args)
