@@ -91,6 +91,8 @@ function Socket:set_param()
     local recv_byte_max = param.recv_byte_max or 1024 * 1024 -- 接收缓冲区数
 
     self.s:set_buffer_params(send_byte_max, recv_byte_max, action)
+
+    return true
 end
 
 -- 接受新连接

@@ -288,7 +288,7 @@ int32_t Socket::set_ipv6only(int32_t fd)
     // 如果是accept的socket，继承listen的设置
 
     int32_t af = af_type_ >> 16;
-    if (af_type_ == AF_INET) return 0;
+    if (af == AF_INET) return 0;
 
     int32_t optval = af_type_ & 0x01;
     return setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&optval,
@@ -418,6 +418,13 @@ int32_t Socket::connect(int32_t addr, const char *host, int32_t port)
         return -1;
     }
 
+    int32_t ev;
+    int32_t ok = -1;
+    size_t addr_size;
+    struct sockaddr *sock_addr;
+    struct sockaddr_in host_addr_v4;
+    struct sockaddr_in6 host_addr_v6;
+
     if (set_ipv6only(fd))
     {
         int32_t e = netcompat::errorno();
@@ -425,11 +432,6 @@ int32_t Socket::connect(int32_t addr, const char *host, int32_t port)
         goto FAIL;
     }
 
-    int32_t ok = -1;
-    size_t addr_size;
-    struct sockaddr *sock_addr;
-    struct sockaddr_in host_addr_v4;
-    struct sockaddr_in6 host_addr_v6;
     if (af == AF_INET)
     {
         memset(&host_addr_v4, 0, sizeof(host_addr_v4));
@@ -481,7 +483,7 @@ int32_t Socket::connect(int32_t addr, const char *host, int32_t port)
         }
     }
 
-    int32_t ev = w_->io_->prepare_connect();
+    ev = w_->io_->prepare_connect();
     if (ev < 0)
     {
         ELOG("Socket connect prepare_connect fail");
@@ -599,6 +601,7 @@ int32_t Socket::listen(int32_t addr, const char *host, int32_t port)
         return -1;
     }
 
+    int32_t ev;
     int32_t ok     = 0;
     int32_t optval = 1;
     size_t addr_size;
@@ -668,12 +671,15 @@ int32_t Socket::listen(int32_t addr, const char *host, int32_t port)
         goto FAIL;
     }
 
-    if (::listen(fd, 256) < 0)
+    // udp没有listen过程，bind完就可以收发数据了
+    // 对SOCK_DGRAM调用::listen必定失败(windows WSAEOPNOTSUPP 10045 /
+    // linux EOPNOTSUPP 95)，不跳过的话udp的监听socket会被直接关闭
+    if (SOCK_STREAM == type && ::listen(fd, 256) < 0)
     {
         goto FAIL;
     }
 
-    int32_t ev = w_->io_->prepare_accept();
+    ev = w_->io_->prepare_accept();
     if (ev < 0)
     {
         goto FAIL;

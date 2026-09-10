@@ -18,15 +18,20 @@ UdpSocket.default_param = {
     recv_byte_max = 4 * 1024 * 1024 -- 接收缓冲区数
 }
 
+--[[
+udp没有连接的概念，这里用一个UdpSocket表示一个"对端"。
+    UdpSocket()                独立的客户端(自己connect到一个对端)
+    UdpSocket(addr, main_sock) 服务器上的一个对端，复用主socket收发数据
+]]
 function UdpSocket:__init(addr, main_socket)
-    Socket.__init(self)
-
-    -- 对端地址，发送数据时要用到
-    self.addr = addr
-
-    -- udp作为服务器时，只有一个监听的主socket，所有客户端发送数据都要根据这个来
     if main_socket then
+        -- 服务器的一个对端：不创建底层连接，也不注册到SocketMgr，
+        -- 它只是主socket的一个"会话"，所有数据都走主socket
         self.main_socket = main_socket.s
+        self.socket_id   = SocketMgr.next_id()
+        self.addr = addr -- 对端地址，发送数据时要用到
+    else
+        Socket.__init(self)
     end
 end
 
@@ -35,9 +40,11 @@ end
 function UdpSocket:close(flush)
     self.status = SocketMgr.CLOSING
 
-    if self.listen_ip then
-        return self.s:stop(flush)
-    end
+    -- 服务器的对端没有自己的底层socket，它是复用主socket的
+    local s = self.s
+    if not s then return end
+
+    return s:stop(flush)
 end
 
 -- 获取当前连接的ip地址和端口
@@ -46,7 +53,8 @@ function UdpSocket:address()
     local addr = self.addr
     if not addr then return nil end
 
-    return EngineSocket.get_udp_address(addr)
+    -- get_udp_addr是C++侧注册的成员函数，用冒号调用(self已在索引1)
+    return (self.main_socket or self.s):get_udp_addr(addr)
 end
 
 -- 监听socket连接
@@ -65,7 +73,7 @@ end
 
 -- 连接到其他服务器
 -- @param host 目标服务器地址，可传域名或ip
--- @param port 目标服务器端口
+-- @param port 目标服务器的端口
 -- @param ip 目标服务器的ip，如果不传从则host解析
 function UdpSocket:connect(host, port, ip)
     if not Socket.connect(self, host, port, ip) then
@@ -79,14 +87,17 @@ end
 
 -- 发送数据的实际实现
 -- @param ud string或者lightuserdata
--- @param size ud的长度，ud为string时可不填
+-- @param size ud的长度
 function UdpSocket:send_pkt(ud, size)
     -- udp超过mtu的包会被丢弃，要自己做分包
     if size > self.MTU then
-        return error("udp packet over mtu, size=" .. size .. ", mtu=" .. self.MTU)
+        return error("udp packet over mtu, size=" .. size .. ", mtu=" ..
+                     self.MTU)
     end
 
-    local sock = self.s or self.main_socket
+    -- 服务器的对端要复用主socket。注意 __init 里才是给自己建 socket 的，
+    -- 这里必须先判断 main_socket
+    local sock = self.main_socket or self.s
     return sock:send_clt(self.addr, ud, size)
 end
 

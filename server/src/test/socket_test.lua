@@ -23,6 +23,10 @@ Test.describe("socket test", function()
     local ss_clt = nil
     local ss_listen = nil
 
+    local udp_srv = nil
+    local udp_clt1 = nil
+    local udp_clt2 = nil
+
     local ss_port = 2098
     local sc_port = 2099
     local local_host = TEST_IPV4 and "127.0.0.1" or "::1"
@@ -281,60 +285,70 @@ Test.describe("socket test", function()
         local udp_mgr = {}
         local UdpSocket = require "network.udp_socket"
 
-        local udp_srv = UdpSocket()
-        udp_srv:listen(local_host, ss_port)
-        udp_srv.on_message = function(self, addr, ud, size)
+        udp_srv = UdpSocket()
+        -- udp没有连接过程，listen失败这里是唯一能发现问题的地方，必须断言
+        assert(udp_srv:listen(local_host, ss_port), "udp listen fail")
+
+        -- 服务器的一个UdpSocket对应一个对端，用unpack返回的20字节地址做key
+        local function get_clt(addr)
             local clt = udp_mgr[addr]
             if not clt then
-                clt = UdpSocket(addr, self)
+                clt = UdpSocket(addr, udp_srv)
                 udp_mgr[addr] = clt
 
                 local ip, port = clt:address()
                 print(string.format("new udp client %s:%d", ip, port))
             end
-            clt:send_pkt(ud, size)
+            return clt
+        end
+
+        udp_srv.on_message = function(self, addr, ud, size)
+            get_clt(addr):send_pkt(ud, size)
         end
 
         local function clt_send(clt, prefix)
             local last_send = prefix .. tostring(math.random(10000, 1000000))
 
             clt.last_send = last_send
-            clt:send_pkt(last_send, string.len(last_send))
+            clt:send_pkt(last_send, #last_send)
         end
 
         local count1 = 0
         local count2 = 0
-        local udp_clt1 = UdpSocket()
-        local udp_clt2 = UdpSocket()
 
+        local done = false
         local function check_done()
-            if count1 == count and count2 == count then
-                Test.done()
-            end
-            udp_srv:close()
-            udp_clt1:close()
-            udp_clt2:close()
+            -- 只有两个客户端都收到足够的包才算完成，不能提前关闭socket
+            if done or count1 < count or count2 < count then return end
+            done = true
+
+            Test.done()
         end
+
+        udp_clt1 = UdpSocket()
+        udp_clt2 = UdpSocket()
 
         udp_clt1:connect(local_host, ss_port)
         udp_clt1.on_message = function(self, addr, ud, size)
             local str = Buffer.lightud_tostring(ud, size)
             Test.equal(str, self.last_send)
+
             count1 = count1 + 1
-            if count1 == count then
-                return check_done()
-            end
-            print("udp_clt1 recv", str)
+            if count1 >= count then return check_done() end
+
+            -- print("udp_clt1 recv", str)
             clt_send(self, "clt1")
         end
 
         udp_clt2:connect(local_host, ss_port)
-        udp_clt1.on_message = function(self, addr, ud, size)
-            Test.equal(Buffer.lightud_tostring(ud, size), self.last_send)
-            count1 = count1 + 1
-            if count1 == count then
-                return check_done()
-            end
+        udp_clt2.on_message = function(self, addr, ud, size)
+            local str = Buffer.lightud_tostring(ud, size)
+            Test.equal(str, self.last_send)
+
+            count2 = count2 + 1
+            if count2 >= count then return check_done() end
+
+            -- print("udp_clt2 recv", str)
             clt_send(self, "clt2")
         end
 
@@ -351,6 +365,11 @@ Test.describe("socket test", function()
         if ss_clt then ss_clt:close() end
         if ss_srv then ss_srv:close() end
         if ss_listen then ss_listen:close() end
+
+        if udp_srv then udp_srv:close() end
+        if udp_clt1 then udp_clt1:close() end
+        if udp_clt2 then udp_clt2:close() end
+
         _G.pingpong_b = nil
     end)
 end)

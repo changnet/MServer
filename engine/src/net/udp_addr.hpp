@@ -2,6 +2,8 @@
 
 #include "global/global.hpp"
 
+#include <cstddef> // offsetof
+
 #ifdef __windows__
     #include <winsock2.h>
     #include <ws2tcpip.h> // inet_ntop inet_pton
@@ -18,6 +20,11 @@
  * 当hash key，未初始化的字节会让同一个客户端每次算出不同的key，所以：
  *     1. 构造函数和from_sockaddr都会先清零
  *     2. 从缓冲区里取地址必须memcpy，不能reinterpret_cast(alignof == 1)
+ *
+ * 关于 #pragma pack(1)：uint16+uint16+uint8[16] 天然就是20字节、无padding，
+ * pack与否sizeof和布局都一样。保留pack是为了把"sizeof必须等于20"固化下来，
+ * 以后谁往里加字段都不会悄悄变成22字节而让lua侧的key长度对不上。
+ * 它没有性能代价：这里全是memcpy，不受对齐影响。
  */
 #pragma pack(push, 1)
 struct UdpAddr
@@ -148,6 +155,12 @@ struct UdpAddr
 
 static_assert(sizeof(UdpAddr) == 20, "UdpAddr must be 20 bytes");
 static_assert(alignof(UdpAddr) == 1, "UdpAddr must be packed");
+
+// udp_io.cpp的send path按offsetof直接从缓冲区里取字段，
+// 布局变了这里会编译报错，而不是运行期算出错误的地址
+static_assert(offsetof(UdpAddr, family_) == 0, "UdpAddr layout changed");
+static_assert(offsetof(UdpAddr, port_) == 2, "UdpAddr layout changed");
+static_assert(offsetof(UdpAddr, addr_) == 4, "UdpAddr layout changed");
 
 /// 单个udp数据包的最大长度(ipv4: 65535 - 20(ip头) - 8(udp头) = 65507)
 static constexpr int32_t UDP_MAX_DGRAM = 65507;
