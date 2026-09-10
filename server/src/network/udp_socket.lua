@@ -25,12 +25,14 @@ function UdpSocket:__init(addr, main_socket)
     self.addr = addr
 
     -- udp作为服务器时，只有一个监听的主socket，所有客户端发送数据都要根据这个来
-    self.main_socket = main_socket
+    if main_socket then
+        self.main_socket = main_socket.s
+    end
 end
 
 -- 关闭链接
 -- @param flush 关闭前是否发送缓冲区的数据
-function Socket:close(flush)
+function UdpSocket:close(flush)
     self.status = SocketMgr.CLOSING
 
     if self.listen_ip then
@@ -40,11 +42,39 @@ end
 
 -- 获取当前连接的ip地址和端口
 -- @return ip, port
-function Socket:address()
+function UdpSocket:address()
     local addr = self.addr
     if not addr then return nil end
 
     return EngineSocket.get_udp_address(addr)
+end
+
+-- 监听socket连接
+-- @param ip 监听的ip
+-- @param port 监听的端口
+-- @param boolean 返回是否成功
+function UdpSocket:listen(ip, port)
+    if not Socket.listen(self, ip, port) then
+        return false
+    end
+
+    -- udp没有链接过程，监听成功后就需要设置参数然后发送数据了
+    -- 现在udp不会触发连接成功之类的回调，直接判断listen、connect返回的值即可
+    return self:set_param()
+end
+
+-- 连接到其他服务器
+-- @param host 目标服务器地址，可传域名或ip
+-- @param port 目标服务器端口
+-- @param ip 目标服务器的ip，如果不传从则host解析
+function UdpSocket:connect(host, port, ip)
+    if not Socket.connect(self, host, port, ip) then
+        return false
+    end
+
+    -- udp没有链接过程，监听成功后就需要设置参数然后发送数据了
+    -- 现在udp不会触发连接成功之类的回调，直接判断listen、connect返回的值即可
+    return self:set_param()
 end
 
 -- 发送数据的实际实现

@@ -296,7 +296,7 @@ Test.describe("socket test", function()
         end
 
         local function clt_send(clt, prefix)
-            local last_send = "prefix" .. tostring(math.random(10000, 1000000))
+            local last_send = prefix .. tostring(math.random(10000, 1000000))
 
             clt.last_send = last_send
             clt:send_pkt(last_send, string.len(last_send))

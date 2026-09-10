@@ -31,10 +31,11 @@ struct UdpAddr
         clear();
     }
 
-    /// 清零，★ 必须在使用前调用，否则addr_里是随机字节
     void clear()
     {
-        memset(this, 0, sizeof(UdpAddr));
+        family_  = AF_UNSPEC;
+        port_    = 0;
+        addr_[0] = '\0';
     }
 
     bool operator==(const UdpAddr &o) const

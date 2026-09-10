@@ -212,7 +212,7 @@ function Socket:auto_set_af_type(ip)
 end
 
 -- 连接到其他服务器
--- @param host 目标服务器地址
+-- @param host 目标服务器地址，可传域名或ip
 -- @param port 目标服务器端口
 -- @param ip 目标服务器的ip，如果不传从则host解析
 function Socket:connect(host, port, ip)
@@ -279,10 +279,10 @@ function Socket:connect_s(host, port, ssl, ip)
     return self:connect(host, port, ip)
 end
 
--- 监听http连接
+-- 监听socket连接
 -- @param ip 监听的ip
 -- @param port 监听的端口
--- @param boolean, message 返回是否成功，失败后面带message
+-- @param boolean 返回是否成功
 function Socket:listen(ip, port)
     self.listen_ip = ip
     self.listen_port = port

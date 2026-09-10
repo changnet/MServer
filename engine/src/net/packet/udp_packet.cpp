@@ -73,8 +73,16 @@ int32_t UdpPacket::pack_srv(lua_State *L, int32_t index)
     // index + 1: payload，lua string或者lightuserdata
     // index + 2: size，payload为lightuserdata时必填
     size_t addr_len = 0;
-    const char *addr_key = luaL_checklstring(L, index, &addr_len);
-    if (addr_len != sizeof(UdpAddr))
+    const char *addr_key = lua_tolstring(L, index, &addr_len);
+    if (!addr_key)
+    {
+        // 已connect的udp socket，只能发到connect时的对端，发到其他地址是无效的
+        const static UdpAddr ua;
+
+        addr_len = sizeof(UdpAddr);
+        addr_key = reinterpret_cast<const char *>(&ua);
+    }
+    else if (addr_len != sizeof(UdpAddr))
     {
         return luaL_error(L, "invalid udp addr length: %d", (int32_t)addr_len);
     }
