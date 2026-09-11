@@ -46,6 +46,9 @@ bool EVBackend::start()
 {
     if (!before_start()) return false;
 
+    // 注册到线程消息管理器，这样worker可以直接forward_message到BACKEND_ADDR
+    ThreadContextMgr::add_thread_ctx(BACKEND_ADDR, this);
+
     thread_ = std::thread(&EVBackend::backend, this);
 
     return true;
@@ -57,7 +60,28 @@ void EVBackend::stop()
     wake();
     thread_.join();
 
+    ThreadContextMgr::del_thread_ctx(BACKEND_ADDR);
+
     after_stop();
+}
+
+void EVBackend::do_thread_message()
+{
+    ThreadMessage *m = nullptr;
+    while (nullptr != (m = pop_message()))
+    {
+        switch (m->type_)
+        {
+#if defined(ENABLE_KCP)
+        case ThreadMessage::KCP_ADD: kcp_mgr_.on_add(m); break;
+        case ThreadMessage::KCP_DEL: kcp_mgr_.on_del(m); break;
+#endif
+        default:
+            ELOG("backend unknow message type: %d", m->type_);
+            break;
+        }
+        ThreadContext::dispose_message(m);
+    }
 }
 
 void EVBackend::backend_once(int32_t ev_count, int64_t now)
@@ -86,7 +110,20 @@ void EVBackend::backend()
 
     while (!done_.load(std::memory_order_acquire))
     {
-        int32_t ev_count = wait(busy_ ? min_wait : max_wait);
+        // ★ ① 先处理线程消息（KCP_ADD / KCP_DEL）。
+        //    放在 wait() 之前：新建会话在进入epoll轮询前完成，
+        //    不会漏掉紧接着到达的数据包
+        do_thread_message();
+
+        int32_t timeout = busy_ ? min_wait : max_wait;
+
+#if defined(ENABLE_KCP)
+        // ★ ② 用kcp节拍收紧wait超时（到点的那一拍会驱动 ikcp_update 发出重传/ACK）
+        int64_t k = kcp_mgr_.update(timing::steady_clock());
+        if (k >= 0 && k < timeout) timeout = (int32_t)k;
+#endif
+
+        int32_t ev_count = wait(timeout);
         if (ev_count < 0) break;
 
         int64_t now = timing::steady_clock();

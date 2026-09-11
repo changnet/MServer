@@ -210,6 +210,9 @@ static void luaopen_socket(lua_State *L)
     lc.def<&Socket::io_init_connect>("io_init_connect");
     lc.def<&Socket::send_pkt>("send_pkt");
     lc.def<&Socket::get_udp_addr>("get_udp_addr");
+    lc.def<&Socket::start_kcp>("start_kcp");
+    lc.def<&Socket::set_kcp_conv>("set_kcp_conv");
+    lc.def<&Socket::unpack_kcp_accept>("unpack_kcp_accept");
     lc.def<&Socket::send_clt>("send_clt");
     lc.def<&Socket::send_srv>("send_srv");
     lc.def<&Socket::send_ctrl>("send_ctrl");
@@ -230,9 +233,11 @@ static void luaopen_socket(lua_State *L)
     lc.set(Packet::PT_WEBSOCKET, "PT_WEBSOCKET");
     lc.set(Packet::PT_WSSTREAM, "PT_WSSTREAM");
     lc.set(Packet::PT_UDPSTREAM, "PT_UDPSTREAM");
+    lc.set(Packet::PT_KCPSTREAM, "PT_KCPSTREAM");
     lc.set(IO::IOT_TCP, "IOT_TCP");
     lc.set(IO::IOT_SSL, "IOT_SSL");
     lc.set(IO::IOT_UDP, "IOT_UDP");
+    lc.set(IO::IOT_KCP, "IOT_KCP");
 
     lc.set(AF_INET, "AF_INET");
     lc.set(AF_INET6, "AF_INET6");

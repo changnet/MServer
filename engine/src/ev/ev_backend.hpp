@@ -3,11 +3,19 @@
 #include <vector>
 #include <thread>
 #include "ev_watcher.hpp"
+#include "thread/thread_context.hpp"
+
+#if defined(ENABLE_KCP)
+    #include "net/kcp_mgr.hpp"
+#endif
 
 /**
  * @brief 用于执行io操作的后台基类，统一epoll、poll等不同内核接口。该io操作在一个独立的线程
+ *
+ * 继承 ThreadContext 是为了拿到线程消息队列（kcp的建/删会话是控制面，
+ * 走消息队列；业务数据是数据面，走 Buffer + EV_READ/EV_WRITE）
  */
-class EVBackend
+class EVBackend : public ThreadContext
 {
 public:
     /**
@@ -22,6 +30,15 @@ public:
 public:
     EVBackend();
     virtual ~EVBackend();
+
+    // ---- ThreadContext ----
+    /// backend不导出给lua
+    int32_t push(lua_State *L, bool gc) override
+    {
+        UNUSED(L);
+        UNUSED(gc);
+        return 0;
+    }
 
     // 唤醒子进程
     virtual void wake() = 0;
@@ -59,6 +76,26 @@ public:
      */
     static EVBackend *instance();
 
+    /**
+     * @brief 把事件直接派发给watcher所属的worker线程（供KcpMgr使用）
+     * 与 add_watcher_event 的区别：不经过epoll，只走跨线程事件派发
+     */
+    void notify_watcher(EVIO *w, int32_t ev)
+    {
+        dispatch_event(w, ev);
+    }
+
+#if defined(ENABLE_KCP)
+    KcpMgr &kcp_mgr() { return kcp_mgr_; }
+#endif
+
+protected:
+    /// 覆写唤醒方式：backend阻塞在epoll/poll上，cv_.notify_one()叫不醒它
+    void wake_target() override
+    {
+        wake();
+    }
+
 protected:
     struct WatcherEvent
     {
@@ -93,6 +130,10 @@ private:
      * @brief 后台线程执行函数
      */
     void backend();
+    /**
+     * @brief 处理来自其他线程的线程消息（KCP_ADD / KCP_DEL）
+     */
+    void do_thread_message();
     /**
      * @brief 执行单次后台逻辑
      */
@@ -148,9 +189,16 @@ protected:
 
     std::vector<EVIO *> pending_events_; // backend线程自己收到，等待异步处理的事件
 
+    // 注意：这是EVBackend自己的锁（保护背面几个成员），
+    // 和基类 ThreadContext::mutex_（保护消息队列）是两个不同的锁，
+    // EVBackend的代码里出现的 mutex_ 都是这一个
     std::mutex mutex_;
     std::vector<EVIO *> watcher_events_;       // 收到其他线程的事件
     std::vector<EVIO *> swap_watcher_events_; // swap用，避免临时变量分配
     WatcherMgr fd_mgr_;                        // 管理epoll中的所有fd
+
+#if defined(ENABLE_KCP)
+    KcpMgr kcp_mgr_; // kcp会话管理器，backend独占
+#endif
 };
 

@@ -24,6 +24,9 @@ endif()
 
 project(MServer)
 
+# 是否编译kcp支持。关闭时 kcp 相关的四个源文件整体被编译期剔除
+option(ENABLE_KCP "Enable Kcp" ON)
+
 if(NOT CMAKE_BUILD_TYPE)
    set(CMAKE_BUILD_TYPE Debug )
 endif()
@@ -162,6 +165,12 @@ target_link_libraries(master PRIVATE
     lua_rapidxml
     websocket_parser
 )
+
+# kcp：开关和常量都要让源码可见，所以要加编译定义
+if(ENABLE_KCP)
+    target_compile_definitions(master PRIVATE ENABLE_KCP=1)
+    target_link_libraries(master PRIVATE kcp)
+endif()
 
 if(WINDOWS)
     target_include_directories(master PRIVATE

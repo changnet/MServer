@@ -23,6 +23,7 @@ public:
         IOT_TCP = 1, // 默认IO类型，无特别处理(tcp)
         IOT_SSL = 2, // 使用SSL加密的TCP
         IOT_UDP = 3, // udp
+        IOT_KCP = 4, // kcp（可靠udp）。监听socket会被换成 KcpAcceptorIO
     };
 
 public:

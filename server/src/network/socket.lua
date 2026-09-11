@@ -20,6 +20,7 @@ local SOCK_DGRAM = EngineSocket.SOCK_DGRAM
 local IOT_TCP = EngineSocket.IOT_TCP
 local IOT_SSL = EngineSocket.IOT_SSL
 local IOT_UDP = EngineSocket.IOT_UDP
+local IOT_KCP = EngineSocket.IOT_KCP
 
 local ADDR = LOCAL_ADDR
 
@@ -39,6 +40,18 @@ on_disconnected
 ]]
 
 function Socket:__init()
+    local socket_id = SocketMgr.next_id()
+
+    self.s = EngineSocket(socket_id)
+    self.socket_id = socket_id
+
+    SocketMgr.add(self)
+end
+
+-- 创建一个不占用fd的socket对象（服务器上的一个kcp对端）
+-- 与UdpSocket对端不同，kcp对端是一"条"连接，必须进SocketMgr，
+-- 否则backend派发EV_READ时 socket_dispatch 找不到对象，静默丢弃
+function Socket:init_virtual()
     local socket_id = SocketMgr.next_id()
 
     self.s = EngineSocket(socket_id)
@@ -204,7 +217,9 @@ function Socket:auto_set_af_type(ip)
     local af_type = self.af_type
     if not af_type then
         local io_type = self.default_param.io_type
-        local sock = (io_type == IOT_UDP and SOCK_DGRAM or SOCK_STREAM)
+        -- kcp也是基于udp的，必须一起认，否则会被建成SOCK_STREAM
+        local sock = ((io_type == IOT_UDP or io_type == IOT_KCP)
+                      and SOCK_DGRAM or SOCK_STREAM)
         local af = self:find_ip_version(ip) or AF_INET
 
         -- 如果是ipv6，那默认是ipv6 dual stack

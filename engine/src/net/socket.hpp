@@ -7,6 +7,7 @@
 #include "packet/packet.hpp"
 
 class TlsCtx;
+struct UdpAddr;
 
 /* 网络socket连接类
  * 这里封装了基本的网络操作
@@ -220,6 +221,34 @@ public:
      * @return ip地址, 端口
      */
     static int32_t get_udp_addr(lua_State *L);
+
+    /**
+     * @brief 把一条kcp连接交给backend建会话（服务端对端 / 客户端形态共用）
+     * lua侧：self.s:start_kcp(worker_addr, listen_id, listen_fd, conv, addr)
+     * @param worker_addr 本worker地址（backend回调投递用）
+     * @param listen_id   服务端对端：监听socket_id；客户端形态：0
+     * @param listen_fd   sendto用的fd（服务端对端=监听fd；客户端=自己的fd）
+     * @param conv        会话号
+     * @param addr        20字节的UdpAddr二进制串；客户端形态传nil（内部用默认值AF_UNSPEC）
+     * @return 1 投递成功，0 失败
+     */
+    int32_t start_kcp(lua_State *L);
+
+    /**
+     * @brief 主线程在 start_kcp 之前预置会话号（客户端形态用，conv由客户端随机）
+     */
+    void set_kcp_conv(uint32_t conv)
+    {
+        kcp_conv_ = conv;
+    }
+
+    /**
+     * @brief 把 backend 发来的 KcpAcceptMsg 拆开
+     * lua侧：EngineSocket.unpack_kcp_accept(udata, usize)
+     * @return listen_id, addr(20字节二进制串), conv
+     */
+    static int32_t unpack_kcp_accept(lua_State *L);
+
     // 打包前端发往后端的数据
     int32_t send_clt(lua_State *L);
     // 打包后端发往前端的数据
@@ -247,4 +276,6 @@ private:
 
     EVIO *w_; /// io事件监视器
     Packet *packet_;
+
+    uint32_t kcp_conv_ = 0; // kcp会话号，start_kcp 之前由主线程预置
 };

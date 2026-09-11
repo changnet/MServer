@@ -8,15 +8,25 @@
 
 struct lua_State;
 
+/// backend(io)线程的投递地址。C++ 与 lua 侧(startup.lua)必须保持一致
+static constexpr int32_t BACKEND_ADDR = -1;
+
 // 线程数据交互结构
 struct ThreadMessage final
 {
     enum
     {
+        // ---- 0 ~ 63：C++ 预留 ----
         NONE   = 0, // 无作用，通常只是唤醒线程
         TIMER  = 1, // 定时器
         SIGNAL = 2, // 信号
         SOCKET = 3, // 网络消息
+        // ---- kcp 新增，编号与 thread_message.lua 保持一致 ----
+        KCP_ACCEPT = 4, // backend → worker：发现新客户端，请决定是否接入
+        KCP_ADD    = 5, // worker → backend：建会话（建 ikcpcb + 注册）
+        KCP_DEL    = 6, // worker → backend：删除会话（释放 ikcpcb + 摘路由）
+        // ---- 64 ~ 127：Lua 预留，C++ 不解释 ----
+        LUA_BASE = 64,
     };
 
     ThreadMessage(int32_t src, int32_t dst, uint16_t type,
@@ -106,7 +116,7 @@ public:
             std::lock_guard<std::mutex> lg(mutex_);
             queue_.emplace_back((ThreadMessage *)message);
         }
-        cv_.notify_one();
+        wake_target();
     }
 
     /**
@@ -129,6 +139,16 @@ public:
     }
 
 protected:
+    /**
+     * @brief 唤醒阻塞在当前线程上的对端。默认唤醒cv_（worker线程）
+     *
+     * backend线程阻塞在epoll/poll上，cv_.notify_one()叫不醒它，
+     * EVBackend覆写成wake()。这是kcp方案里唯一侵入现有代码的地方
+     */
+    virtual void wake_target()
+    {
+        cv_.notify_one();
+    }
 
     ThreadMessage *cb_message_; // 当前线程回调中的消息
     mutable std::mutex mutex_;

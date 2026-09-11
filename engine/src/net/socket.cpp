@@ -13,6 +13,13 @@
 #include "system/static_global.hpp"
 #include "lpp/lcpp.hpp"
 
+#if defined(ENABLE_KCP)
+    #include "io/kcp_acceptor_io.hpp"
+    #include "io/kcp_io.hpp"
+    #include "kcp_msg.hpp"
+    #include "packet/kcp_packet.hpp"
+#endif
+
 #ifdef __windows__
     #include <winsock2.h>
     #include <ws2tcpip.h>
@@ -68,6 +75,28 @@ Socket::~Socket()
      *
      */
 
+#if defined(ENABLE_KCP)
+    /**
+     * lua侧忘了 close() 的兜底：补发一条 KCP_DEL，这样 KcpMgr::conns_ 里
+     * 不会残留已析构的 EVIO*。
+     *
+     * ★ 判别条件必须是"还活着的虚拟连接"：
+     *   虚拟连接（服务端对端）: fd == INVALID 且 M_REF_BACKEND 还在
+     *   监听socket / 客户端   : 有真实fd（KcpAcceptorIO 不能强转成 KcpIO）
+     *   已关闭的连接          : fd 会被置为 INVALID，但 M_REF_BACKEND 已被
+     *                           backend释放，不会误判
+     */
+    if (IO::IOT_KCP == io_type_ && w_ && netcompat::INVALID == fd_
+        && 0 != (w_->mask_ & EVIO::M_REF_BACKEND))
+    {
+        KcpDelMsg msg;
+        msg.conn_id = socket_id_;
+        StaticGlobal::M->forward_message(0, BACKEND_ADDR,
+                                         ThreadMessage::KCP_DEL, &msg,
+                                         (int32_t)sizeof(msg));
+    }
+#endif
+
     delete packet_;
     packet_ = nullptr;
 
@@ -81,6 +110,20 @@ Socket::~Socket()
 
 void Socket::stop(bool flush)
 {
+#if defined(ENABLE_KCP)
+    // kcp会话的资源（ikcpcb + 路由表）只有backend能释放，
+    // 所以关闭时先递一条删除消息，再走常规的事件通知
+    if (IO::IOT_KCP == io_type_)
+    {
+        KcpDelMsg msg;
+        msg.conn_id = socket_id_;
+        // src 只用于调试，KCP_DEL 不关心来源（和 EVBackend::dispatch_event 一样传0）
+        StaticGlobal::M->forward_message(0, BACKEND_ADDR,
+                                         ThreadMessage::KCP_DEL, &msg,
+                                         (int32_t)sizeof(msg));
+    }
+#endif
+
     // 通知backend线程关闭socket
     // 注意没有执行start时，backend那边并不会引用这个socket
     // 不过那边有处理，这里统一发送
@@ -116,6 +159,86 @@ int32_t Socket::get_udp_addr(lua_State *L)
     lua_pushinteger(L, ntohs(addr.port_));
 
     return 2;
+}
+
+int32_t Socket::start_kcp(lua_State *L)
+{
+#if defined(ENABLE_KCP)
+    assert(io_type_ == IO::IOT_KCP);
+    assert(w_ && w_->io_);
+
+    // lua侧的数据都从索引2开始（索引1是self）
+    int32_t worker_addr = (int32_t)luaL_checkinteger(L, 2);
+    int32_t listen_id   = (int32_t)luaL_checkinteger(L, 3);
+    int32_t listen_fd   = (int32_t)luaL_checkinteger(L, 4);
+    uint32_t conv       = (uint32_t)luaL_checkinteger(L, 5);
+
+    // 客户端形态不传addr，保持默认值AF_UNSPEC（socket已connect，用::send）
+    size_t len      = 0;
+    const char *raw = lua_tolstring(L, 6, &len);
+    UdpAddr addr;
+    if (raw)
+    {
+        if (len != sizeof(UdpAddr))
+        {
+            ELOG("invalid kcp addr length: %d", (int32_t)len);
+            lua_pushboolean(L, 0);
+            return 1;
+        }
+        memcpy(&addr, raw, sizeof(addr)); // ★ memcpy，不reinterpret_cast
+    }
+
+    // ① 先把引用位和线程地址准备好：
+    //    服务端对端不走 start()，这两项必须在这里补上；
+    //    客户端形态 start() 已经设过，重复设置是幂等的
+    w_->addr_ = worker_addr;
+    w_->mask_ |= EVIO::M_REF_BACKEND;
+
+    KcpIO *io = static_cast<KcpIO *>(w_->io_);
+    io->set_conv(conv);
+    kcp_conv_ = conv;
+
+    // ② 通知backend建会话（走现成的forward_message，不新造投递函数）
+    KcpAddMsg msg;
+    msg.conn_w    = w_;
+    msg.listen_id = listen_id;
+    msg.listen_fd = listen_fd;
+    msg.conv      = conv;
+    if (raw) msg.addr = addr;
+
+    bool ok = StaticGlobal::M->forward_message(worker_addr, BACKEND_ADDR,
+                                               ThreadMessage::KCP_ADD, &msg,
+                                               (int32_t)sizeof(msg));
+    lua_pushboolean(L, ok ? 1 : 0);
+    return 1;
+#else
+    UNUSED(L);
+    return luaL_error(L, "kcp disabled");
+#endif
+}
+
+int32_t Socket::unpack_kcp_accept(lua_State *L)
+{
+#if defined(ENABLE_KCP)
+    const char *p = (const char *)lua_touserdata(L, 1);
+    int32_t len   = (int32_t)luaL_checkinteger(L, 2);
+    if (!p || len < (int32_t)sizeof(KcpAcceptMsg))
+    {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    KcpAcceptMsg msg;
+    memcpy(&msg, p, sizeof(msg)); // ★ memcpy，不reinterpret_cast
+
+    lua_pushinteger(L, msg.listen_id);
+    lua_pushlstring(L, (const char *)&msg.addr, sizeof(UdpAddr));
+    lua_pushinteger(L, (lua_Integer)msg.conv);
+    return 3;
+#else
+    lua_pushnil(L);
+    return 1;
+#endif
 }
 
 void Socket::append(const void *data, size_t len)
@@ -679,6 +802,17 @@ int32_t Socket::listen(int32_t addr, const char *host, int32_t port)
         goto FAIL;
     }
 
+#if defined(ENABLE_KCP)
+    if (IO::IOT_KCP == io_type_)
+    {
+        // kcp的监听socket只做"收包 + 路由"，没有ikcpcb。
+        // set_io 在 listen/connect 两条路径上都会被调用，只有走到这里才能区分角色，
+        // 所以在bind成功、还没start之前把它换成专门的 acceptor io
+        delete w_->io_;
+        w_->io_ = new KcpAcceptorIO();
+    }
+#endif
+
     ev = w_->io_->prepare_accept();
     if (ev < 0)
     {
@@ -834,6 +968,9 @@ void *Socket::set_io(int32_t io_type, TlsCtx *tls_ctx)
         io = new SSLIO(tls_ctx);
         break;
     case IO::IOT_UDP: io = new UdpIO(); break;
+#if defined(ENABLE_KCP)
+    case IO::IOT_KCP: io = new KcpIO(); break;
+#endif
     default: return nullptr;
     }
 
@@ -856,6 +993,9 @@ int32_t Socket::set_packet(int32_t packet_type)
     case Packet::PT_WEBSOCKET: packet_ = new WebsocketPacket(this); break;
     case Packet::PT_WSSTREAM: packet_ = new WSStreamPacket(this); break;
     case Packet::PT_UDPSTREAM: packet_ = new UdpPacket(this); break;
+#if defined(ENABLE_KCP)
+    case Packet::PT_KCPSTREAM: packet_ = new KcpPacket(this); break;
+#endif
     default: return -1;
     }
     return 0;

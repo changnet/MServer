@@ -3,6 +3,7 @@
 #include <cstddef> // offsetof
 
 #include "ev/ev_watcher.hpp"
+#include "net/io/net_io_helper.hpp" // is_icmp_unreachable
 #include "net/net_compat.hpp"
 #include "thread/thread_local_buf.hpp"
 
@@ -12,20 +13,6 @@
 #else
     #include <sys/socket.h>
 #endif
-
-/**
- * ICMP port unreachable：上一个sendto发送到了一个已关闭的对端
- * windows下是WSAECONNRESET，linux下是ECONNREFUSED。这不是错误，
- * 必须忽略，否则udp连接会被误判为出错并关闭
- */
-static bool is_icmp_unreachable(int32_t e)
-{
-#ifdef __windows__
-    return WSAECONNRESET == e || WSAENETRESET == e || WSAECONNABORTED == e;
-#else
-    return ECONNREFUSED == e || ECONNRESET == e;
-#endif
-}
 
 UdpIO::UdpIO()
 {

@@ -50,3 +50,14 @@ target_include_directories(lua_rapidxml PRIVATE
 add_library(websocket_parser STATIC
     websocket-parser/websocket_parser.c
 )
+
+# kcp —— 直接在这里编译，不要 add_subdirectory(kcp)
+# deps/kcp/CMakeLists.txt 里是 cmake_minimum_required(VERSION 4.0)，
+# 而deps是3.5，add_subdirectory进去会直接fatal error
+if(ENABLE_KCP)
+    add_library(kcp STATIC kcp/ikcp.c)
+    # 清空编译参数：linux下 -Wall/-pedantic 会让第三方代码刷屏
+    # （注意 -Wextra/-Wconversion 是 add_subdirectory 之后才加的，这里必须显式清）
+    set_target_properties(kcp PROPERTIES COMPILE_OPTIONS "")
+    target_include_directories(kcp PUBLIC kcp)
+endif()

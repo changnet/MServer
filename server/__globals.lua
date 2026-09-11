@@ -1,4 +1,4 @@
--- auto export by lua-tags 205 symbols
+-- auto export by lua-tags 206 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -10,6 +10,7 @@ return {
 "Alert", -- src/modules/misc/alert.lua
 "Astar", -- engine/__astar.lua
 "Await", -- src/rpc/rpc_proxy.lua
+"BACKEND_ADDR", -- src/engine/startup.lua
 "BagMgr", -- src/modules/item/bag_mgr.lua
 "Bot", -- src/bot/bot.lua
 "BotMgr", -- src/bot/bot_mgr.lua
