@@ -10,8 +10,8 @@
 #include "net/io/kcp_io.hpp"
 #include "system/static_global.hpp"
 
-/// accept表里没有待接入对端时的回收节拍（有对端时才会真正被用到）
-static constexpr int64_t KCP_SWEEP_INTERVAL = 1000;
+/// accept表里对端的回收扫描间隔（超时本身是16s，5s的粒度足够）
+static constexpr int64_t KCP_SWEEP_INTERVAL = 5000;
 
 KcpMgr::~KcpMgr()
 {
@@ -28,19 +28,35 @@ KcpMgr::~KcpMgr()
     }
 
     conns_.clear();
-    conn_ids_.clear();
     acceptors_.clear();
 }
 
 void KcpMgr::reg_acceptor(int32_t listen_id, KcpAcceptorIO *acc)
 {
     assert(acc);
-    acceptors_[listen_id] = acc;
+
+    // 幂等：同名重复登记（KcpAcceptorIO::accept 每次都会调）直接覆盖。
+    // 监听socket关闭后重建时，新acceptor会覆盖掉旧的悬空指针
+    auto it = acceptors_.find(listen_id);
+    if (it != acceptors_.end())
+    {
+        it->second = acc;
+        return;
+    }
+
+    acceptors_.emplace(listen_id, acc);
 }
 
-void KcpMgr::unreg_acceptor(int32_t listen_id)
+void KcpMgr::unreg_acceptor(KcpAcceptorIO *acc)
 {
-    acceptors_.erase(listen_id);
+    // 监听socket数量极少（通常1~2个），按值反查即可
+    for (auto it = acceptors_.begin(); it != acceptors_.end(); ++it)
+    {
+        if (it->second != acc) continue;
+
+        acceptors_.erase(it);
+        return;
+    }
 }
 
 void KcpMgr::remove(int32_t conn_id, bool notify_worker)
@@ -61,18 +77,8 @@ void KcpMgr::remove(int32_t conn_id, bool notify_worker)
         if (a != acceptors_.end()) a->second->unestablish(io->peer());
     }
 
-    // ③ 摘身份表 + 迭代视图（swap-erase，O(1)，不要缓存迭代器）
+    // ③ 摘身份表
     conns_.erase(it);
-    for (size_t i = 0; i < conn_ids_.size(); ++i)
-    {
-        if (conn_ids_[i] == conn_id)
-        {
-            conn_ids_[i] = conn_ids_.back();
-            conn_ids_.pop_back();
-            if (cursor_ > i) --cursor_;
-            break;
-        }
-    }
 
     // ④ 通知worker（io线程主动回收时要通知，worker自己发起时不需要）
     if (notify_worker) StaticGlobal::B->notify_watcher(w, EV_CLOSE);
@@ -133,11 +139,9 @@ void KcpMgr::on_add(ThreadMessage *m)
     // ② ★ 必须先update一次：把updated置1并初始化ts_flush。
     //    否则 ikcp_check 恒返回 current（照它排期会死循环），ikcp_flush 也是no-op
     ikcp_update(io->kcp(), (IUINT32)now);
-    io->touch(now);
 
-    // ③ 登记身份表 + 迭代视图
+    // ③ 登记身份表
     conns_[w->id_] = w;
-    conn_ids_.push_back(w->id_);
 
     /**
      * ④ ★ 服务端对端：把这条连接从accept表晋升到"已建立表"，同时取回接入
@@ -169,10 +173,6 @@ void KcpMgr::on_add(ThreadMessage *m)
         }
         if (has_data) StaticGlobal::B->notify_watcher(w, EV_READ);
     }
-
-    // ⑥ 有新会话了，把全局节拍拉近
-    if (next_update_ == 0 || now + KCP_INTERVAL < next_update_)
-        next_update_ = now + KCP_INTERVAL;
 }
 
 /// KCP_ADD 失败/被拒时，把accept表里对应的项删掉（否则它会一直留到16s超时）
@@ -219,79 +219,77 @@ void KcpMgr::on_del(ThreadMessage *m)
 
 int64_t KcpMgr::update(int64_t now)
 {
+    // ① 每5秒扫一次accept表，回收N秒还没建立的连接
+    if (now >= next_sweep_)
+    {
+        for (auto &x : acceptors_)
+        {
+            x.second->sweep(now);
+        }
+        next_sweep_ = now + KCP_SWEEP_INTERVAL;
+    }
+
     /**
-     * ① 定期回收accept表里16s还没晋升的对端。
-     *    acceptor 内部有原子短路（没有待接入对端时立刻返回），
-     *    所以放在每拍执行的开销可以忽略
+     * ② 遍历所有会话，问 ikcp_check "你下次想什么时候被处理"，取最小值
+     *    作为下一轮主循环的wait超时。
+     *
+     *    官方 ikcp_check（ikcp.c:1275）只有三种返回：
+     *      ① updated==0 / current 已到或过了 ts_flush / snd_buf 里有段的
+     *         resendts 已到 → 返回 current（"现在就该动"）
+     *      ② 否则返回 current + min(到下个 flush 点, 到最近一个段的重传点)
+     *      ③ 上面的差值被 `if (minimal >= kcp->interval) minimal = kcp->interval;` 夹住
+     *    → 返回值的上限就是 current + interval。**这个 40ms 是 ikcp 自己的设计
+     *      上限，不是我们选的节拍**：一旦有包该发（重传到点、ts_flush 到点），
+     *      ikcp_check 会明确返回 current 让我们立刻动，不会让重传等到下一拍。
+     *
+     *    ikcp_update 的签名是 void（官方如此），所以 flush 完必须自己再 check
+     *    一次才能拿到新的下次时间。
      */
-    bool pending = false;
-    for (auto &x : acceptors_)
+    const IUINT32 cur = (IUINT32)now;
+    int64_t next      = -1; // -1 = 还没有
+
+    for (auto &x : conns_)
     {
-        if (x.second->sweep(now)) pending = true;
+        KcpIO *io = static_cast<KcpIO *>(x.second->io_);
+        if (!io) continue;
+
+        IKCPCB *kcp = io->kcp();
+        if (!kcp) continue;
+
+        IUINT32 t = ikcp_check(kcp, cur);
+        if (t == cur)
+        {
+            // 到点了：该重传的、该发 ACK 的、窗口探测全在这里发出去
+            ikcp_update(kcp, cur);
+            t = ikcp_check(kcp, cur);
+
+            /**
+             * ★ 补一条：ikcp_flush 只在 `slap = cur - ts_flush >= 0` 时才真正
+             *   执行（ikcp.c:1256），而 ikcp_check 在"有段已过 resendts"时也会
+             *   返回 current。两者一起出现的场景是：某个段的重传点落在两个
+             *   flush 点之间（resendts 由 rto 决定，而 rto 通常不是 interval
+             *   的整数倍，比如 rto=70 或退避后的 300）。
+             *   这时 update 是空操作、再 check 仍返回 current —— 如果照它给 0，
+             *   主循环就会以 min_wait(1ms) 空转到下一个 flush 点。
+             *   既然这一段本来也要等到 ts_flush 才能发出去，就直接把下次唤醒
+             *   对齐到 ts_flush，省掉这段空转（重传时刻不变）
+             */
+            if (t == cur)
+            {
+                IINT32 to_flush = (IINT32)(kcp->ts_flush - cur);
+                if (to_flush > 0) t = kcp->ts_flush;
+            }
+        }
+
+        // 和 ikcp.c 的 _itimediff 一个语义：有符号差值，天然处理 IUINT32 回绕
+        int64_t d = (int64_t)(IINT32)(t - cur);
+        if (d < 0) d = 0;
+        if (next < 0 || d < next) next = d;
     }
 
-    if (conns_.empty())
-    {
-        // accept表里还有等待接入的对端 → 每秒回来做一次超时回收
-        next_update_ = pending ? (now + KCP_SWEEP_INTERVAL) : 0;
-        return pending ? KCP_SWEEP_INTERVAL : -1;
-    }
+    // ③ accept表的回收不重要，就不管了。什么时候调用update什么时候检测就行
 
-    // 还没到点，直接返回剩余时间（io线程用它收紧wait超时）
-    if (now < next_update_) return next_update_ - now;
-
-    bool more = tick(now);
-
-    // 这一拍没处理完 → 立刻再来一轮，不要白等40ms。
-    // 节拍长度天然被 IKCP_INTERVAL 限制（ikcp_check 的返回值上限就是interval）
-    next_update_ = more ? now : now + KCP_INTERVAL;
-
-    return next_update_ - now;
-}
-
-bool KcpMgr::tick(int64_t now)
-{
-    IUINT32 now32 = (IUINT32)now;
-
-    size_t total = conn_ids_.size();
-    if (0 == total) return false;
-
-    size_t n    = total < (size_t)KCP_TICK_BATCH ? total
-                                                : (size_t)KCP_TICK_BATCH;
-    size_t done = 0;
-
-    while (done < n)
-    {
-        if (cursor_ >= conn_ids_.size()) cursor_ = 0;
-
-        int32_t conn_id = conn_ids_[cursor_];
-
-        // ★ 分片期间 conn_ids_ 可能被 remove() 改动（swap-erase会把尾部元素
-        //   换到当前下标），所以每次都要重新取，并且不要缓存迭代器
-        if (++done > conn_ids_.size()) break; // 防御：一轮内被删空
-        if (cursor_ < conn_ids_.size() && conn_ids_[cursor_] == conn_id)
-            ++cursor_;
-
-        auto it = conns_.find(conn_id);
-        if (it == conns_.end()) continue;
-
-        KcpIO *io = static_cast<KcpIO *>(it->second->io_);
-        if (!io || !io->kcp()) continue;
-
-        // 这一句把重传 / ACK / 探测包发出去（内部会sendto）
-        ikcp_update(io->kcp(), now32);
-    }
-
-    return n < total;
-}
-
-void KcpMgr::touch(int32_t conn_id)
-{
-    auto it = conns_.find(conn_id);
-    if (it == conns_.end()) return;
-
-    KcpIO *io = static_cast<KcpIO *>(it->second->io_);
-    if (io) io->touch(timing::steady_clock());
+    return next;
 }
 
 #endif

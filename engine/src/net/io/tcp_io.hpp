@@ -34,6 +34,7 @@ public:
     int32_t send(EVIO *w) override;
     /**
      * 接受新连接（此函数在io线程执行，由EV_ACCEPT派发）
+     * @return EV_ACCEPT 本轮有（或可能有）新连接要交给业务线程；EV_ERROR io错误
      */
     int32_t accept(EVIO *w) override;
     // 初始化accept所需要数据
@@ -47,5 +48,5 @@ public:
     };
 
 protected:
-    AcceptBuffer *accept_; // accept缓冲区（多数socket用不到，因此用指针，用到才分配）
+    AcceptBuffer *accept_; // accept缓冲区（多数socket用不到，因此用指针，用到才分配，做一个TcpAcceptorIo？）
 };

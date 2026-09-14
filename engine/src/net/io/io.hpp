@@ -121,23 +121,22 @@ public:
      *
      * tcp: 从内核backlog里取出所有新连接，放进自己的accept缓冲表
      * kcp: recvfrom收包 + 按源地址路由；未接入的对端放进自己的accept表
-     * @return io状态，与recv/send同一套（EV_NONE/EV_ERROR/...）
+     *
+     * @return 是否要把EV_ACCEPT派发给业务线程，由返回值回答：
+     *   EV_ACCEPT 本轮确实产生了需要业务线程处理的连接/对端
+     *   EV_NONE   本轮没有新东西，不要唤醒业务线程
+     *   EV_ERROR  io错误，走常规关闭流程
+     *
+     * tcp的监听fd被epoll报可读 ⟹ 内核backlog里一定有待accept的连接，所以恒返回
+     * EV_ACCEPT；kcp只有一个udp fd，报可读既可能是"新对端"也可能是"已有对端的
+     * 数据包"（绝大多数），后者绝不能唤醒业务线程，否则每个数据包都要多一次
+     * 跨线程消息。
      */
     virtual int32_t accept(EVIO *w)
     {
         UNUSED(w);
         return EV_ERROR; // 不支持accept的IO不会被注册成EV_ACCEPT
     }
-
-    /**
-     * @brief 本轮accept是否需要派发EV_ACCEPT给业务线程（默认true，即tcp的语义）
-     *
-     * tcp的监听fd被epoll报可读 ⟹ 内核backlog里一定有待accept的连接。
-     * kcp只有一个udp fd，报可读既可能是"新对端"也可能是"已有对端的数据包"（绝大多数），
-     * 后者绝不能唤醒业务线程，否则每个数据包都要多一次跨线程消息。
-     * 所以由IO自己回答"这一轮有没有新对端"
-     */
-    virtual bool accept_notify() const { return true; }
 
     /**
      * @brief 从accept缓冲区取出一个待处理的连接（此函数在业务线程执行）

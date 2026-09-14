@@ -1,7 +1,6 @@
 #pragma once
 
 #include <unordered_map>
-#include <vector>
 
 #include "global/global.hpp"
 
@@ -42,8 +41,11 @@ struct UdpAddrHash
  * 监听socket自己才知道这些对端属于它，放在全局扁平表里会让两个监听socket
  * 上的同一个客户端地址互相覆盖。
  *
- * 定时不用 multimap：所有会话的 interval 都是同一个 KCP_INTERVAL，
- * 所以只保留一个全局节拍 next_update_ + 游标分片，见设计 §4。
+ * 定时：不用 multimap，也不做游标分片。每轮 update() 老老实实遍历一次
+ * conns_，对每个会话问 ikcp_check "你下次想什么时候被处理"，取最小值作为
+ * 下一轮主循环的 wait 超时。这样每个会话都是在自己的 ts_flush 到点的那一
+ * 轮被 flush，相位零偏移（固定节拍就不行：ts_flush 的相位取决于会话创建
+ * 时刻，与固定节拍点存在恒定偏移）。
  */
 class KcpMgr
 {
@@ -56,37 +58,37 @@ public:
     void on_del(ThreadMessage *m); // KCP_DEL（含"业务拒绝接入"）
 
     // ---- 监听socket登记（由 KcpAcceptorIO 在io线程调用）----
+    /// 幂等：同一个listen_id重复登记直接覆盖（监听socket重建时会用到）
     void reg_acceptor(int32_t listen_id, KcpAcceptorIO *acc);
-    void unreg_acceptor(int32_t listen_id);
+    /// 按指针反查删除（监听socket析构时调用）
+    void unreg_acceptor(KcpAcceptorIO *acc);
 
     // ---- 生命周期 ----
     /// 唯一的回收点：释放 ikcpcb + 摘 conns_/已建立表 + （虚拟连接）解io线程引用
     void remove(int32_t conn_id, bool notify_worker);
 
-    // ---- 定时（见设计 §4）----
-    /// 到点就 tick（并顺带驱动 accept 表超时回收），返回下次唤醒建议的ms，-1 表示不需要被唤醒
+    // ---- 定时 ----
+    /**
+     * @brief 驱动所有会话的定时器，返回下一轮主循环建议的wait超时(ms)
+     *
+     * 到点的会话当场 ikcp_update()（把重传/ACK/窗口探测发出去），
+     * 没到点的会话用 ikcp_check() 算出还剩多少毫秒，取全局最小值返回。
+     *
+     * @return >= 0：下一轮wait的超时毫秒数；-1：没有任何定时在跑，不需要被唤醒
+     */
     int64_t update(int64_t now);
-    /// 有数据往来时调用（仅用于统计/调试）
-    void touch(int32_t conn_id);
 
 private:
-    /// 一次节拍：游标分片遍历 conns_
-    /// @return true 表示这一拍没处理完，剩下的要立刻继续
-    bool tick(int64_t now);
-
     /// KCP_ADD 失败/被拒时，把accept表里对应的项删掉
     void drop_accepting(const KcpAddMsg *msg);
 
     /// 身份表：socket_id → 连接 EVIO（★ 身份一律用 socket_id）
     std::unordered_map<int32_t, EVIO *> conns_;
-    /// 身份表的摊平迭代视图，分片用
-    std::vector<int32_t> conn_ids_;
-    size_t cursor_ = 0;
 
     /// listen_id → 监听socket的acceptor（它的表里放着这个监听fd上的所有对端）
     std::unordered_map<int32_t, KcpAcceptorIO *> acceptors_;
 
-    int64_t next_update_ = 0; // 绝对时间(ms)，0 = 无会话
+    int64_t next_sweep_ = 0; // accept表回收节拍：绝对时间(ms)
 };
 
 #endif

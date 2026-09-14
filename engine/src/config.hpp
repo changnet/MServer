@@ -57,9 +57,6 @@ static constexpr int32_t KCP_MAX_PARKED = 1024;
 // 这里必须封顶，否则一次 addr 洪水就能把 parked_ 的 std::string 撑爆
 static constexpr int32_t KCP_MAX_PARKED_DATA = 64 * 1024;
 
-// 一次节拍最多 update 多少个会话（游标分片，见 project/kcp_design.md §4.2）
-static constexpr int32_t KCP_TICK_BATCH = 512;
-
 // 【坑】以下两个常量定义在 ikcp.c 里，ikcp.h 没有导出，必须自己抄一份
 static constexpr uint8_t IKCP_CMD_PUSH = 81;
 static constexpr int32_t IKCP_OVERHEAD = 24;

@@ -59,8 +59,6 @@ public:
     int32_t listen_id() const { return listen_id_; }
     int32_t listen_fd() const { return listen_fd_; }
     const UdpAddr &peer() const { return peer_; }
-    void touch(int64_t now) { last_active_ = now; }
-    int64_t last_active() const { return last_active_; }
 
 private:
     static int32_t output(const char *buf, int32_t len, struct IKCPCB *kcp,
@@ -75,7 +73,6 @@ private:
     UdpAddr peer_;      // ★ 地址只记在这里
     int32_t listen_id_  = 0; // 0 = 客户端形态
     int32_t listen_fd_  = netcompat::INVALID; // 客户端=自己的fd；服务端对端=监听fd
-    int64_t last_active_ = 0;
 
     int64_t stat_drop_snd_ = 0; // ikcp_waitsnd 超限丢弃的条数
 };

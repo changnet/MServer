@@ -175,7 +175,8 @@ int32_t TcpIO::accept(EVIO *w)
                 return EV_ERROR;
             }
 
-            return EV_NONE; /* 所有等待的连接已处理完 */
+            // 所有等待的连接已处理完（EMFILE时队列里有错误mask，也要唤醒逻辑线程）
+            return EV_ACCEPT;
         }
 
         {
@@ -183,7 +184,15 @@ int32_t TcpIO::accept(EVIO *w)
             accept_->fd_queue_.emplace_back(new_fd);
         }
     }
-    return EV_READ; // EV_ACCEPT ?
+
+    /**
+     * 一次没accept完，要等下次继续。
+     * ★ 返回EV_ACCEPT而不是EV_READ：do_io_status 的 case EV_READ 会把EV_READ
+     *   加进kevents，使监听socket的注册事件从EV_ACCEPT变成EV_ACCEPT|EV_READ，
+     *   下一轮就会掉进 w->recv() 分支（对监听fd调recv必然报错并关闭它）。
+     *   udp是LT模式，缓冲区还有连接时epoll会继续报，不需要主动求重试
+     */
+    return EV_ACCEPT;
 }
 
 int64_t TcpIO::pop_accept()

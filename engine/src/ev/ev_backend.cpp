@@ -125,10 +125,23 @@ void EVBackend::backend()
         int32_t timeout = busy_ ? min_wait : max_wait;
 
 #if defined(ENABLE_KCP)
-        // ★ 用kcp节拍收紧wait超时（到点的那一拍会驱动 ikcp_update 发出重传/ACK，
-        //   并顺带做accept表的超时回收）
+        /**
+         * ★ 用kcp的定时收紧wait超时。
+         *
+         * 到点的会话已经在这一句里面完成了 ikcp_update（重传/ACK/窗口探测
+         * 都发出去了），返回值是"最近的会话还差多少毫秒需要被处理"。
+         *
+         * min_wait 的下限必须保住：返回0意味着"立刻要处理"，但给
+         * epoll_wait 传0会退化成非阻塞轮询，主循环会空转烧CPU
+         */
         int64_t k = kcp_mgr_.update(timing::steady_clock());
-        if (k >= 0 && k < timeout) timeout = (int32_t)k;
+        if (k >= 0)
+        {
+            // 不用 min_wait 这个名字：下面有个 `#define min_wait 0`，
+            // 虽然它在文本上更靠后、不会污染这一行，但没必要留这个雷
+            if (k < 1) k = 1;
+            if (k < timeout) timeout = (int32_t)k;
+        }
 #endif
 
         int32_t ev_count = wait(timeout);
@@ -259,6 +272,14 @@ void EVBackend::do_io_status(EVIO *w, int32_t ev, int32_t status,
     case EV_READ:
         // ssl握手需要继续读取数据时，需要添加可读事件
         kevents |= EV_READ;
+        break;
+    case EV_ACCEPT:
+        /**
+         * 监听socket上有新连接/新对端要交给业务线程。
+         * tcp的accept恒返回它；kcp只有真的出现新对端时才返回，
+         * 已有对端的数据包返回EV_NONE（不唤醒业务线程）
+         */
+        events |= EV_ACCEPT;
         break;
     case EV_WRITE:
         kevents |= EV_WRITE;
@@ -441,16 +462,13 @@ void EVBackend::do_kernel_event(EVIO *w, int32_t revents)
                 /**
                  * accept只有tcp、kcp才有，这里的socket必然是监听socket。
                  *
-                 * ★ 是否把 EV_ACCEPT 派发给业务线程，交给 IO 自己回答：
+                 * ★ 是否把 EV_ACCEPT 派发给业务线程，交给 accept() 的返回值回答：
                  *   tcp 的监听fd被epoll报可读 ⟹ 内核backlog里一定有待accept
-                 *   的连接；kcp 只有一个udp fd，报可读既可能是"新对端"，也
-                 *   可能是"已有对端的数据包"（绝大多数），后者绝不能唤醒业务
-                 *   线程，否则每个数据包都要多一次跨线程消息
+                 *   的连接，恒返回EV_ACCEPT；kcp 只有一个udp fd，读到的既可能是
+                 *   "新对端"也可能是"已有对端的数据包"（绝大多数），后者绝不能
+                 *   唤醒业务线程，否则每个数据包都要多一次跨线程消息
                  */
-                auto io     = w->io_;
-                auto status = io->accept(w);
-                if (io->accept_notify()) events |= EV_ACCEPT;
-
+                auto status = w->io_->accept(w);
                 do_io_status(w, EV_ACCEPT, status, events, kevents);
             }
             else if (unlikely(b_kevents & EV_INIT_ACPT))

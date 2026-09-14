@@ -37,10 +37,7 @@ KcpAcceptorIO::~KcpAcceptorIO()
      * 所以本对象的析构只可能发生在io线程（epoll关闭路径 → ~EVIO → delete io_），
      * 可以安全地碰 KcpMgr（同为io线程独占）
      */
-    if (registered_ && StaticGlobal::B)
-    {
-        StaticGlobal::B->kcp_mgr().unreg_acceptor(listen_id_);
-    }
+    if (StaticGlobal::B) StaticGlobal::B->kcp_mgr().unreg_acceptor(this);
 }
 
 int32_t KcpAcceptorIO::recv(EVIO *w)
@@ -54,18 +51,18 @@ int32_t KcpAcceptorIO::accept(EVIO *w)
     int32_t fd = w->fd_;
     assert(fd != netcompat::INVALID);
 
-    accept_notify_ = false;
-
-    // 首次被调用时把自己登记到KcpMgr（listen_id就是监听socket的socket_id），
-    // 供 KcpMgr::on_add 晋升、以及定期回收 accept 表使用
-    if (!registered_)
-    {
-        listen_id_  = w->id_;
-        registered_ = true;
-        StaticGlobal::B->kcp_mgr().reg_acceptor(listen_id_, this);
-    }
+    /**
+     * 把自己登记到 KcpMgr（listen_id 就是监听socket的socket_id），
+     * 供 KcpMgr::on_add 晋升、以及定期回收accept表使用。
+     *
+     * reg_acceptor 是幂等的（同key覆盖），所以不需要"是否已登记"的标志位；
+     * 这里必然跑在io线程，且一定早于任何 KCP_ADD
+     */
+    StaticGlobal::B->kcp_mgr().reg_acceptor(w->id_, this);
 
     thread_local ThreadLocalBuf<UDP_MAX_DGRAM> buf;
+
+    int32_t ret = EV_NONE;
 
     for (int32_t i = 0; i < MAX_RECV_PER_EVENT; i++)
     {
@@ -88,21 +85,20 @@ int32_t KcpAcceptorIO::accept(EVIO *w)
         UdpAddr addr;
         addr.from_sockaddr((struct sockaddr *)&from); // 内部已clear
 
-        on_dgram(fd, addr, buf.get(), n);
+        if (on_dgram(addr, buf.get(), n)) ret = EV_ACCEPT;
     }
 
     /**
-     * ★ 只返回 EV_NONE/EV_ERROR，绝不能返回 EV_READ：
+     * ★ 绝不能返回 EV_READ：
      *   do_io_status 的 case EV_READ 会把监听socket的注册事件从 EV_ACCEPT
-     *   翻成 EV_READ，下一轮就掉进 w->recv() 分支（而且 do_io_status 没有
-     *   case EV_ACCEPT，返回它只会打 "unknow io status"）。
-     *   udp 是 LT 模式，缓冲区还有数据时 epoll 会继续报，不需要主动求重试
+     *   翻成 EV_ACCEPT|EV_READ，下一轮就掉进 w->recv() 分支（对监听fd调recv
+     *   必然报错，进而把它关掉）。
+     *   udp是LT模式，缓冲区还有数据时epoll会继续报，不需要主动求重试
      */
-    return EV_NONE;
+    return ret;
 }
 
-void KcpAcceptorIO::on_dgram(int32_t fd, const UdpAddr &addr, const char *data,
-                             int32_t len)
+bool KcpAcceptorIO::on_dgram(const UdpAddr &addr, const char *data, int32_t len)
 {
     // ① 已建立 → 直接喂给那条连接的ikcp（和数据面同线程，无锁）
     auto est = established_.find(addr);
@@ -113,21 +109,19 @@ void KcpAcceptorIO::on_dgram(int32_t fd, const UdpAddr &addr, const char *data,
 
         // 会话正在被 KcpMgr 回收（ikcpcb 已释放）：这一包直接丢，
         // 不要在这里报错，否则会把一次正常关闭变成协议错误
-        if (!io || !io->kcp()) return;
+        if (!io || !io->kcp()) return false;
 
         bool has_data = false;
-        io->touch(timing::steady_clock());
-
         if (0 != io->input(data, len, has_data))
         {
             ELOG("kcp input error, conn=%d", conn_w->id_);
             StaticGlobal::B->kcp_mgr().remove(conn_w->id_, true); // 协议错误 → 回收
-            return;
+            return false;
         }
 
         // ★ 只有确实产出业务数据才唤醒，纯ACK/探测包不唤醒业务线程
         if (has_data) StaticGlobal::B->notify_watcher(conn_w, EV_READ);
-        return;
+        return false;
     }
 
     // ② 未建立 → 放进accept表
@@ -136,63 +130,61 @@ void KcpAcceptorIO::on_dgram(int32_t fd, const UdpAddr &addr, const char *data,
     std::scoped_lock sl(accept_mutex_);
 
     auto it = accepting_.find(addr);
-    if (it == accepting_.end())
+    if (it != accepting_.end())
     {
-        if (accepting_.size() >= (size_t)KCP_MAX_PARKED)
-        {
-            log_limited(now, "table full", addr, KCP_MAX_PARKED);
-            return;
-        }
-
         /**
-         * ikcp_getconv 要读前4字节，所以短包必须挡掉。
-         * 这是内存安全，不是洪水防护 —— 洪水防护靠 KCP_MAX_PARKED + 16s回收
+         * 已经在accept表里：还没晋升（或已交给业务线程但KCP_ADD还没到），
+         * 继续往这条对端的缓冲区里攒，KCP_ADD时会按序回放
          */
-        if (len < KCP_CONV_LEN)
+        AcceptEntry &e = it->second;
+        if (e.data.size() + (size_t)len > (size_t)KCP_MAX_PARKED_DATA)
         {
-            log_limited(now, "short dgram", addr, len);
-            return;
+            log_limited(now, "parked overflow", addr,
+                        (int32_t)e.data.size() + len);
         }
+        else
+        {
+            e.data.append(data, (size_t)len);
+        }
+        return false;
+    }
 
-        AcceptEntry &e = accepting_[addr];
-        e.conv         = ikcp_getconv(data);
-        e.listen_fd    = fd;
-        e.create_ms    = now;
-        e.data.assign(data, (size_t)len);
-
-        ready_.push_back(addr);
-        ++accepting_num_;
-        accept_notify_ = true; // 有新对端，需要唤醒业务线程
-        return;
+    if (accepting_.size() >= (size_t)KCP_MAX_PARKED)
+    {
+        log_limited(now, "table full", addr, KCP_MAX_PARKED);
+        return false;
     }
 
     /**
-     * ③ 已经在accept表里：还没晋升（或已通知业务线程但KCP_ADD还没到），
-     *    继续往这条对端的缓冲区里攒，KCP_ADD时会按序回放
+     * ikcp_getconv 要读前4字节，所以短包必须挡掉。
+     * 这是内存安全，不是洪水防护 —— 洪水防护靠 KCP_MAX_PARKED + 16s回收
      */
-    AcceptEntry &e = it->second;
-    if (e.data.size() + (size_t)len > (size_t)KCP_MAX_PARKED_DATA)
+    if (len < KCP_CONV_LEN)
     {
-        log_limited(now, "parked overflow", addr,
-                    (int32_t)e.data.size() + len);
-        return;
+        log_limited(now, "short dgram", addr, len);
+        return false;
     }
-    e.data.append(data, (size_t)len);
+
+    AcceptEntry &e = accepting_[addr];
+    e.conv         = ikcp_getconv(data);
+    e.create_ms    = now;
+    e.data.assign(data, (size_t)len);
+
+    return true; // 新对端 → 需要派发EV_ACCEPT
 }
 
 bool KcpAcceptorIO::pop_accept(UdpAddr &addr, uint32_t &conv)
 {
     std::scoped_lock sl(accept_mutex_);
 
-    while (!ready_.empty())
+    for (auto &x : accepting_)
     {
-        addr = ready_.front();
-        ready_.pop_front();
+        // 已经交给业务线程了（KCP_ADD 可能还在路上），不要重复accept
+        if (x.second.notified) continue;
 
-        auto it = accepting_.find(addr);
-        if (it == accepting_.end()) continue; // 已被拒绝/超时回收
-
-        conv = it->second.conv;
+        x.second.notified = true;
+        addr              = x.first;
+        conv              = x.second.conv;
         return true;
     }
 
@@ -209,16 +201,6 @@ void KcpAcceptorIO::promote(const UdpAddr &addr, EVIO *w, std::string &out)
         {
             out.swap(it->second.data);
             accepting_.erase(it);
-            --accepting_num_;
-
-            for (auto r = ready_.begin(); r != ready_.end(); ++r)
-            {
-                if (*r == addr)
-                {
-                    ready_.erase(r);
-                    break;
-                }
-            }
         }
     }
 
@@ -235,25 +217,11 @@ void KcpAcceptorIO::unestablish(const UdpAddr &addr)
 void KcpAcceptorIO::drop_accepting(const UdpAddr &addr)
 {
     std::scoped_lock sl(accept_mutex_);
-
-    if (0 == accepting_.erase(addr)) return;
-    --accepting_num_;
-
-    for (auto r = ready_.begin(); r != ready_.end(); ++r)
-    {
-        if (*r == addr)
-        {
-            ready_.erase(r);
-            break;
-        }
-    }
+    accepting_.erase(addr);
 }
 
-bool KcpAcceptorIO::sweep(int64_t now)
+void KcpAcceptorIO::sweep(int64_t now)
 {
-    // 常态（没有待接入对端）下不加锁、不遍历
-    if (0 == accepting_num_.load(std::memory_order_relaxed)) return false;
-
     std::scoped_lock sl(accept_mutex_);
 
     for (auto it = accepting_.begin(); it != accepting_.end();)
@@ -270,20 +238,8 @@ bool KcpAcceptorIO::sweep(int64_t now)
              it->first.to_string(ip, sizeof(ip)),
              (uint32_t)ntohs(it->first.port_));
 
-        for (auto r = ready_.begin(); r != ready_.end(); ++r)
-        {
-            if (*r == it->first)
-            {
-                ready_.erase(r);
-                break;
-            }
-        }
-
         it = accepting_.erase(it);
-        --accepting_num_;
     }
-
-    return !accepting_.empty();
 }
 
 void KcpAcceptorIO::log_limited(int64_t now, const char *what,
