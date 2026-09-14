@@ -33,13 +33,13 @@ public:
      */
     int32_t send(EVIO *w) override;
     /**
-     * 接受新连接
+     * 接受新连接（此函数在io线程执行，由EV_ACCEPT派发）
      */
-    int32_t accept(EVIO *w);
+    int32_t accept(EVIO *w) override;
     // 初始化accept所需要数据
     int32_t prepare_accept() override;
     // 从accept buffer获取一个新的fd
-    int64_t pop_accept_fd() override;
+    int64_t pop_accept() override;
     // 准备connect所需要数据
     int32_t prepare_connect() override
     {

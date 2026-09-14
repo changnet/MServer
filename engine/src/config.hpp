@@ -27,6 +27,8 @@ static constexpr int32_t KCP_MTU = 1400;
 //   interval=40: 内部更新时钟间隔 40ms
 //   resend  =0 : 不启用快速重传
 //   nc      =0 : 启用拥塞控制
+// 普通模式（类似 TCP）ikcp_nodelay(kcp, 0, 40, 0, 0);
+// 极速模式（最低延迟）ikcp_nodelay(kcp, 1, 10, 2, 1);
 static constexpr int32_t KCP_NODELAY  = 0;
 static constexpr int32_t KCP_INTERVAL = 40;
 static constexpr int32_t KCP_RESEND   = 0;

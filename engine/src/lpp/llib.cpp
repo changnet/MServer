@@ -211,8 +211,7 @@ static void luaopen_socket(lua_State *L)
     lc.def<&Socket::send_pkt>("send_pkt");
     lc.def<&Socket::get_udp_addr>("get_udp_addr");
     lc.def<&Socket::start_kcp>("start_kcp");
-    lc.def<&Socket::set_kcp_conv>("set_kcp_conv");
-    lc.def<&Socket::unpack_kcp_accept>("unpack_kcp_accept");
+    lc.def<&Socket::drop_kcp_accept>("drop_kcp_accept");
     lc.def<&Socket::send_clt>("send_clt");
     lc.def<&Socket::send_srv>("send_srv");
     lc.def<&Socket::send_ctrl>("send_ctrl");

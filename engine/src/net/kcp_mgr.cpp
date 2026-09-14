@@ -2,15 +2,20 @@
 
 #if defined(ENABLE_KCP)
 
+#include <string>
+
 #include "ev/ev_watcher.hpp"
 #include "ev/time.hpp"
+#include "net/io/kcp_acceptor_io.hpp"
 #include "net/io/kcp_io.hpp"
-#include "net/kcp_msg.hpp"
 #include "system/static_global.hpp"
+
+/// accept表里没有待接入对端时的回收节拍（有对端时才会真正被用到）
+static constexpr int64_t KCP_SWEEP_INTERVAL = 1000;
 
 KcpMgr::~KcpMgr()
 {
-    // backend线程已经join，这里独占访问。
+    // io线程已经join，这里独占访问。
     // ikcpcb 必须在这里放掉，否则 ~KcpIO 会在worker线程碰它
     for (auto &x : conns_)
     {
@@ -18,66 +23,24 @@ KcpMgr::~KcpMgr()
         KcpIO *io = static_cast<KcpIO *>(w->io_);
         if (io) io->release_kcp();
 
-        // 虚拟连接不在 fd_mgr_ 里，backend不会走epoll关闭路径替它解引用
+        // 虚拟连接不在 fd_mgr_ 里，io线程不会走epoll关闭路径替它解引用
         if (w->fd_ == netcompat::INVALID) w->del_ref(EVIO::M_REF_BACKEND);
     }
 
     conns_.clear();
-    route_.clear();
-    parked_.clear();
     conn_ids_.clear();
+    acceptors_.clear();
 }
 
-EVIO *KcpMgr::route(int32_t listen_id, const UdpAddr &addr) const
+void KcpMgr::reg_acceptor(int32_t listen_id, KcpAcceptorIO *acc)
 {
-    auto it = route_.find(listen_id);
-    if (it == route_.end()) return nullptr;
-
-    auto it2 = it->second.find(addr);
-    if (it2 == it->second.end()) return nullptr;
-
-    auto it3 = conns_.find(it2->second);
-    return it3 == conns_.end() ? nullptr : it3->second;
+    assert(acc);
+    acceptors_[listen_id] = acc;
 }
 
-bool KcpMgr::park(int32_t listen_id, int32_t listen_fd, int32_t worker_addr,
-                  const UdpAddr &addr, uint32_t conv, const char *data,
-                  int32_t len)
+void KcpMgr::unreg_acceptor(int32_t listen_id)
 {
-    if (parked_.size() >= (size_t)KCP_MAX_PARKED) return false;
-
-    Parked &p   = parked_[addr];
-    p.listen_id = listen_id;
-    p.listen_fd = listen_fd;
-    p.conv      = conv;
-    p.data.assign(data, (size_t)len);
-
-    KcpAcceptMsg msg;
-    msg.listen_id = listen_id;
-    msg.conv      = conv;
-    msg.addr      = addr;
-
-    // 走现成的forward_message，不新造投递函数
-    return StaticGlobal::M->forward_message(0, worker_addr,
-                                            ThreadMessage::KCP_ACCEPT, &msg,
-                                            (int32_t)sizeof(msg));
-}
-
-bool KcpMgr::append_parked(const UdpAddr &addr, const char *data, int32_t len)
-{
-    auto it = parked_.find(addr);
-    if (it == parked_.end()) return false;
-
-    // 接入窗口内又来包：追加到已park的数据后面，KCP_ADD时按序回放
-    // （零丢包、零额外RTO）。但必须封顶，否则addr洪水能撑爆这个string
-    if (it->second.data.size() + (size_t)len > (size_t)KCP_MAX_PARKED_DATA)
-    {
-        ++stat_drop_unknown_;
-        return true; // 已"吞掉"这一包，只是丢弃
-    }
-
-    it->second.data.append(data, (size_t)len);
-    return true;
+    acceptors_.erase(listen_id);
 }
 
 void KcpMgr::remove(int32_t conn_id, bool notify_worker)
@@ -91,15 +54,11 @@ void KcpMgr::remove(int32_t conn_id, bool notify_worker)
     // ① 释放ikcpcb（此后kcp_为nullptr，~KcpIO不会再碰它）
     if (io) io->release_kcp();
 
-    // ② 摘反向索引
+    // ② 摘"已建立表"（表在监听socket的acceptor上）
     if (io && io->listen_id() != 0)
     {
-        auto r = route_.find(io->listen_id());
-        if (r != route_.end())
-        {
-            r->second.erase(io->peer());
-            if (r->second.empty()) route_.erase(r);
-        }
+        auto a = acceptors_.find(io->listen_id());
+        if (a != acceptors_.end()) a->second->unestablish(io->peer());
     }
 
     // ③ 摘身份表 + 迭代视图（swap-erase，O(1)，不要缓存迭代器）
@@ -115,11 +74,11 @@ void KcpMgr::remove(int32_t conn_id, bool notify_worker)
         }
     }
 
-    // ④ 通知worker（backend主动回收时要通知，worker自己发起时不需要）
+    // ④ 通知worker（io线程主动回收时要通知，worker自己发起时不需要）
     if (notify_worker) StaticGlobal::B->notify_watcher(w, EV_CLOSE);
 
     // ⑤ 虚拟连接没有fd，不会走epoll关闭路径，所以这里必须自己解引用
-    //    客户端形态有真实fd，M_REF_BACKEND由backend常规关闭路径释放
+    //    客户端形态有真实fd，M_REF_BACKEND由io线程常规关闭路径释放
     if (w->fd_ == netcompat::INVALID) w->del_ref(EVIO::M_REF_BACKEND);
 }
 
@@ -131,7 +90,7 @@ void KcpMgr::on_add(ThreadMessage *m)
 
     if (!io)
     {
-        // 脚本报错导致io没建出来。这条连接backend不会再管，必须让worker关掉，
+        // 脚本报错导致io没建出来。这条连接io线程不会再管，必须让worker关掉，
         // 否则 M_REF_BACKEND 永远放不掉
         ELOG("kcp add no io, conn=%d", w ? w->id_ : -1);
         if (w)
@@ -139,7 +98,7 @@ void KcpMgr::on_add(ThreadMessage *m)
             StaticGlobal::B->notify_watcher(w, EV_CLOSE);
             if (w->fd_ == netcompat::INVALID) w->del_ref(EVIO::M_REF_BACKEND);
         }
-        parked_.erase(msg->addr);
+        drop_accepting(msg);
         return;
     }
 
@@ -155,7 +114,7 @@ void KcpMgr::on_add(ThreadMessage *m)
         // 虚拟连接没有fd，不会走epoll关闭路径，这里自己解引用（规则同remove()）
         if (w->fd_ == netcompat::INVALID) w->del_ref(EVIO::M_REF_BACKEND);
 
-        parked_.erase(msg->addr);
+        drop_accepting(msg);
         return;
     }
 
@@ -167,7 +126,7 @@ void KcpMgr::on_add(ThreadMessage *m)
         ELOG("kcp create fail, conn=%d", w->id_);
         StaticGlobal::B->notify_watcher(w, EV_CLOSE);
         if (w->fd_ == netcompat::INVALID) w->del_ref(EVIO::M_REF_BACKEND);
-        parked_.erase(msg->addr);
+        drop_accepting(msg);
         return;
     }
 
@@ -180,33 +139,65 @@ void KcpMgr::on_add(ThreadMessage *m)
     conns_[w->id_] = w;
     conn_ids_.push_back(w->id_);
 
-    // ④ 服务端对端：登记反向索引
+    /**
+     * ④ ★ 服务端对端：把这条连接从accept表晋升到"已建立表"，同时取回接入
+     *    窗口内缓存的数据。
+     *
+     *    手序很重要：必须在 create_kcp 之后、且"摘accept表 + 挂已建立表"在
+     *    同一次临界区内完成。反过来做的话，中间到达的包会路由到这条连接但
+     *    io->kcp() 还是 nullptr，被 input 返回 -1 误判成协议错误而回收
+     */
+    std::string cached;
     if (msg->listen_id != 0)
     {
-        route_[msg->listen_id][msg->addr] = w->id_;
+        auto it = acceptors_.find(msg->listen_id);
+        if (it != acceptors_.end())
+        {
+            it->second->promote(msg->addr, w, cached);
+        }
     }
 
-    // ⑤ ★ 回放接入窗口内park的包（零丢包、零额外RTO）
-    //    注意先删掉parked_再input：input内部只可能发ACK，不会重入本表
-    bool has_data = false;
-    auto p        = parked_.find(msg->addr);
-    if (p != parked_.end())
+    // ⑤ 按序回放接入窗口内缓存的包（零丢包、零额外RTO）
+    if (!cached.empty())
     {
-        io->input(p->second.data.data(), (int32_t)p->second.data.size(),
-                  has_data);
-        parked_.erase(p);
+        bool has_data = false;
+        if (0 != io->input(cached.data(), (int32_t)cached.size(), has_data))
+        {
+            ELOG("kcp replay fail, conn=%d", w->id_);
+            remove(w->id_, true);
+            return;
+        }
+        if (has_data) StaticGlobal::B->notify_watcher(w, EV_READ);
     }
-
-    if (has_data) StaticGlobal::B->notify_watcher(w, EV_READ);
 
     // ⑥ 有新会话了，把全局节拍拉近
     if (next_update_ == 0 || now + KCP_INTERVAL < next_update_)
         next_update_ = now + KCP_INTERVAL;
 }
 
+/// KCP_ADD 失败/被拒时，把accept表里对应的项删掉（否则它会一直留到16s超时）
+void KcpMgr::drop_accepting(const KcpAddMsg *msg)
+{
+    if (0 == msg->listen_id) return;
+
+    auto it = acceptors_.find(msg->listen_id);
+    if (it != acceptors_.end()) it->second->drop_accepting(msg->addr);
+}
+
 void KcpMgr::on_del(ThreadMessage *m)
 {
     const KcpDelMsg *msg = reinterpret_cast<const KcpDelMsg *>(m->buffer());
+
+    /**
+     * conn_id == 0：业务拒绝接入。
+     * 这时候这条对端还没晋升成会话（没有socket_id），删的是accept表项
+     */
+    if (0 == msg->conn_id)
+    {
+        auto it = acceptors_.find(msg->listen_id);
+        if (it != acceptors_.end()) it->second->drop_accepting(msg->addr);
+        return;
+    }
 
     /**
      * worker自己发起的关闭：
@@ -228,13 +219,25 @@ void KcpMgr::on_del(ThreadMessage *m)
 
 int64_t KcpMgr::update(int64_t now)
 {
-    if (conns_.empty())
+    /**
+     * ① 定期回收accept表里16s还没晋升的对端。
+     *    acceptor 内部有原子短路（没有待接入对端时立刻返回），
+     *    所以放在每拍执行的开销可以忽略
+     */
+    bool pending = false;
+    for (auto &x : acceptors_)
     {
-        next_update_ = 0;
-        return -1; // 没有会话，不需要被唤醒
+        if (x.second->sweep(now)) pending = true;
     }
 
-    // 还没到点，直接返回剩余时间（backend用它收紧wait超时）
+    if (conns_.empty())
+    {
+        // accept表里还有等待接入的对端 → 每秒回来做一次超时回收
+        next_update_ = pending ? (now + KCP_SWEEP_INTERVAL) : 0;
+        return pending ? KCP_SWEEP_INTERVAL : -1;
+    }
+
+    // 还没到点，直接返回剩余时间（io线程用它收紧wait超时）
     if (now < next_update_) return next_update_ - now;
 
     bool more = tick(now);

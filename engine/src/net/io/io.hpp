@@ -116,8 +116,37 @@ public:
     // 准备connect所需要数据
     virtual int32_t prepare_connect() = 0;
 
-    // 从accept buffer获取一个新的fd
-    virtual int64_t pop_accept_fd()
+    /**
+     * @brief 处理监听socket上的可读（此函数在io线程执行）
+     *
+     * tcp: 从内核backlog里取出所有新连接，放进自己的accept缓冲表
+     * kcp: recvfrom收包 + 按源地址路由；未接入的对端放进自己的accept表
+     * @return io状态，与recv/send同一套（EV_NONE/EV_ERROR/...）
+     */
+    virtual int32_t accept(EVIO *w)
+    {
+        UNUSED(w);
+        return EV_ERROR; // 不支持accept的IO不会被注册成EV_ACCEPT
+    }
+
+    /**
+     * @brief 本轮accept是否需要派发EV_ACCEPT给业务线程（默认true，即tcp的语义）
+     *
+     * tcp的监听fd被epoll报可读 ⟹ 内核backlog里一定有待accept的连接。
+     * kcp只有一个udp fd，报可读既可能是"新对端"也可能是"已有对端的数据包"（绝大多数），
+     * 后者绝不能唤醒业务线程，否则每个数据包都要多一次跨线程消息。
+     * 所以由IO自己回答"这一轮有没有新对端"
+     */
+    virtual bool accept_notify() const { return true; }
+
+    /**
+     * @brief 从accept缓冲区取出一个待处理的连接（此函数在业务线程执行）
+     *
+     * tcp: 成功返回fd，失败返回错误掩码（低32位fd，高32位错误码）
+     * kcp: 没有fd，这里只返回"没有待处理连接"，对端由
+     *      KcpAcceptorIO::pop_accept(addr, conv) 提供
+     */
+    virtual int64_t pop_accept()
     {
         return ((int64_t)EINVAL << 32) | (uint32_t)netcompat::INVALID;
     };

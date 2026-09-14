@@ -1,15 +1,16 @@
 -- 线程消息派发
--- 编号约定：0~63 给C++预留，64~127 给Lua预留，必须和 engine/src/thread/thread_context.hpp 一致
+-- 编号约定：0~63 给C++预留，64~127 给Lua预留
+-- 必须和 engine/src/thread/thread_message.hpp 一致
 ThreadMessage = {
     -- 0~63：C++ 预留（前4个C++/Lua共用）
     NONE    = 0, -- 无作用，只是唤醒线程
     TIMER   = 1, -- 定时器
     SIGNAL  = 2, -- 信号
     SOCKET  = 3, -- 网络socket数据
-    -- kcp新增（C++已占号，Lua只注册接收方）
-    KCP_ACCEPT = 4, -- backend → worker：发现新客户端，请决定是否接入
-    KCP_ADD    = 5, -- worker → backend：建会话
-    KCP_DEL    = 6, -- worker → backend：删会话
+    -- 4 曾用于 KCP_ACCEPT（io线程通知"发现新客户端"）。kcp的接入现在完全复用
+    -- tcp的 EV_ACCEPT 派发路径，这条消息已废除，编号4作废且不再复用
+    KCP_ADD = 5, -- worker → io线程：建会话
+    KCP_DEL = 6, -- worker → io线程：删会话（含"业务拒绝接入"删accept表项）
 
     -- 64~127：Lua 预留
     RPC_REQ = 64, -- rpc请求      （原 4）
@@ -19,7 +20,6 @@ ThreadMessage = {
     CLT_CAST  = 68, -- 广播/组播/频道消息   （原 8）
 }
 
-local EngineSocket = require "engine.Socket"
 local LOCAL_ADDR = LOCAL_ADDR
 local WorkerHash = WorkerHash
 local type_dispatch = {}
@@ -127,18 +127,5 @@ local function func_none()
 end
 
 ThreadMessage.reg(ThreadMessage.NONE, func_none)
-
--- kcp新客户端接入通知（backend发现首包，由业务决定是否接入）
--- 已经park了首包，worker发KCP_ADD时backend会按序回放，不会丢包
-ThreadMessage.reg(ThreadMessage.KCP_ACCEPT, function(_, udata, usize)
-    local listen_id, addr, conv = EngineSocket.unpack_kcp_accept(udata, usize)
-    if not listen_id then return end
-
-    local srv = SocketMgr.get(listen_id)
-    if srv then
-        return srv:on_kcp_accept(addr, conv)
-    end
-    eprint("kcp accept no listen socket", listen_id)
-end)
 
 return ThreadMessage

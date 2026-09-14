@@ -59,7 +59,6 @@ struct UdpAddr
     /// recvfrom后填充
     void from_sockaddr(const sockaddr *sa)
     {
-        clear(); // ★ 双保险
         if (!sa) return;
 
         if (AF_INET == sa->sa_family)

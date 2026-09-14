@@ -31,8 +31,12 @@ public:
     /// 从 send_ 取帧 → ikcp_send + ikcp_flush
     int32_t send(EVIO *w) override;
 
-    /// 监听：kcp收到了就可以直接读，不需要accept
-    int32_t prepare_accept() override { return EV_READ; }
+    /**
+     * KcpIO 永远不作为监听socket使用：Socket::listen() 里 bind 成功后
+     * 会把 io 换成 KcpAcceptorIO 再 prepare_accept()。
+     * 这里只是为了满足IO的纯虚接口，不会被调用
+     */
+    int32_t prepare_accept() override { return EV_ERROR; }
     /// 客户端：connect后直接开始收包（和 UdpIO 一样）
     int32_t prepare_connect() override { return EV_READ; }
 

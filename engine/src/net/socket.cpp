@@ -16,8 +16,8 @@
 #if defined(ENABLE_KCP)
     #include "io/kcp_acceptor_io.hpp"
     #include "io/kcp_io.hpp"
-    #include "kcp_msg.hpp"
     #include "packet/kcp_packet.hpp"
+    #include "thread/thread_message.hpp"
 #endif
 
 #ifdef __windows__
@@ -90,7 +90,9 @@ Socket::~Socket()
         && 0 != (w_->mask_ & EVIO::M_REF_BACKEND))
     {
         KcpDelMsg msg;
-        msg.conn_id = socket_id_;
+        msg.conn_id   = socket_id_;
+        msg.listen_id = 0; // 删的是会话，不看 listen_id/addr
+        msg.addr.clear();
         StaticGlobal::M->forward_message(0, BACKEND_ADDR,
                                          ThreadMessage::KCP_DEL, &msg,
                                          (int32_t)sizeof(msg));
@@ -116,7 +118,9 @@ void Socket::stop(bool flush)
     if (IO::IOT_KCP == io_type_)
     {
         KcpDelMsg msg;
-        msg.conn_id = socket_id_;
+        msg.conn_id   = socket_id_;
+        msg.listen_id = 0; // 删的是会话，不看 listen_id/addr
+        msg.addr.clear();
         // src 只用于调试，KCP_DEL 不关心来源（和 EVBackend::dispatch_event 一样传0）
         StaticGlobal::M->forward_message(0, BACKEND_ADDR,
                                          ThreadMessage::KCP_DEL, &msg,
@@ -176,7 +180,7 @@ int32_t Socket::start_kcp(lua_State *L)
     // 客户端形态不传addr，保持默认值AF_UNSPEC（socket已connect，用::send）
     size_t len      = 0;
     const char *raw = lua_tolstring(L, 6, &len);
-    UdpAddr addr;
+    UdpAddr addr; // 默认构造已clear（family_ == AF_UNSPEC）
     if (raw)
     {
         if (len != sizeof(UdpAddr))
@@ -196,15 +200,14 @@ int32_t Socket::start_kcp(lua_State *L)
 
     KcpIO *io = static_cast<KcpIO *>(w_->io_);
     io->set_conv(conv);
-    kcp_conv_ = conv;
 
-    // ② 通知backend建会话（走现成的forward_message，不新造投递函数）
+    // ② 通知io线程建会话（走现成的forward_message，不新造投递函数）
     KcpAddMsg msg;
     msg.conn_w    = w_;
     msg.listen_id = listen_id;
     msg.listen_fd = listen_fd;
     msg.conv      = conv;
-    if (raw) msg.addr = addr;
+    msg.addr      = addr; // ★ 无条件赋值：客户端形态保持默认值(AF_UNSPEC)
 
     bool ok = StaticGlobal::M->forward_message(worker_addr, BACKEND_ADDR,
                                                ThreadMessage::KCP_ADD, &msg,
@@ -217,26 +220,32 @@ int32_t Socket::start_kcp(lua_State *L)
 #endif
 }
 
-int32_t Socket::unpack_kcp_accept(lua_State *L)
+int32_t Socket::drop_kcp_accept(lua_State *L)
 {
 #if defined(ENABLE_KCP)
-    const char *p = (const char *)lua_touserdata(L, 1);
-    int32_t len   = (int32_t)luaL_checkinteger(L, 2);
-    if (!p || len < (int32_t)sizeof(KcpAcceptMsg))
+    // lua侧：self.s:drop_kcp_accept(addr)（索引1是self）
+    size_t len      = 0;
+    const char *raw = luaL_checklstring(L, 2, &len);
+    if (len != sizeof(UdpAddr))
     {
-        lua_pushnil(L);
+        ELOG("invalid kcp addr length: %d", (int32_t)len);
+        lua_pushboolean(L, 0);
         return 1;
     }
 
-    KcpAcceptMsg msg;
-    memcpy(&msg, p, sizeof(msg)); // ★ memcpy，不reinterpret_cast
+    KcpDelMsg msg;
+    msg.conn_id   = 0; // ★ 0 表示删的是accept表项（业务拒绝接入），不是会话
+    msg.listen_id = socket_id_;
+    memcpy(&msg.addr, raw, sizeof(UdpAddr)); // ★ memcpy，不reinterpret_cast
 
-    lua_pushinteger(L, msg.listen_id);
-    lua_pushlstring(L, (const char *)&msg.addr, sizeof(UdpAddr));
-    lua_pushinteger(L, (lua_Integer)msg.conv);
-    return 3;
+    bool ok = StaticGlobal::M->forward_message(0, BACKEND_ADDR,
+                                               ThreadMessage::KCP_DEL, &msg,
+                                               (int32_t)sizeof(msg));
+    lua_pushboolean(L, ok ? 1 : 0);
+    return 1;
 #else
-    lua_pushnil(L);
+    UNUSED(L);
+    lua_pushboolean(L, 0);
     return 1;
 #endif
 }
@@ -872,8 +881,36 @@ int32_t Socket::accept(lua_State *L)
 {
     if (!w_->io_) return push_accept_error(L, -1, "no io set");
 
+#if defined(ENABLE_KCP)
+    /**
+     * kcp没有fd：accept返回 (对端地址, conv)，业务侧据此创建"一条对端连接"。
+     * 与tcp回到lua的协议是同一个，只是多一个返回值：
+     *     tcp: on_accepting(fd)
+     *     kcp: on_accepting(addr, conv)
+     *
+     * 能走到这里说明是监听socket（只有监听socket才会注册成EV_ACCEPT），
+     * 而kcp的监听socket在 Socket::listen() 里已经被换成 KcpAcceptorIO
+     */
+    if (IO::IOT_KCP == io_type_)
+    {
+        KcpAcceptorIO *aio = static_cast<KcpAcceptorIO *>(w_->io_);
+
+        UdpAddr addr;
+        uint32_t conv = 0;
+        if (!aio->pop_accept(addr, conv))
+        {
+            lua_pushinteger(L, netcompat::INVALID); // 没有更多待接入的对端
+            return 1;
+        }
+
+        lua_pushlstring(L, (const char *)&addr, sizeof(addr));
+        lua_pushinteger(L, (lua_Integer)conv);
+        return 2;
+    }
+#endif
+
     // accept只有tcp才有，udp的socket不会收到EV_ACCEPT事件
-    int64_t mask = (w_->io_)->pop_accept_fd();
+    int64_t mask = (w_->io_)->pop_accept();
 
     int32_t fd = (int32_t)(mask & 0xFFFFFFFF);
     int32_t no = (int32_t)(mask >> 32);
@@ -935,6 +972,19 @@ int32_t Socket::is_connect_success()
 int32_t Socket::set_watcher_event(int32_t events)
 {
     if (!w_) return -1;
+
+    /**
+     * ★ 虚拟连接（kcp服务端对端，fd == INVALID）没有内核对象，绝不能落到epoll上：
+     * modify_watcher 对 fd == INVALID 会走 FD_OP_ADD → fd_mgr_.set(-1) →
+     * epoll_ctl(-1) EBADF（debug下 epoll_backend 直接 assert(false) abort）。
+     *
+     * 这类连接的事件一律由io线程的 notify_watcher 直接派发，
+     * 所以这里静默成功即可 —— 这样 Socket:io_ready() 对kcp对端也能复用
+     * （对照：add_watcher_event(EV_WRITE) 天然安全，因为 EV_WRITE 不在
+     *  do_watcher_event 的 EV 掩码里，kevents 归零后不会 modify_later）
+     */
+    if (netcompat::INVALID == w_->fd_) return 0;
+
     StaticGlobal::B->set_watcher_event(w_, events);
     return 0;
 }

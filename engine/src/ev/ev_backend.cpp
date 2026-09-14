@@ -3,7 +3,6 @@
 #include "poll_backend.hpp"
 #include "epoll_backend.hpp"
 #include "system/static_global.hpp"
-#include "net/io/tcp_io.hpp"
 #include "time.hpp"
 
 #ifdef __windows__
@@ -86,6 +85,19 @@ void EVBackend::do_thread_message()
 
 void EVBackend::backend_once(int32_t ev_count, int64_t now)
 {
+    /**
+     * ★ 先处理来自其他线程的消息（KCP_ADD / KCP_DEL）。
+     *
+     * 必须排在 do_watcher_events 之前：start_kcp() 投递 KCP_ADD 与紧随其后的
+     * flush()（EV_WRITE）是两次独立入队，若先跑 do_watcher_events，EV_WRITE
+     * 会拿到 kcp_ 还是 nullptr 的 KcpIO —— 不崩，但那一帧会卡在 send_ 里
+     * 直到下一次 flush（延迟 bug）。
+     *
+     * 另外 backend() 开头那次 backend_once(0, last) 也走这里，
+     * 正好补上"第一次进入wait前就要处理消息"的窗口
+     */
+    do_thread_message();
+
     // poll等结构在处理事件时需要for循环遍历所有fd列表
     // 中间禁止调用modify_fd来删除这个列表
     // epoll则是可以删除的
@@ -110,15 +122,11 @@ void EVBackend::backend()
 
     while (!done_.load(std::memory_order_acquire))
     {
-        // ★ ① 先处理线程消息（KCP_ADD / KCP_DEL）。
-        //    放在 wait() 之前：新建会话在进入epoll轮询前完成，
-        //    不会漏掉紧接着到达的数据包
-        do_thread_message();
-
         int32_t timeout = busy_ ? min_wait : max_wait;
 
 #if defined(ENABLE_KCP)
-        // ★ ② 用kcp节拍收紧wait超时（到点的那一拍会驱动 ikcp_update 发出重传/ACK）
+        // ★ 用kcp节拍收紧wait超时（到点的那一拍会驱动 ikcp_update 发出重传/ACK，
+        //   并顺带做accept表的超时回收）
         int64_t k = kcp_mgr_.update(timing::steady_clock());
         if (k >= 0 && k < timeout) timeout = (int32_t)k;
 #endif
@@ -430,9 +438,19 @@ void EVBackend::do_kernel_event(EVIO *w, int32_t revents)
             }
             else if (b_kevents & EV_ACCEPT)
             {
-                events |= EV_ACCEPT;
-                // accept只有tcp才有，这里的socket必然是监听socket
-                auto status = static_cast<TcpIO *>(w->io_)->accept(w);
+                /**
+                 * accept只有tcp、kcp才有，这里的socket必然是监听socket。
+                 *
+                 * ★ 是否把 EV_ACCEPT 派发给业务线程，交给 IO 自己回答：
+                 *   tcp 的监听fd被epoll报可读 ⟹ 内核backlog里一定有待accept
+                 *   的连接；kcp 只有一个udp fd，报可读既可能是"新对端"，也
+                 *   可能是"已有对端的数据包"（绝大多数），后者绝不能唤醒业务
+                 *   线程，否则每个数据包都要多一次跨线程消息
+                 */
+                auto io     = w->io_;
+                auto status = io->accept(w);
+                if (io->accept_notify()) events |= EV_ACCEPT;
+
                 do_io_status(w, EV_ACCEPT, status, events, kevents);
             }
             else if (unlikely(b_kevents & EV_INIT_ACPT))

@@ -186,7 +186,7 @@ int32_t TcpIO::accept(EVIO *w)
     return EV_READ; // EV_ACCEPT ?
 }
 
-int64_t TcpIO::pop_accept_fd()
+int64_t TcpIO::pop_accept()
 {
     if (!accept_)
     {

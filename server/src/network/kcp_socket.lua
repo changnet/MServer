@@ -24,7 +24,7 @@ kcp有连接语义，但服务器的一个fd上会有多个对端。
     KcpSocket(addr, main, conv) 服务器上的一个对端，复用主socket的fd收发数据
 
 与UdpSocket对端不同，kcp对端是"一条连接"：有自己的socket_id、EVIO、缓冲区
-和溢出策略，必须进 SocketMgr（否则backend派发EV_READ时找不到对象）
+和溢出策略，必须进 SocketMgr（否则io线程派发EV_READ时找不到对象）
 ]]
 function KcpSocket:__init(addr, main_socket, conv)
     if main_socket then
@@ -41,12 +41,47 @@ function KcpSocket:__init(addr, main_socket, conv)
         self:auto_set_io()
         self:set_param()
 
-        -- 把「对端」这条连接交给backend：建ikcpcb + 登记路由
+        -- 把「对端」这条连接交给io线程：建ikcpcb + 晋升到已建立连接表
         assert(self.s:start_kcp(LOCAL_ADDR, main_socket.socket_id,
                                 main_socket.s:fd(), conv, addr))
     else
         Socket.__init(self)
     end
+end
+
+-- 接受一个新对端（由 socket_mgr.lua 的 do_accept 调用）
+-- ★ 参数与tcp不同：tcp是 fd，kcp是 (对端地址二进制串, conv)
+--   但调用路径完全一致：io线程派发EV_ACCEPT → business线程 do_accept 循环
+function KcpSocket:on_accepting(addr, conv)
+    -- 服务端对端：复用监听socket的fd收发数据，不建新的fd。
+    -- KcpSocket.__init 内部已经做了 init_virtual + set_param + start_kcp
+    -- （start_kcp 会向io线程递KCP_ADD，把它从accept表晋升到已建立连接表，
+    --   并按序回放接入窗口内缓存的数据）
+    local mt = getmetatable(self) or self
+    local socket = mt(addr, self, conv)
+
+    -- 继承监听socket的业务回调
+    -- 必须用rawget，避免取到元表的函数，那样会影响热更
+    -- 如果需要逻辑里要覆盖这几个回调，那应该在table中覆盖而不是元表
+    socket.on_message = rawget(self, "on_message")
+    socket.on_accepted = rawget(self, "on_accepted")
+    socket.on_connected = rawget(self, "on_connected")
+    socket.on_disconnected = rawget(self, "on_disconnected")
+
+    -- 注意这个事件socket并未连接完成，不可发放数据，on_connected事件才完成
+    socket:on_accepted()
+
+    -- kcp没有握手过程，直接标记就绪
+    socket:io_ready()
+end
+
+-- 业务拒绝接入（黑名单、人数满等）
+-- 直接把accept表里的这一项删掉，不建会话。对应tcp的 close(fd)
+-- 不调用它的话，这一项要等16秒超时才会被回收
+-- @param addr on_accepting 的第一个参数（对端地址）
+-- @return 是否投递成功
+function KcpSocket:reject(addr)
+    return self.s:drop_kcp_accept(addr)
 end
 
 -- 关闭链接
@@ -58,7 +93,7 @@ function KcpSocket:close(flush)
     if not s then return end
 
     -- 和 UdpSocket:close 一字不差：Socket::stop 内部会自己递 KCP_DEL，
-    -- backend 收到后释放 ikcpcb + 摘路由
+    -- io线程收到后释放 ikcpcb + 摘路由
     return s:stop(flush)
 end
 
@@ -89,13 +124,12 @@ end
 -- @param port 目标服务器的端口
 -- @param ip 目标服务器的ip，如果不传则从host解析
 function KcpSocket:connect(host, port, ip)
-    -- conv 由客户端随机，必须在 start_kcp 之前写入
+    -- conv 由客户端随机，作为 start_kcp 的参数传入
     local conv = self.default_param.conv
     if not conv or 0 == conv then
         conv = math.random(1, 0x7FFFFFFF)
     end
     self.conv = conv
-    self.s:set_kcp_conv(conv)
 
     if not Socket.connect(self, host, port, ip) then
         return false

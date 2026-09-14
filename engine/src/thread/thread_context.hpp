@@ -5,57 +5,11 @@
 #include <shared_mutex>
 #include <condition_variable>
 #include "global/global.hpp"
+#include "thread/thread_message.hpp"
 
 struct lua_State;
 
-/// backend(io)线程的投递地址。C++ 与 lua 侧(startup.lua)必须保持一致
-static constexpr int32_t BACKEND_ADDR = -1;
-
-// 线程数据交互结构
-struct ThreadMessage final
-{
-    enum
-    {
-        // ---- 0 ~ 63：C++ 预留 ----
-        NONE   = 0, // 无作用，通常只是唤醒线程
-        TIMER  = 1, // 定时器
-        SIGNAL = 2, // 信号
-        SOCKET = 3, // 网络消息
-        // ---- kcp 新增，编号与 thread_message.lua 保持一致 ----
-        KCP_ACCEPT = 4, // backend → worker：发现新客户端，请决定是否接入
-        KCP_ADD    = 5, // worker → backend：建会话（建 ikcpcb + 注册）
-        KCP_DEL    = 6, // worker → backend：删除会话（释放 ikcpcb + 摘路由）
-        // ---- 64 ~ 127：Lua 预留，C++ 不解释 ----
-        LUA_BASE = 64,
-    };
-
-    ThreadMessage(int32_t src, int32_t dst, uint16_t type,
-                  int32_t usize)
-    {
-        mask_  = 0;
-        src_   = src;
-        dst_   = dst;
-        type_  = type;
-        usize_ = usize;
-    }
-    ~ThreadMessage()
-    {
-    }
-
-    // 获取缓冲区指针
-    char *buffer() noexcept
-    {
-        // C++ 不支持Flexible Array Member，直接强转.C++ 20可用std::span
-        return reinterpret_cast<char *>(this + 1);
-    }
-
-    uint16_t mask_; // 掩码标记 0位从内存分配
-    uint16_t type_; // 消息类型
-    int32_t src_; // 来源地址
-    int32_t dst_; // 目标地址
-    int32_t usize_; // 自定义数据长度
-    // 这个结构是flexible array，后面还有自定义数据
-};
+// 线程数据交互结构(ThreadMessage)与kcp的消息载荷见 thread/thread_message.hpp
 
 // 线程间交互数据及唤醒的机制
 class ThreadContext
