@@ -16,6 +16,8 @@ read_globals =
     "g_async_log",
     "g_sharedata",
     "Engine",
+    "WINDOWS",
+    "LINUX",
 }
 
 local rw_globals = {

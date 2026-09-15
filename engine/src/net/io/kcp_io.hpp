@@ -46,14 +46,15 @@ public:
                     const UdpAddr &addr);
     /// ★ 唯一的 ikcp_release 出口，且幂等
     void release_kcp();
-    /// 把一段kcp报文喂进ikcp；has_data表示产出了完整业务包并已写入recv_
-    int32_t input(const char *data, int32_t len, bool &has_data);
-    /// 把ikcp里重组好的逻辑包搬进recv_，返回是否有产出
-    bool drain();
+    /**
+     * 把一段数据喂给kcp，输出有序的业务数据
+     * @return <0=出错 0=kcp控制报文 >0=数据长度
+     */
+    int32_t input(const char *data, int32_t len);
 
     struct IKCPCB *kcp() const { return kcp_; }
 
-    // ---- 主线程（start_kcp 之前预置）----
+    // 设置kcp的会话id
     void set_conv(uint32_t conv) { conv_ = conv; }
 
     int32_t listen_id() const { return listen_id_; }
@@ -69,12 +70,10 @@ private:
 
     struct IKCPCB *kcp_ = nullptr;
 
-    uint32_t conv_      = 0;
+    uint32_t conv_      = 0; // kcp的会话id（conversation）
     UdpAddr peer_;      // ★ 地址只记在这里
     int32_t listen_id_  = 0; // 0 = 客户端形态
     int32_t listen_fd_  = netcompat::INVALID; // 客户端=自己的fd；服务端对端=监听fd
-
-    int64_t stat_drop_snd_ = 0; // ikcp_waitsnd 超限丢弃的条数
 };
 
 #endif

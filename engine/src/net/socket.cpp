@@ -209,10 +209,10 @@ int32_t Socket::start_kcp(lua_State *L)
     msg.conv      = conv;
     msg.addr      = addr; // ★ 无条件赋值：客户端形态保持默认值(AF_UNSPEC)
 
-    bool ok = StaticGlobal::M->forward_message(worker_addr, BACKEND_ADDR,
+    StaticGlobal::B->emplace_message(worker_addr, -1,
                                                ThreadMessage::KCP_ADD, &msg,
                                                (int32_t)sizeof(msg));
-    lua_pushboolean(L, ok ? 1 : 0);
+    lua_pushboolean(L, 1);
     return 1;
 #else
     UNUSED(L);

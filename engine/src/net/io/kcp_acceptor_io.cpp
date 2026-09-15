@@ -23,8 +23,6 @@
 static constexpr int64_t KCP_ACCEPT_TIMEOUT_MS = 16 * 1000;
 /// 同一原因的日志最小间隔，防止addr洪水刷爆磁盘
 static constexpr int64_t KCP_LOG_INTERVAL_MS = 1000;
-/// ikcp的conv在报文最前面4字节
-static constexpr int32_t KCP_CONV_LEN = 4;
 
 KcpAcceptorIO::KcpAcceptorIO()
 {
@@ -32,12 +30,6 @@ KcpAcceptorIO::KcpAcceptorIO()
 
 KcpAcceptorIO::~KcpAcceptorIO()
 {
-    /**
-     * 监听socket一定走过 Socket::start()，也就是置了 M_REF_BACKEND，
-     * 所以本对象的析构只可能发生在io线程（epoll关闭路径 → ~EVIO → delete io_），
-     * 可以安全地碰 KcpMgr（同为io线程独占）
-     */
-    if (StaticGlobal::B) StaticGlobal::B->kcp_mgr().unreg_acceptor(this);
 }
 
 int32_t KcpAcceptorIO::recv(EVIO *w)
@@ -46,19 +38,20 @@ int32_t KcpAcceptorIO::recv(EVIO *w)
     return EV_NONE;
 }
 
+void KcpAcceptorIO::on_backend_add(EVIO *w)
+{
+    StaticGlobal::B->kcp_mgr().add_acceptor(w->id_, this);
+}
+
+void KcpAcceptorIO::on_backend_remove(EVIO *w)
+{
+    StaticGlobal::B->kcp_mgr().remove_acceptor(w->id_, this);
+}
+
 int32_t KcpAcceptorIO::accept(EVIO *w)
 {
     int32_t fd = w->fd_;
     assert(fd != netcompat::INVALID);
-
-    /**
-     * 把自己登记到 KcpMgr（listen_id 就是监听socket的socket_id），
-     * 供 KcpMgr::on_add 晋升、以及定期回收accept表使用。
-     *
-     * reg_acceptor 是幂等的（同key覆盖），所以不需要"是否已登记"的标志位；
-     * 这里必然跑在io线程，且一定早于任何 KCP_ADD
-     */
-    StaticGlobal::B->kcp_mgr().reg_acceptor(w->id_, this);
 
     thread_local ThreadLocalBuf<UDP_MAX_DGRAM> buf;
 
@@ -88,13 +81,6 @@ int32_t KcpAcceptorIO::accept(EVIO *w)
         if (on_dgram(addr, buf.get(), n)) ret = EV_ACCEPT;
     }
 
-    /**
-     * ★ 绝不能返回 EV_READ：
-     *   do_io_status 的 case EV_READ 会把监听socket的注册事件从 EV_ACCEPT
-     *   翻成 EV_ACCEPT|EV_READ，下一轮就掉进 w->recv() 分支（对监听fd调recv
-     *   必然报错，进而把它关掉）。
-     *   udp是LT模式，缓冲区还有数据时epoll会继续报，不需要主动求重试
-     */
     return ret;
 }
 
@@ -104,23 +90,19 @@ bool KcpAcceptorIO::on_dgram(const UdpAddr &addr, const char *data, int32_t len)
     auto est = established_.find(addr);
     if (est != established_.end())
     {
-        EVIO *conn_w = est->second;
-        KcpIO *io    = static_cast<KcpIO *>(conn_w->io_);
-
-        // 会话正在被 KcpMgr 回收（ikcpcb 已释放）：这一包直接丢，
-        // 不要在这里报错，否则会把一次正常关闭变成协议错误
-        if (!io || !io->kcp()) return false;
+        EVIO *w = est->second;
+        KcpIO *io    = static_cast<KcpIO *>(w->io_);
 
         bool has_data = false;
         if (0 != io->input(data, len, has_data))
         {
-            ELOG("kcp input error, conn=%d", conn_w->id_);
-            StaticGlobal::B->kcp_mgr().remove(conn_w->id_, true); // 协议错误 → 回收
+            ELOG("kcp input error, conn=%d", w->id_);
+            StaticGlobal::B->kcp_mgr().remove(w->id_, true); // 协议错误 → 回收
             return false;
         }
 
         // ★ 只有确实产出业务数据才唤醒，纯ACK/探测包不唤醒业务线程
-        if (has_data) StaticGlobal::B->notify_watcher(conn_w, EV_READ);
+        if (has_data) StaticGlobal::B->dispatch_event(w, EV_READ);
         return false;
     }
 
@@ -155,13 +137,11 @@ bool KcpAcceptorIO::on_dgram(const UdpAddr &addr, const char *data, int32_t len)
         return false;
     }
 
-    /**
-     * ikcp_getconv 要读前4字节，所以短包必须挡掉。
-     * 这是内存安全，不是洪水防护 —— 洪水防护靠 KCP_MAX_PARKED + 16s回收
-     */
-    if (len < KCP_CONV_LEN)
+    // ikcp_getconv 不检测指针长度，要防止收到其他程序的非kcp包
+    IUINT32 conv = 0;
+    if (len < sizeof(conv))
     {
-        log_limited(now, "short dgram", addr, len);
+        log_limited(now, "kcp dgram too short", addr, len);
         return false;
     }
 

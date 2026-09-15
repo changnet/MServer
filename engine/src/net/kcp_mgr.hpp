@@ -57,11 +57,10 @@ public:
     void on_add(ThreadMessage *m); // KCP_ADD
     void on_del(ThreadMessage *m); // KCP_DEL（含"业务拒绝接入"）
 
-    // ---- 监听socket登记（由 KcpAcceptorIO 在io线程调用）----
-    /// 幂等：同一个listen_id重复登记直接覆盖（监听socket重建时会用到）
-    void reg_acceptor(int32_t listen_id, KcpAcceptorIO *acc);
-    /// 按指针反查删除（监听socket析构时调用）
-    void unreg_acceptor(KcpAcceptorIO *acc);
+    // 添加监听的io
+    void add_acceptor(int32_t listen_id, KcpAcceptorIO *acc);
+    /// 移除监听的io
+    void remove_acceptor(int32_t listen_id, KcpAcceptorIO *acc);
 
     // ---- 生命周期 ----
     /// 唯一的回收点：释放 ikcpcb + 摘 conns_/已建立表 + （虚拟连接）解io线程引用
@@ -88,7 +87,7 @@ private:
     /// listen_id → 监听socket的acceptor（它的表里放着这个监听fd上的所有对端）
     std::unordered_map<int32_t, KcpAcceptorIO *> acceptors_;
 
-    int64_t next_sweep_ = 0; // accept表回收节拍：绝对时间(ms)
+    int64_t next_sweep_ = 0; // 下一次遍历acceptor回收超时连接时间戳(ms)
 };
 
 #endif

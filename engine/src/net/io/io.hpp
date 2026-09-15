@@ -115,6 +115,16 @@ public:
     virtual int32_t prepare_accept() = 0;
     // 准备connect所需要数据
     virtual int32_t prepare_connect() = 0;
+    // 首次添加到backend线程时调用
+    virtual void on_backend_add(EVIO *w)
+    {
+        UNUSED(w);
+    }
+    // 从backend线程移除时调用
+    virtual void on_backend_remove(EVIO *w)
+    {
+        UNUSED(w);
+    }
 
     /**
      * @brief 处理监听socket上的可读（此函数在io线程执行）

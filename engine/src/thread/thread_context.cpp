@@ -37,7 +37,7 @@ void ThreadContext::emplace_message(int32_t src, int32_t dst, uint16_t type,
         queue_.push_back(m);
     }
     // 不能写死 cv_.notify_one()：backend线程阻塞在epoll上，叫不醒
-    wake_target();
+    wake();
 }
 
 void ThreadContextMgr::add_thread_ctx(int32_t addr, ThreadContext* ctx)

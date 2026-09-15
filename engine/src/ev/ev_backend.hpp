@@ -40,9 +40,6 @@ public:
         return 0;
     }
 
-    // 唤醒子进程
-    virtual void wake() = 0;
-
     // 启动backend线程
     virtual bool before_start() = 0;
 
@@ -58,10 +55,15 @@ public:
      */
     void stop();
     /**
+     * @brief 添加指定watcher到管理器中
+     * @return 是否添加成功
+     */
+    bool add_watcher(EVIO *w);
+    /**
      * @brief 删除指定watcher在backend线程中的引用
      * @return 该watcher是否还有效（被其他线程引用）
      */
-    bool del_watcher(EVIO *w, int32_t fd);
+    bool remove_watcher(EVIO *w, int32_t fd);
     /**
      * @brief 往backend给指定watcher追加一个事件，该事件和已有事件堆叠
      * 主要解决socket频繁发送数据，需要不断追加EV_WRITE事件的问题
@@ -76,25 +78,12 @@ public:
      */
     static EVBackend *instance();
 
-    /**
-     * @brief 把事件直接派发给watcher所属的worker线程（供KcpMgr使用）
-     * 与 add_watcher_event 的区别：不经过epoll，只走跨线程事件派发
-     */
-    void notify_watcher(EVIO *w, int32_t ev)
-    {
-        dispatch_event(w, ev);
-    }
+    // 派发事件给watcher对应的线程
+    void dispatch_event(EVIO *w, int32_t ev);
 
 #if defined(ENABLE_KCP)
     KcpMgr &kcp_mgr() { return kcp_mgr_; }
 #endif
-
-protected:
-    /// 覆写唤醒方式：backend阻塞在epoll/poll上，cv_.notify_one()叫不醒它
-    void wake_target() override
-    {
-        wake();
-    }
 
 protected:
     struct WatcherEvent
@@ -178,8 +167,6 @@ private:
      * @param events 要添加的事件
     */
     void modify_later(EVIO *w, int32_t events);
-    // 派发事件给watcher对应的线程
-    void dispatch_event(EVIO *w, int32_t ev);
 
 protected:
     std::atomic<bool> done_;     /// 是否终止进程

@@ -39,24 +39,14 @@ static constexpr int32_t KCP_NC       = 0;
 static constexpr int32_t KCP_SND_WND = 128;
 static constexpr int32_t KCP_RCV_WND = 128;
 
-// 单个逻辑包上限。ikcp_send 会按 mss 自动分片，frg 字段是 1 字节，
-// 理论上限 = 255 * (KCP_MTU - 24)；这里取 64KB，超过则 Lua 侧报错
-static constexpr int32_t KCP_MAX_MSG = 64 * 1024;
-
 // ikcp_waitsnd 上限。超过就丢这一条 + 计数，不 sleep、不阻塞整条 fd
 static constexpr int32_t KCP_MAX_WAIT_SND = 256;
 
 // 同时存在的 kcp 会话上限（客户端形态 + 服务端对端，全进程）
 static constexpr int32_t KCP_MAX_SESSION = 4096;
 
-// 接入窗口（首包 → KCP_ADD）期间 park 的地址数上限
+// 未建立连接时，等待的地址数量，超过此数量后续的新地址将会被丢弃
 static constexpr int32_t KCP_MAX_PARKED = 1024;
 
-// 接入窗口内单个地址累计 park 的字节上限。
-// 只有 IKCP_CMD_PUSH 才会 park，但接入窗口内同一个 addr 可以持续发包，
-// 这里必须封顶，否则一次 addr 洪水就能把 parked_ 的 std::string 撑爆
+// 连接未建立时，同一个地址仅缓冲N字节的数据，防止被攻击
 static constexpr int32_t KCP_MAX_PARKED_DATA = 64 * 1024;
-
-// 【坑】以下两个常量定义在 ikcp.c 里，ikcp.h 没有导出，必须自己抄一份
-static constexpr uint8_t IKCP_CMD_PUSH = 81;
-static constexpr int32_t IKCP_OVERHEAD = 24;

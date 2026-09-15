@@ -70,7 +70,7 @@ public:
             std::lock_guard<std::mutex> lg(mutex_);
             queue_.emplace_back((ThreadMessage *)message);
         }
-        wake_target();
+        wake();
     }
 
     /**
@@ -99,7 +99,7 @@ protected:
      * backend线程阻塞在epoll/poll上，cv_.notify_one()叫不醒它，
      * EVBackend覆写成wake()。这是kcp方案里唯一侵入现有代码的地方
      */
-    virtual void wake_target()
+    virtual void wake()
     {
         cv_.notify_one();
     }

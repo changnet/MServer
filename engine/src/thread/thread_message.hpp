@@ -13,9 +13,6 @@
 
 class EVIO;
 
-/// backend(io)线程的投递地址。C++ 与 lua 侧(server/src/engine/startup.lua)必须保持一致
-static constexpr int32_t BACKEND_ADDR = -1;
-
 // 线程数据交互结构
 struct ThreadMessage final
 {
@@ -32,7 +29,6 @@ struct ThreadMessage final
         KCP_ADD = 5, // worker → backend：建会话（建 ikcpcb + 登记）
         KCP_DEL = 6, // worker → backend：删会话（释放 ikcpcb + 摘路由）
         // ---- 64 ~ 127：Lua 预留，C++ 不解释 ----
-        LUA_BASE = 64,
     };
 
     ThreadMessage(int32_t src, int32_t dst, uint16_t type,

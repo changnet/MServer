@@ -45,9 +45,6 @@ bool EVBackend::start()
 {
     if (!before_start()) return false;
 
-    // 注册到线程消息管理器，这样worker可以直接forward_message到BACKEND_ADDR
-    ThreadContextMgr::add_thread_ctx(BACKEND_ADDR, this);
-
     thread_ = std::thread(&EVBackend::backend, this);
 
     return true;
@@ -58,8 +55,6 @@ void EVBackend::stop()
     done_.store(true, std::memory_order_release);
     wake();
     thread_.join();
-
-    ThreadContextMgr::del_thread_ctx(BACKEND_ADDR);
 
     after_stop();
 }
@@ -225,7 +220,7 @@ int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
         int32_t e = modify_fd(fd, FD_OP_DEL, events);
         dispatch_event(w, EV_CLOSE);
 
-        del_watcher(w, fd);
+        remove_watcher(w, fd);
         return e;
     }
     else
@@ -237,7 +232,7 @@ int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
             assert(0 == w->b_kevents_ && 0 != events);
 
             op = FD_OP_ADD;
-            if (!fd_mgr_.set(w)) return 0;
+            if (!add_watcher(w)) return 0;
         }
 
         // events可能是0。在连接过程中，连接收到返回，还来不及设置数据到backend
@@ -549,7 +544,16 @@ void EVBackend::dispatch_event(EVIO *w, int32_t ev)
     if (!ok) ELOG("backend forward_message fail: %d", w->addr_);
 }
 
-bool EVBackend::del_watcher(EVIO *w, int32_t fd)
+bool EVBackend::add_watcher(EVIO* w)
+{
+    if (!fd_mgr_.set(w)) return false;
+
+    w->io_->on_backend_add(w);
+
+    return true;
+}
+
+bool EVBackend::remove_watcher(EVIO *w, int32_t fd)
 {
     bool has_ref = true;
     fd_mgr_.unset(fd); // 这里不能取w->fd_了，因为可能已经被逻辑线程关闭

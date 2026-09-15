@@ -56,6 +56,9 @@ public:
     int32_t prepare_accept() override { return EV_ACCEPT; }
     int32_t prepare_connect() override { return EV_READ; }
 
+    void on_backend_add(EVIO *w) override;
+    void on_backend_remove(EVIO *w) override;
+
     /**
      * 监听fd可读：recvfrom + 路由（与 TcpIO::accept 同构，跑在io线程）
      * @return EV_ACCEPT 本轮产生了新对端，需要派发EV_ACCEPT给业务线程；

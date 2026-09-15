@@ -31,15 +31,14 @@ KcpMgr::~KcpMgr()
     acceptors_.clear();
 }
 
-void KcpMgr::reg_acceptor(int32_t listen_id, KcpAcceptorIO *acc)
+void KcpMgr::add_acceptor(int32_t listen_id, KcpAcceptorIO *acc)
 {
     assert(acc);
 
-    // 幂等：同名重复登记（KcpAcceptorIO::accept 每次都会调）直接覆盖。
-    // 监听socket关闭后重建时，新acceptor会覆盖掉旧的悬空指针
     auto it = acceptors_.find(listen_id);
     if (it != acceptors_.end())
     {
+        ELOG("KcpMgr acceptor already exist:%d", listen_id);
         it->second = acc;
         return;
     }
@@ -47,16 +46,9 @@ void KcpMgr::reg_acceptor(int32_t listen_id, KcpAcceptorIO *acc)
     acceptors_.emplace(listen_id, acc);
 }
 
-void KcpMgr::unreg_acceptor(KcpAcceptorIO *acc)
+void KcpMgr::remove_acceptor(int32_t listen_id, KcpAcceptorIO *acc)
 {
-    // 监听socket数量极少（通常1~2个），按值反查即可
-    for (auto it = acceptors_.begin(); it != acceptors_.end(); ++it)
-    {
-        if (it->second != acc) continue;
-
-        acceptors_.erase(it);
-        return;
-    }
+    acceptors_.erase(listen_id);
 }
 
 void KcpMgr::remove(int32_t conn_id, bool notify_worker)
@@ -230,20 +222,20 @@ int64_t KcpMgr::update(int64_t now)
     }
 
     /**
-     * ② 遍历所有会话，问 ikcp_check "你下次想什么时候被处理"，取最小值
-     *    作为下一轮主循环的wait超时。
+     * ② 遍历所有会话，问 ikcp_check "下次该什么时候调 ikcp_update"，取最小值
+     *    作为下一轮主循环的 wait 超时。
      *
-     *    官方 ikcp_check（ikcp.c:1275）只有三种返回：
-     *      ① updated==0 / current 已到或过了 ts_flush / snd_buf 里有段的
-     *         resendts 已到 → 返回 current（"现在就该动"）
-     *      ② 否则返回 current + min(到下个 flush 点, 到最近一个段的重传点)
-     *      ③ 上面的差值被 `if (minimal >= kcp->interval) minimal = kcp->interval;` 夹住
-     *    → 返回值的上限就是 current + interval。**这个 40ms 是 ikcp 自己的设计
-     *      上限，不是我们选的节拍**：一旦有包该发（重传到点、ts_flush 到点），
-     *      ikcp_check 会明确返回 current 让我们立刻动，不会让重传等到下一拍。
+     *    ikcp_check 的官方契约（ikcp.h:399）：
+     *      returns the timestamp (in milliseconds) at which you should call
+     *      ikcp_update, assuming no ikcp_input/_send calls occur in between.
+     *    → 返回的是**时间戳**（不是间隔），可以是 current 本身（"现在就调"），
+     *      也可以是 current + min(到下个 flush 点, 到最近一个段的重传点)，
+     *      该差值被 ikcp 自己夹在 interval 以内
+     *      （ikcp.c: `if (minimal >= kcp->interval) minimal = kcp->interval;`）。
+     *      这个 interval 上限是 ikcp 的设计，不是我们选的节拍。
      *
-     *    ikcp_update 的签名是 void（官方如此），所以 flush 完必须自己再 check
-     *    一次才能拿到新的下次时间。
+     *    ikcp_update 返回 void（官方签名），所以调用后要再 check 一次才能拿到
+     *    新的下次时间。
      */
     const IUINT32 cur = (IUINT32)now;
     int64_t next      = -1; // -1 = 还没有
@@ -262,27 +254,8 @@ int64_t KcpMgr::update(int64_t now)
             // 到点了：该重传的、该发 ACK 的、窗口探测全在这里发出去
             ikcp_update(kcp, cur);
             t = ikcp_check(kcp, cur);
-
-            /**
-             * ★ 补一条：ikcp_flush 只在 `slap = cur - ts_flush >= 0` 时才真正
-             *   执行（ikcp.c:1256），而 ikcp_check 在"有段已过 resendts"时也会
-             *   返回 current。两者一起出现的场景是：某个段的重传点落在两个
-             *   flush 点之间（resendts 由 rto 决定，而 rto 通常不是 interval
-             *   的整数倍，比如 rto=70 或退避后的 300）。
-             *   这时 update 是空操作、再 check 仍返回 current —— 如果照它给 0，
-             *   主循环就会以 min_wait(1ms) 空转到下一个 flush 点。
-             *   既然这一段本来也要等到 ts_flush 才能发出去，就直接把下次唤醒
-             *   对齐到 ts_flush，省掉这段空转（重传时刻不变）
-             */
-            if (t == cur)
-            {
-                IINT32 to_flush = (IINT32)(kcp->ts_flush - cur);
-                if (to_flush > 0) t = kcp->ts_flush;
-            }
         }
-
-        // 和 ikcp.c 的 _itimediff 一个语义：有符号差值，天然处理 IUINT32 回绕
-        int64_t d = (int64_t)(IINT32)(t - cur);
+        int64_t d = (int64_t)(IINT32)(t - cur); // _itimediff 语义，回绕安全
         if (d < 0) d = 0;
         if (next < 0 || d < next) next = d;
     }

@@ -60,6 +60,12 @@ bool KcpIO::create_kcp(uint32_t conv, int32_t listen_id, int32_t listen_fd,
     kcp_ = ikcp_create(conv, this);
     if (!kcp_) return false;
 
+    /**
+     * 是否启用流模式，启用流模式后，kcp会把多次ikcp_send的数据拼到一个mtu包里
+     * ikcp_recv会只收到一次，需要业务层拆包
+     */
+    // kcp_->stream = 1;
+
     ikcp_setoutput(kcp_, &KcpIO::output);
     ikcp_setmtu(kcp_, KCP_MTU);
     ikcp_nodelay(kcp_, KCP_NODELAY, KCP_INTERVAL, KCP_RESEND, KCP_NC);
@@ -75,85 +81,71 @@ void KcpIO::release_kcp()
     kcp_ = nullptr;
 }
 
-int32_t KcpIO::input(const char *data, int32_t len, bool &has_data)
+int32_t KcpIO::input(const char *data, int32_t len)
 {
-    has_data = false;
-    if (!kcp_) return -1;
-
+    /**
+     * data来源于udp，不存在数据不足的问题
+     * 如果返回的值不是0就表示不是kcp的数据包，但这些数据不会影响kcp的后续状态
+     */
     int32_t ret = ikcp_input(kcp_, data, len);
     if (0 != ret) return ret;
 
-    // ikcp_input 内部会更新rtt/ack队列，但不flush
-    has_data = drain();
-    return 0;
-}
-
-bool KcpIO::drain()
-{
-    bool produced = false;
-    // 变长缓冲：ikcp 用 rcv_wnd * mss 限制单条逻辑包的大小（约176KB，比
-    // KCP_MAX_MSG大），所以这里不能开定长缓冲，get() 时按需伸缩
-    thread_local ThreadLocalBuf<sizeof(uint32_t) + KCP_MAX_MSG,
-                                2 * 1024 * 1024>
-        buf;
-
+    // kcp在消息模式下，一次喂一个udp包给ikcp_input，则ikcp_recv最多只能收到一个包，不需要循环取
+    // 但在流模式下，kcp会把多个数据拼到一个mtu包，超出的放到下一个mtu包。ikcp_recv返回的是一个
+    // mtu包。多次发送小数据，可能只recv到一次。一次发送大数据，会recv多次才能取出所有数据
     while (true)
     {
-        // ★ 是 < 0 而不是 <= 0：0 表示"一条长度为0的完整逻辑包"，
-        //   必须消费掉，否则它会一直卡在队列头上，后面的消息全被堵住
-        int32_t peek = ikcp_peeksize(kcp_);
-        if (peek < 0) break;
+        /**
+         * ikcp_recv返回值
+         * >0 成功取出消息，值表示消息长度
+         * -1 rcv_queue为空，当前没有可取的消息
+         * -2 ikcp_peeksize失败，收到的数据不是kcp数据包，无消息可取
+         * -3 缓冲区太小，调整缓冲区后再试
+         */
+        int32_t kcp_ret  = 0;
+        int32_t recv_ret = recv_.append_from_generator(
+            [this, &kcp_ret](char *wptr, int64_t space)
+            {
+                kcp_ret = ikcp_recv(kcp_, wptr, (int32_t)space);
+                return kcp_ret;
+            });
 
-        if (recv_.is_overflow()) break; // 交给上层按 M_OVERFLOW_* 处理
-
-        int32_t need = (int32_t)sizeof(uint32_t) + peek;
-        char *pbuf   = buf.get((size_t)need);
-
-        int32_t n = ikcp_recv(kcp_, pbuf + sizeof(uint32_t), peek);
-        if (n < 0) break;
-
-        if (0 == n) continue; // 空逻辑包，跳过（上面已经把它消费掉了）
-
-        // 超过KCP_MAX_MSG的逻辑包（对端不是本框架）直接丢弃，不能塞进recv_，
-        // 否则会撑爆上层按KCP_MAX_MSG来算的各种缓冲区
-        if (n > KCP_MAX_MSG)
+        // if (-2 == recv_ret) TODO udp共用一个fd接收数据，不能关掉，后续加机制处理
+        if (kcp_ret > 0)
         {
-            ELOG("kcp drop over max msg: %d", n);
-            continue;
+            ret += kcp_ret;
         }
-
-        uint32_t size = (uint32_t)(sizeof(uint32_t) + n);
-        memcpy(pbuf, &size, sizeof(size));
-
-        recv_.append(pbuf, size); // 一次append整帧
-        produced = true;
+        else if (-3 == kcp_ret)
+        {
+            char wptr[UDP_MAX_DGRAM];
+            kcp_ret = ikcp_recv(kcp_, wptr, (int32_t)UDP_MAX_DGRAM);
+            if (kcp_ret > 0)
+            {
+                ret += kcp_ret;
+                recv_.append(wptr, kcp_ret);
+            }
+            else
+            {
+                assert(false);
+            }
+        }
+        else
+        {
+            return ret;
+        }
     }
-    return produced;
 }
 
 int32_t KcpIO::send(EVIO *w)
 {
-    if (!kcp_) return EV_NONE;
-
     while (true)
     {
+        // 长度 + 数据，格式在kcp_packet那边
         uint32_t size = 0;
-        if (send_.length() < (int64_t)sizeof(size)) break;
         if (!send_.peek(&size)) break;
 
-        // 帧不完整，等下次。★ 返回EV_NONE而不是EV_WRITE：
-        // kcp的可写性由ikcp_waitsnd和定时器决定，不靠epoll可写
-        if (send_.length() < (int64_t)size) break;
-
-        if (size < sizeof(uint32_t)
-            || size > (uint32_t)(sizeof(uint32_t) + KCP_MAX_MSG))
-        {
-            assert(false);
-            return EV_ERROR;
-        }
-
         char *frame = send_.peek_buffer(size, 2);
-        if (!frame) break;
+        assert(frame);
 
         const char *payload = frame + sizeof(uint32_t);
         int32_t len         = (int32_t)(size - sizeof(uint32_t));
@@ -161,19 +153,34 @@ int32_t KcpIO::send(EVIO *w)
         // ★ 背压：丢这一条 + 计数，绝不sleep、绝不因一个对端卡住整条fd
         if (ikcp_waitsnd(kcp_) >= KCP_MAX_WAIT_SND)
         {
-            ++stat_drop_snd_;
             ELOG("kcp send drop, conn=%d waitsnd=%d", w->id_, ikcp_waitsnd(kcp_));
             send_.remove_head_data(size);
             continue;
         }
 
-        if (0 != ikcp_send(kcp_, payload, len)) ++stat_drop_snd_;
-        send_.remove_head_data(size);
-
-        // ★ ikcp_send 只是入队；ikcp_update 要等 ts_flush 才flush，
-        //   所以这里必须显式flush，否则白等一个interval(40ms)
-        ikcp_flush(kcp_);
+        /**
+         * >0 成功写入队列的字节数，消息模式等于len，流模式可能小于len
+         * 0  len等于0时才会返回
+         * -1 len<0，无操作
+         * -2 消息太大（消息分片后数量>，或者分配不到内存）
+         * 
+         * ikcp_send会自动把大的消息分片，但分片数量不基于ikcp_wndsize设置的值，
+         * 固定不能超过IKCP_WND_RCV = 128这个宏定义，所以单个消息超过
+         * 1376(mtu-kcp头) * IKCP_WND_RCV = 174kb，超过这个值就无法发送
+         */
+        int32_t kcp_ret = ikcp_send(kcp_, payload, len);
+        if (kcp_ret == len)
+        {
+            send_.remove_head_data(size);
+        }
+        else if (-2 == kcp_ret)
+        {
+            ELOG("kcp send msg size too large: %d %d", w->id_, len);
+        }
     }
+
+    // ikcp_send 只是入队；ikcp_update 才flush，不想等ikcp_update就手动flush
+    ikcp_flush(kcp_);
 
     return EV_NONE;
 }
