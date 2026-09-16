@@ -22,6 +22,8 @@
 // 单个 KCP 报文的最大长度（含 ikcp 头）。1400 = 以太网 MTU 1500 - IP 20 - UDP 8 - 余量
 static constexpr int32_t KCP_MTU = 1400;
 
+static constexpr int32_t KCP_STREAM = 0; // 是否启用kcp的stream模式，默认不启用=0
+
 // ikcp_nodelay(kcp, nodelay, interval, resend, nc)
 //   nodelay =0 : 不启用 nodelay 模式
 //   interval=40: 内部更新时钟间隔 40ms

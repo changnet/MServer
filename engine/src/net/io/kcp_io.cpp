@@ -64,7 +64,7 @@ bool KcpIO::create_kcp(uint32_t conv, int32_t listen_id, int32_t listen_fd,
      * 是否启用流模式，启用流模式后，kcp会把多次ikcp_send的数据拼到一个mtu包里
      * ikcp_recv会只收到一次，需要业务层拆包
      */
-    // kcp_->stream = 1;
+    kcp_->stream = KCP_STREAM;
 
     ikcp_setoutput(kcp_, &KcpIO::output);
     ikcp_setmtu(kcp_, KCP_MTU);
@@ -76,7 +76,7 @@ bool KcpIO::create_kcp(uint32_t conv, int32_t listen_id, int32_t listen_fd,
 
 void KcpIO::release_kcp()
 {
-    if (!kcp_) return; // ★ 幂等：KcpMgr::remove 与 ~KcpIO 都可能调
+    if (!kcp_) return;
     ikcp_release(kcp_);
     kcp_ = nullptr;
 }
@@ -88,11 +88,11 @@ int32_t KcpIO::input(const char *data, int32_t len)
      * 如果返回的值不是0就表示不是kcp的数据包，但这些数据不会影响kcp的后续状态
      */
     int32_t ret = ikcp_input(kcp_, data, len);
-    if (0 != ret) return ret;
+    if (0 != ret) return ret; // 上层有错误日志，这里暂不打印
 
     // kcp在消息模式下，一次喂一个udp包给ikcp_input，则ikcp_recv最多只能收到一个包，不需要循环取
     // 但在流模式下，kcp会把多个数据拼到一个mtu包，超出的放到下一个mtu包。ikcp_recv返回的是一个
-    // mtu包。多次发送小数据，可能只recv到一次。一次发送大数据，会recv多次才能取出所有数据
+    // mtu包。多次发送小数据，可能只recv到一次。一次发送大数据，要recv多次才能取出所有数据
     while (true)
     {
         /**
@@ -126,18 +126,34 @@ int32_t KcpIO::input(const char *data, int32_t len)
             }
             else
             {
-                assert(false);
+                return kcp_ret;
             }
         }
         else
         {
             return ret;
         }
-    }
+    } // while
 }
 
 int32_t KcpIO::send(EVIO *w)
 {
+    // 网络慢，数据留在send_队列，不能丢包
+    // 当send_缓冲区满时，就是超过设定值，业务逻辑那边可断开，这里不处理
+    // 这里不要返回 EV_BUSY/EV_WRITE，因为connect的连接，返回EV_WRITE会不断地尝试send
+    // 但数据由kcp控制，send并不发送数据，得调用ikcp_update
+    // 如果开启了KCP_NODELAY，这里会调用ikcp_flush，可以返回EV_WRITE
+    if (ikcp_waitsnd(kcp_) >= KCP_MAX_WAIT_SND)
+    {
+        // ELOG("kcp send busy, conn=%d waitsnd=%d", w->id_, ikcp_waitsnd(kcp_));
+        if constexpr (1 == KCP_NODELAY)
+        {
+            ikcp_flush(kcp_);
+            return EV_WRITE;
+        }
+        return EV_NONE;
+    }
+
     while (true)
     {
         // 长度 + 数据，格式在kcp_packet那边
@@ -150,47 +166,58 @@ int32_t KcpIO::send(EVIO *w)
         const char *payload = frame + sizeof(uint32_t);
         int32_t len         = (int32_t)(size - sizeof(uint32_t));
 
-        // ★ 背压：丢这一条 + 计数，绝不sleep、绝不因一个对端卡住整条fd
-        if (ikcp_waitsnd(kcp_) >= KCP_MAX_WAIT_SND)
-        {
-            ELOG("kcp send drop, conn=%d waitsnd=%d", w->id_, ikcp_waitsnd(kcp_));
-            send_.remove_head_data(size);
-            continue;
-        }
-
         /**
          * >0 成功写入队列的字节数，消息模式等于len，流模式可能小于len
          * 0  len等于0时才会返回
          * -1 len<0，无操作
          * -2 消息太大（消息分片后数量>，或者分配不到内存）
+         *
+         * ikcp_waitsnd的值不影响kcp_send，即使发送窗口已满，仍会添加到发送队列
+         * 需要手动控制是否send，不然会把内存撑爆
          * 
          * ikcp_send会自动把大的消息分片，但分片数量不基于ikcp_wndsize设置的值，
          * 固定不能超过IKCP_WND_RCV = 128这个宏定义，所以单个消息超过
          * 1376(mtu-kcp头) * IKCP_WND_RCV = 174kb，超过这个值就无法发送
+         * 
+         * 在消息模式，单条消息无法超过这个值。但在stream，单次send不能超过这个
+         * 值，但可以多次send
          */
         int32_t kcp_ret = ikcp_send(kcp_, payload, len);
         if (kcp_ret == len)
         {
             send_.remove_head_data(size);
+            continue;
         }
-        else if (-2 == kcp_ret)
+        else if (kcp_ret <= 0)
         {
-            ELOG("kcp send msg size too large: %d %d", w->id_, len);
+            ELOG("kcp send msg error: %d %d %d", w->id_, len, kcp_ret);
+            return EV_ERROR;
+        }
+
+        // stream模式，超出mtu的值，需要多次发送
+        while (kcp_ret < len)
+        {
+            int32_t kcp_ret2 = ikcp_send(kcp_, payload + kcp_ret, len - kcp_ret);
+            if (kcp_ret2 <= 0)
+            {
+                ELOG("kcp resend msg error: %d %d %d", w->id_, len, kcp_ret2);
+                return EV_ERROR;
+            }
         }
     }
 
-    // ikcp_send 只是入队；ikcp_update 才flush，不想等ikcp_update就手动flush
-    ikcp_flush(kcp_);
+    // ikcp_send 只是入队snd_queue，ikcp_update到点才flush，不想等就手动flush
+    // 即使设置ikcp_nodelay也不会立马发送，需要等下一次ikcp_flush
+    if constexpr (1 == KCP_NODELAY)
+    {
+        ikcp_flush(kcp_);
+    }
 
     return EV_NONE;
 }
 
 int32_t KcpIO::recv(EVIO *w)
 {
-    // 会话已被 KcpMgr 回收（ikcpcb已释放），等常规关闭路径收尾即可，
-    // 不要在这里报错，否则会把一次正常关闭变成错误关闭
-    if (!kcp_) return EV_NONE;
-
     int32_t fd = w->fd_;
     assert(fd != netcompat::INVALID);
 
@@ -212,17 +239,35 @@ int32_t KcpIO::recv(EVIO *w)
             return EV_ERROR;
         }
 
-        bool d = false;
-        if (0 != input(buf.get(), n, d))
+        if (input(buf.get(), n) < 0)
         {
             w->errno_ = EBADMSG;
             return EV_ERROR;
         }
-        has_data = has_data || d;
     }
 
-    // 纯ACK没有业务数据 → 返回EV_NONE，避免白唤醒worker
-    return has_data ? EV_READ : EV_NONE;
+    return EV_NONE;
 }
 
+int64_t KcpIO::update(int64_t now)
+{
+    /**
+     * ikcp_update只按ikcp_nodelay设置的KCP_INTERVAL参数和内部重发等间隔执行
+     * 而ikcp_send并不影响这些参数
+     *
+     * 也就是说算出来的interval还有30ms，现在ikcp_send发了数据，即使设置了nodelay
+     * 直接调用ikcp_update也不会发送数据，要等30ms后才会发
+     *
+     * ikcp_check按ikcp_update同样的逻辑执行，只是它并不会执行flush
+     */
+    int64_t t = ikcp_check(kcp_, (IUINT32)now);
+    if (t == now)
+    {
+        // 到点了：该重传的、该发 ACK 的、窗口探测全在这里发出去
+        ikcp_update(kcp_, (IUINT32)now);
+        t = ikcp_check(kcp_, (IUINT32)now);
+    }
+
+    return t;
+}
 #endif

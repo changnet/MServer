@@ -26,7 +26,7 @@ class EVIO;
  *   ④ 业务线程发来 KCP_ADD 后，由 KcpMgr::on_add 调 promote 把这条连接
  *      从accept表晋升到"已建立表"，并按序回放接入窗口内缓存的数据（零丢包）
  *   ⑤ 业务拒绝接入时发 KCP_DEL，drop_accepting 直接删掉该项
- *   ⑥ 16s 还没晋升的对端由 sweep 回收
+ *   ⑥ 16s 还没晋升的对端由 remove_accept_timeout 回收
  *
  * ★ 与 tcp 的关键差异：tcp 的 AcceptBuffer 里放的是已经完成内核握手的连接
  *   （fd 自带生命周期），kcp 拿到的是"还没有连接的若干字节"，所以额外需要
@@ -86,8 +86,8 @@ public:
     void unestablish(const UdpAddr &addr);
     /// 业务拒绝接入：直接删掉accept表项（对应tcp的 close(fd)）
     void drop_accepting(const UdpAddr &addr);
-    /// 回收 16s 内没晋升的对端（KcpMgr 每5秒调一次）
-    void sweep(int64_t now);
+    /// 回收 16s 内还没在业务端建立的连接
+    void remove_accept_timeout(int64_t now);
 
 private:
     /// 一个还没晋升的对端
@@ -103,7 +103,7 @@ private:
      * 处理一个数据报（io线程）
      * @return true 表示产生了新的待接入对端（需要派发EV_ACCEPT唤醒业务线程）
      */
-    bool on_dgram(const UdpAddr &addr, const char *data, int32_t len);
+    void on_dgram(const UdpAddr &addr, const char *data, int32_t len);
     /// 洪水时不能刷爆日志，同一个原因每N毫秒最多一条
     void log_limited(int64_t now, const char *what, const UdpAddr &addr,
                      int32_t extra);

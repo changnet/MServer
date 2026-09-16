@@ -34,7 +34,7 @@ struct UdpAddrHash
  * kcp 会话管理器（io线程独占，单例挂在 EVBackend 上）
  *
  * 只保留"身份表"：
- *   conns_     socket_id → 连接 EVIO（身份一律用 socket_id）
+ *   establishs_     socket_id → 连接 EVIO（身份一律用 socket_id）
  *
  * 路由（listen_id + 源地址 → socket_id）和"接入窗口缓存"都已经下沉到
  * 各自的 KcpAcceptorIO 上 —— 因为一个 kcp 监听 fd 上承载 N 个对端，只有
@@ -53,7 +53,6 @@ public:
     /// io线程join之后由 ~EVBackend 触发，释放所有残留会话
     ~KcpMgr();
 
-    // ---- 来自 worker 的消息（在io线程执行）----
     void on_add(ThreadMessage *m); // KCP_ADD
     void on_del(ThreadMessage *m); // KCP_DEL（含"业务拒绝接入"）
 
@@ -63,10 +62,9 @@ public:
     void remove_acceptor(int32_t listen_id, KcpAcceptorIO *acc);
 
     // ---- 生命周期 ----
-    /// 唯一的回收点：释放 ikcpcb + 摘 conns_/已建立表 + （虚拟连接）解io线程引用
+    /// 唯一的回收点：释放 ikcpcb + 摘 establishs_/已建立表 + （虚拟连接）解io线程引用
     void remove(int32_t conn_id, bool notify_worker);
 
-    // ---- 定时 ----
     /**
      * @brief 驱动所有会话的定时器，返回下一轮主循环建议的wait超时(ms)
      *
@@ -81,13 +79,13 @@ private:
     /// KCP_ADD 失败/被拒时，把accept表里对应的项删掉
     void drop_accepting(const KcpAddMsg *msg);
 
-    /// 身份表：socket_id → 连接 EVIO（★ 身份一律用 socket_id）
-    std::unordered_map<int32_t, EVIO *> conns_;
+    /// 已建立的连接：socket_id → 连接 EVIO
+    std::unordered_map<int32_t, EVIO *> establishs_;
 
     /// listen_id → 监听socket的acceptor（它的表里放着这个监听fd上的所有对端）
     std::unordered_map<int32_t, KcpAcceptorIO *> acceptors_;
 
-    int64_t next_sweep_ = 0; // 下一次遍历acceptor回收超时连接时间戳(ms)
+    int64_t next_accept_timeout_ = 0; // 下一次遍历acceptor回收超时连接时间戳(ms)
 };
 
 #endif

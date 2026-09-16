@@ -11,13 +11,13 @@
 #include "system/static_global.hpp"
 
 /// accept表里对端的回收扫描间隔（超时本身是16s，5s的粒度足够）
-static constexpr int64_t KCP_SWEEP_INTERVAL = 5000;
+static constexpr int64_t KCP_ACCEPT_TIMEOUT = 5000;
 
 KcpMgr::~KcpMgr()
 {
     // io线程已经join，这里独占访问。
     // ikcpcb 必须在这里放掉，否则 ~KcpIO 会在worker线程碰它
-    for (auto &x : conns_)
+    for (auto &x : establishs_)
     {
         EVIO *w   = x.second;
         KcpIO *io = static_cast<KcpIO *>(w->io_);
@@ -27,7 +27,7 @@ KcpMgr::~KcpMgr()
         if (w->fd_ == netcompat::INVALID) w->del_ref(EVIO::M_REF_BACKEND);
     }
 
-    conns_.clear();
+    establishs_.clear();
     acceptors_.clear();
 }
 
@@ -53,8 +53,8 @@ void KcpMgr::remove_acceptor(int32_t listen_id, KcpAcceptorIO *acc)
 
 void KcpMgr::remove(int32_t conn_id, bool notify_worker)
 {
-    auto it = conns_.find(conn_id);
-    if (it == conns_.end()) return;
+    auto it = establishs_.find(conn_id);
+    if (it == establishs_.end()) return;
 
     EVIO *w   = it->second;
     KcpIO *io = static_cast<KcpIO *>(w->io_);
@@ -70,10 +70,10 @@ void KcpMgr::remove(int32_t conn_id, bool notify_worker)
     }
 
     // ③ 摘身份表
-    conns_.erase(it);
+    establishs_.erase(it);
 
     // ④ 通知worker（io线程主动回收时要通知，worker自己发起时不需要）
-    if (notify_worker) StaticGlobal::B->notify_watcher(w, EV_CLOSE);
+    if (notify_worker) StaticGlobal::B->dispatch_event(w, EV_CLOSE);
 
     // ⑤ 虚拟连接没有fd，不会走epoll关闭路径，所以这里必须自己解引用
     //    客户端形态有真实fd，M_REF_BACKEND由io线程常规关闭路径释放
@@ -100,7 +100,7 @@ void KcpMgr::on_add(ThreadMessage *m)
         return;
     }
 
-    if (conns_.size() >= (size_t)KCP_MAX_SESSION)
+    if (establishs_.size() >= (size_t)KCP_MAX_SESSION)
     {
         PLOG("kcp session full, drop conn=%d", w->id_);
 
@@ -130,10 +130,10 @@ void KcpMgr::on_add(ThreadMessage *m)
 
     // ② ★ 必须先update一次：把updated置1并初始化ts_flush。
     //    否则 ikcp_check 恒返回 current（照它排期会死循环），ikcp_flush 也是no-op
-    ikcp_update(io->kcp(), (IUINT32)now);
+    io->update((IUINT32)now);
 
     // ③ 登记身份表
-    conns_[w->id_] = w;
+    establishs_[w->id_] = w;
 
     /**
      * ④ ★ 服务端对端：把这条连接从accept表晋升到"已建立表"，同时取回接入
@@ -203,8 +203,8 @@ void KcpMgr::on_del(ThreadMessage *m)
      *   __socket_hash 又持有强引用，对象永远不会被GC）。
      *   所以这里必须替它把 EV_CLOSE 补上。
      */
-    auto it   = conns_.find(msg->conn_id);
-    bool virt = (it != conns_.end()) && (it->second->fd_ == netcompat::INVALID);
+    auto it   = establishs_.find(msg->conn_id);
+    bool virt = (it != establishs_.end()) && (it->second->fd_ == netcompat::INVALID);
 
     remove(msg->conn_id, virt);
 }
@@ -212,55 +212,31 @@ void KcpMgr::on_del(ThreadMessage *m)
 int64_t KcpMgr::update(int64_t now)
 {
     // ① 每5秒扫一次accept表，回收N秒还没建立的连接
-    if (now >= next_sweep_)
+    if (now >= next_accept_timeout_)
     {
         for (auto &x : acceptors_)
         {
-            x.second->sweep(now);
+            x.second->remove_accept_timeout(now);
         }
-        next_sweep_ = now + KCP_SWEEP_INTERVAL;
+        next_accept_timeout_ = now + KCP_ACCEPT_TIMEOUT;
     }
 
     /**
-     * ② 遍历所有会话，问 ikcp_check "下次该什么时候调 ikcp_update"，取最小值
-     *    作为下一轮主循环的 wait 超时。
-     *
-     *    ikcp_check 的官方契约（ikcp.h:399）：
-     *      returns the timestamp (in milliseconds) at which you should call
-     *      ikcp_update, assuming no ikcp_input/_send calls occur in between.
-     *    → 返回的是**时间戳**（不是间隔），可以是 current 本身（"现在就调"），
-     *      也可以是 current + min(到下个 flush 点, 到最近一个段的重传点)，
-     *      该差值被 ikcp 自己夹在 interval 以内
-     *      （ikcp.c: `if (minimal >= kcp->interval) minimal = kcp->interval;`）。
-     *      这个 interval 上限是 ikcp 的设计，不是我们选的节拍。
-     *
-     *    ikcp_update 返回 void（官方签名），所以调用后要再 check 一次才能拿到
-     *    新的下次时间。
+     * ② 遍历所有会话，执行ikcp_update，并计算下一次最小执行的时间
+     * 
+     * TODO 当数量比较多时，直接遍历cpu占用会比较高，后续估计要用时间分片
+     * 或者树型结构，或者模仿内核epoll的机制来优化
      */
     const IUINT32 cur = (IUINT32)now;
-    int64_t next      = -1; // -1 = 还没有
+    int64_t next      = now + KCP_ACCEPT_TIMEOUT;
 
-    for (auto &x : conns_)
+    for (auto &x : establishs_)
     {
         KcpIO *io = static_cast<KcpIO *>(x.second->io_);
-        if (!io) continue;
+        int64_t t = io->update(now);
 
-        IKCPCB *kcp = io->kcp();
-        if (!kcp) continue;
-
-        IUINT32 t = ikcp_check(kcp, cur);
-        if (t == cur)
-        {
-            // 到点了：该重传的、该发 ACK 的、窗口探测全在这里发出去
-            ikcp_update(kcp, cur);
-            t = ikcp_check(kcp, cur);
-        }
-        int64_t d = (int64_t)(IINT32)(t - cur); // _itimediff 语义，回绕安全
-        if (d < 0) d = 0;
-        if (next < 0 || d < next) next = d;
+        if (t < next) next = t;
     }
-
-    // ③ accept表的回收不重要，就不管了。什么时候调用update什么时候检测就行
 
     return next;
 }

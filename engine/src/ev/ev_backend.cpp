@@ -268,14 +268,6 @@ void EVBackend::do_io_status(EVIO *w, int32_t ev, int32_t status,
         // ssl握手需要继续读取数据时，需要添加可读事件
         kevents |= EV_READ;
         break;
-    case EV_ACCEPT:
-        /**
-         * 监听socket上有新连接/新对端要交给业务线程。
-         * tcp的accept恒返回它；kcp只有真的出现新对端时才返回，
-         * 已有对端的数据包返回EV_NONE（不唤醒业务线程）
-         */
-        events |= EV_ACCEPT;
-        break;
     case EV_WRITE:
         kevents |= EV_WRITE;
         break;
@@ -454,15 +446,6 @@ void EVBackend::do_kernel_event(EVIO *w, int32_t revents)
             }
             else if (b_kevents & EV_ACCEPT)
             {
-                /**
-                 * accept只有tcp、kcp才有，这里的socket必然是监听socket。
-                 *
-                 * ★ 是否把 EV_ACCEPT 派发给业务线程，交给 accept() 的返回值回答：
-                 *   tcp 的监听fd被epoll报可读 ⟹ 内核backlog里一定有待accept
-                 *   的连接，恒返回EV_ACCEPT；kcp 只有一个udp fd，读到的既可能是
-                 *   "新对端"也可能是"已有对端的数据包"（绝大多数），后者绝不能
-                 *   唤醒业务线程，否则每个数据包都要多一次跨线程消息
-                 */
                 auto status = w->io_->accept(w);
                 do_io_status(w, EV_ACCEPT, status, events, kevents);
             }
