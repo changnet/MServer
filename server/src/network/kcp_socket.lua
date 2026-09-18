@@ -18,14 +18,23 @@ KcpSocket.default_param = {
     conv = 0, -- 0 表示随机，仅客户端形态使用
 }
 
---[[
-kcp有连接语义，但服务器的一个fd上会有多个对端。
-    KcpSocket()                 独立的客户端(自己connect到一个对端)
-    KcpSocket(addr, main, conv) 服务器上的一个对端，复用主socket的fd收发数据
+-- 发送消息到后台线程，添加一个新的kcp连接
+local function kcp_backend_add(conv, main_id, addr)
+    local size = 4
 
-与UdpSocket对端不同，kcp对端是"一条连接"：有自己的socket_id、EVIO、缓冲区
-和溢出策略，必须进 SocketMgr（否则io线程派发EV_READ时找不到对象）
-]]
+    local m, mbuffer = g_mthread:construct_message(
+        LOCAL_ADDR, 0, ThreadMessage.KCP_ADD, size + 10)
+    buffer_write_int(mbuffer, 8, pid)       -- 玩家id
+    buffer_write_int(mbuffer, 2, cmd_id, 8)  -- 协议id
+    buffer_write_buffer(mbuffer, buffer, size, 10) -- pb数据
+
+    g_mthread:push_message(m)
+end
+
+-- 发送消息到后台线程，删除一个kcp连接
+local function kcp_backend_del()
+end
+
 function KcpSocket:__init(addr, main_socket, conv)
     if main_socket then
         -- 服务器的一个对端：不创建底层socket，但它是"一条连接"

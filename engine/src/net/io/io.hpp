@@ -8,6 +8,7 @@
 
 class EVIO;
 class Buffer;
+struct lua_State;
 
 /* socket input output control
  * 这里只定义与传输层无关的公共部分（缓冲区、ssl握手等），
@@ -115,32 +116,22 @@ public:
     virtual int32_t prepare_accept() = 0;
     // 准备connect所需要数据
     virtual int32_t prepare_connect() = 0;
-    // 首次添加到backend线程时调用
+    // 首次添加到backend线程时调用，在backend线程执行
     virtual void on_backend_add(EVIO *w)
     {
         UNUSED(w);
     }
-    // 从backend线程移除时调用
+    // 从backend线程移除时调用，在backend线程执行
     virtual void on_backend_remove(EVIO *w)
     {
         UNUSED(w);
     }
-
+    // socket初始化完成，开始初始化读写事件时调用，在业务线程执行
+    virtual bool init_event(EVIO *w, lua_State *L, int32_t index);
+    // socket关闭，通知backend线程移除事件，在业务线程执行
+    virtual bool uninit_event(EVIO *w, lua_State *L, int32_t index);
     /**
      * @brief 处理监听socket上的可读（此函数在io线程执行）
-     *
-     * tcp: 从内核backlog里取出所有新连接，放进自己的accept缓冲表
-     * kcp: recvfrom收包 + 按源地址路由；未接入的对端放进自己的accept表
-     *
-     * @return 是否要把EV_ACCEPT派发给业务线程，由返回值回答：
-     *   EV_ACCEPT 本轮确实产生了需要业务线程处理的连接/对端
-     *   EV_NONE   本轮没有新东西，不要唤醒业务线程
-     *   EV_ERROR  io错误，走常规关闭流程
-     *
-     * tcp的监听fd被epoll报可读 ⟹ 内核backlog里一定有待accept的连接，所以恒返回
-     * EV_ACCEPT；kcp只有一个udp fd，报可读既可能是"新对端"也可能是"已有对端的
-     * 数据包"（绝大多数），后者绝不能唤醒业务线程，否则每个数据包都要多一次
-     * 跨线程消息。
      */
     virtual int32_t accept(EVIO *w)
     {

@@ -28,8 +28,7 @@ int32_t KcpPacket::unpack(lua_State *L, Buffer &buffer)
     if (!buffer.peek_size(size)) return unpack_return(L, PC_MORE);
 
     // 数据是自己写进去的，正常情况下不会出现异常长度
-    if (unlikely(size < sizeof(uint32_t)
-                 || size > (uint32_t)(sizeof(uint32_t) + KCP_MAX_MSG)))
+    if (unlikely(size < sizeof(uint32_t)))
     {
         assert(false);
         return unpack_return(L, PC_MORE);
@@ -76,11 +75,6 @@ int32_t KcpPacket::pack_srv(lua_State *L, int32_t index)
         size_t str_len = 0;
         payload        = luaL_checklstring(L, index, &str_len);
         len            = (int32_t)str_len;
-    }
-
-    if (len < 0 || len > KCP_MAX_MSG)
-    {
-        return luaL_error(L, "kcp packet size invalid: %d", len);
     }
 
     uint32_t size = (uint32_t)(sizeof(uint32_t) + len);

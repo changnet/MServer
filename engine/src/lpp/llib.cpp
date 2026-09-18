@@ -163,6 +163,7 @@ static void luaopen_ev(lua_State *L)
     lc.def<&EV::timer_stop>("timer_stop");
     lc.def<&EV::periodic_start>("periodic_start");
     lc.def<&EV::periodic_stop>("periodic_stop");
+    lc.def<&EV::push_backend_message>("push_backend_message");
 }
 
 static void luaopen_worker_thread(lua_State *L)

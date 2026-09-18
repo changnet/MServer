@@ -165,6 +165,11 @@ int32_t EV::unpack_message(lua_State* L)
     return 5;
 }
 
+void EV::push_backend_message(void *message)
+{
+    StaticGlobal::B->push_message(message);
+}
+
 int32_t EV::push(lua_State* L, bool gc)
 {
     lcpp::Class<EV>::push(L, this, gc);

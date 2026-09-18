@@ -75,30 +75,6 @@ Socket::~Socket()
      *
      */
 
-#if defined(ENABLE_KCP)
-    /**
-     * lua侧忘了 close() 的兜底：补发一条 KCP_DEL，这样 KcpMgr::conns_ 里
-     * 不会残留已析构的 EVIO*。
-     *
-     * ★ 判别条件必须是"还活着的虚拟连接"：
-     *   虚拟连接（服务端对端）: fd == INVALID 且 M_REF_BACKEND 还在
-     *   监听socket / 客户端   : 有真实fd（KcpAcceptorIO 不能强转成 KcpIO）
-     *   已关闭的连接          : fd 会被置为 INVALID，但 M_REF_BACKEND 已被
-     *                           backend释放，不会误判
-     */
-    if (IO::IOT_KCP == io_type_ && w_ && netcompat::INVALID == fd_
-        && 0 != (w_->mask_ & EVIO::M_REF_BACKEND))
-    {
-        KcpDelMsg msg;
-        msg.conn_id   = socket_id_;
-        msg.listen_id = 0; // 删的是会话，不看 listen_id/addr
-        msg.addr.clear();
-        StaticGlobal::M->forward_message(0, BACKEND_ADDR,
-                                         ThreadMessage::KCP_DEL, &msg,
-                                         (int32_t)sizeof(msg));
-    }
-#endif
-
     delete packet_;
     packet_ = nullptr;
 
@@ -110,30 +86,14 @@ Socket::~Socket()
     }
 }
 
-void Socket::stop(bool flush)
+int32_t Socket::stop(lua_State *L)
 {
-#if defined(ENABLE_KCP)
-    // kcp会话的资源（ikcpcb + 路由表）只有backend能释放，
-    // 所以关闭时先递一条删除消息，再走常规的事件通知
-    if (IO::IOT_KCP == io_type_)
-    {
-        KcpDelMsg msg;
-        msg.conn_id   = socket_id_;
-        msg.listen_id = 0; // 删的是会话，不看 listen_id/addr
-        msg.addr.clear();
-        // src 只用于调试，KCP_DEL 不关心来源（和 EVBackend::dispatch_event 一样传0）
-        StaticGlobal::M->forward_message(0, BACKEND_ADDR,
-                                         ThreadMessage::KCP_DEL, &msg,
-                                         (int32_t)sizeof(msg));
-    }
-#endif
-
     // 通知backend线程关闭socket
     // 注意没有执行start时，backend那边并不会引用这个socket
     // 不过那边有处理，这里统一发送
 
-    // EV_FLUSH不要和EV_CLOSE同时发送，不然EV_FLUSH会失效，这在另一个线程有特殊处理
-    StaticGlobal::B->add_watcher_event(w_, flush ? EV_FLUSH : EV_CLOSE);
+    w_->io_->uninit_event(w_, L, 2);
+    return 0;
 }
 
 int32_t Socket::send_pkt(lua_State *L)
@@ -220,80 +180,29 @@ int32_t Socket::start_kcp(lua_State *L)
 #endif
 }
 
-int32_t Socket::drop_kcp_accept(lua_State *L)
-{
-#if defined(ENABLE_KCP)
-    // lua侧：self.s:drop_kcp_accept(addr)（索引1是self）
-    size_t len      = 0;
-    const char *raw = luaL_checklstring(L, 2, &len);
-    if (len != sizeof(UdpAddr))
-    {
-        ELOG("invalid kcp addr length: %d", (int32_t)len);
-        lua_pushboolean(L, 0);
-        return 1;
-    }
-
-    KcpDelMsg msg;
-    msg.conn_id   = 0; // ★ 0 表示删的是accept表项（业务拒绝接入），不是会话
-    msg.listen_id = socket_id_;
-    memcpy(&msg.addr, raw, sizeof(UdpAddr)); // ★ memcpy，不reinterpret_cast
-
-    bool ok = StaticGlobal::M->forward_message(0, BACKEND_ADDR,
-                                               ThreadMessage::KCP_DEL, &msg,
-                                               (int32_t)sizeof(msg));
-    lua_pushboolean(L, ok ? 1 : 0);
-    return 1;
-#else
-    UNUSED(L);
-    lua_pushboolean(L, 0);
-    return 1;
-#endif
-}
-
 void Socket::append(const void *data, size_t len)
 {
     assert(w_->io_);
     auto &send_buff = w_->io_->get_send_buffer();
     send_buff.append(data, len);
 
-    /**
-     * 一般缓冲区都设置得足够大
-     * 如果都溢出了，说明接收端非常慢，比如断点调试，这时候适当处理一下
-     */
-    if (likely(!send_buff.is_overflow())) return;
-
-    if (w_->mask_ & EVIO::M_OVERFLOW_KILL)
-    {
-        // 对于客户端这种不重要的，可以断开连接
-        ELOG("socket send buffer overflow, kill conn:%d,buffer size:%d",
-             socket_id_, send_buff.length());
-
-        Socket::stop();
-
-        return;
-    }
-    else if (w_->mask_ & EVIO::M_OVERFLOW_PEND)
-    {
-        // 如果是服务器之间的连接，考虑阻塞
-        // 这会影响定时器这些，但至少数据不会丢
-        // 在项目中，比如断点调试，可能会导致数据大量堆积。如果是线上项目，应该不会出现
-        flush();
-
-        // sleep一会儿，等待backend线程把数据发送出去
-        for (int32_t i = 0; i < 4; i++)
-        {
-            std::this_thread::sleep_for(std::chrono::microseconds(500));
-            ELOG("socket send buffer overflow, pending,conn:%d,buffer size:%d",
-                 socket_id_, send_buff.length());
-
-            if (!send_buff.is_overflow()) break;
-        };
-    }
+    // 发送数据不存在失败的情况，这里也不会处理缓冲区溢出的情况
+    // 一条消息会分多次append，防止溢出时只写入半条消息
+    // 溢出由send等函数发送完整条消息后处理
 }
 
 void Socket::flush()
 {
     StaticGlobal::B->add_watcher_event(w_, EV_WRITE);
+}
+
+bool Socket::send(const void *data, size_t len)
+{
+    append(data, len);
+    flush();
+
+    auto &send_buff = w_->io_->get_send_buffer();
+    return send_buff.is_overflow();
 }
 
 int32_t Socket::set_nonblock(int32_t fd, int32_t flag)
@@ -413,7 +322,7 @@ int32_t Socket::set_user_timeout(int32_t timeout)
 #endif
 }
 
-int32_t Socket::set_ipv6only(int32_t fd)
+int32_t Socket::set_ipv6only(int32_t fd) const
 {
     // 如果是listen的socket，必须在bind之前设置
     // 如果是connect的socket，不需要设置，由目标地址决定。但如果传的ip是v4-map-v6格式，必须在connect之前设置
@@ -496,22 +405,23 @@ int32_t Socket::get_addr_info(std::vector<std::string> &addrs, const char *host,
     return 0;
 }
 
-bool Socket::start(int32_t addr, int32_t fd, int32_t ev)
+int32_t Socket::start(lua_State *L)
 {
-    assert(fd_ == netcompat::INVALID);
-
+    int32_t fd = luaL_checkinteger(L, 2);
+    // fd可能是netcompat::INVALID，udp、kcp连接没有fd，用的主fd收发数据
     fd_ = fd;
 
     w_->fd_   = fd;
-    w_->addr_ = addr;
+    w_->addr_ = luaL_checkinteger(L, 3);
     w_->mask_ |= EVIO::M_REF_BACKEND; // 当前worker线程一个，backend线程一个
 
-    StaticGlobal::B->set_watcher_event(w_, ev);
+    bool ret = w_->io_->init_event(w_, L, 4);
 
-    return true;
+    lua_pushboolean(L, ret);
+    return 1;
 }
 
-int32_t Socket::connect(int32_t addr, const char *host, int32_t port)
+int32_t Socket::connect(const char *host, int32_t port)
 {
     if (fd_ != netcompat::INVALID)
     {
@@ -550,7 +460,6 @@ int32_t Socket::connect(int32_t addr, const char *host, int32_t port)
         return -1;
     }
 
-    int32_t ev;
     int32_t ok = -1;
     size_t addr_size;
     struct sockaddr *sock_addr;
@@ -615,19 +524,10 @@ int32_t Socket::connect(int32_t addr, const char *host, int32_t port)
         }
     }
 
-    ev = w_->io_->prepare_connect();
-    if (ev < 0)
-    {
-        ELOG("Socket connect prepare_connect fail");
-        goto FAIL;
-    }
-    start(addr, fd, ev);
-
     return fd;
 
 FAIL:
     netcompat::close(fd);
-    fd = netcompat::INVALID;
     return -1;
 }
 
@@ -702,7 +602,7 @@ int32_t Socket::address(lua_State *L) const
     return 2;
 }
 
-int32_t Socket::listen(int32_t addr, const char *host, int32_t port)
+int32_t Socket::listen(const char *host, int32_t port)
 {
     if (fd_ != netcompat::INVALID)
     {
@@ -733,7 +633,6 @@ int32_t Socket::listen(int32_t addr, const char *host, int32_t port)
         return -1;
     }
 
-    int32_t ev;
     int32_t ok     = 0;
     int32_t optval = 1;
     size_t addr_size;
@@ -811,29 +710,10 @@ int32_t Socket::listen(int32_t addr, const char *host, int32_t port)
         goto FAIL;
     }
 
-#if defined(ENABLE_KCP)
-    if (IO::IOT_KCP == io_type_)
-    {
-        // kcp的监听socket只做"收包 + 路由"，没有ikcpcb。
-        // set_io 在 listen/connect 两条路径上都会被调用，只有走到这里才能区分角色，
-        // 所以在bind成功、还没start之前把它换成专门的 acceptor io
-        delete w_->io_;
-        w_->io_ = new KcpAcceptorIO();
-    }
-#endif
-
-    ev = w_->io_->prepare_accept();
-    if (ev < 0)
-    {
-        goto FAIL;
-    }
-    start(addr, fd, ev);
-
     return fd;
 
 FAIL:
     netcompat::close(fd);
-    fd = netcompat::INVALID;
     return -1;
 }
 

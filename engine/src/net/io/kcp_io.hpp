@@ -34,6 +34,11 @@ public:
     int32_t prepare_accept() override { return EV_ERROR; }
     int32_t prepare_connect() override { return EV_READ; }
 
+    // socket初始化完成，开始初始化读写事件时调用，在业务线程执行
+    virtual bool init_event(EVIO *w, lua_State *L, int32_t index);
+    // socket关闭，通知backend线程移除事件，在业务线程执行
+    virtual bool uninit_event(EVIO *w, lua_State *L, int32_t index);
+
     /**
      * 定时调用ikcp_update
      * @return 下次执行的时间戳

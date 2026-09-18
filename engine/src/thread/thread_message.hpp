@@ -83,13 +83,8 @@ struct KcpAddMsg
 /// worker → backend：删除一条 kcp 会话 / 删除一个 accept 表项
 struct KcpDelMsg
 {
-    /**
-     * 会话的 socket_id。
-     * ★ 0 表示"业务拒绝接入"：删的是 accept 表里还没晋升的项，此时用 listen_id + addr
-     */
     int32_t conn_id;
-    int32_t listen_id; // conn_id == 0 时使用：哪个监听 socket
-    UdpAddr addr;      // conn_id == 0 时使用：被拒绝的对端地址
+    bool flush;
 };
 
 #pragma pack(pop)

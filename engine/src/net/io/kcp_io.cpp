@@ -2,9 +2,11 @@
 
 #if defined(ENABLE_KCP)
 
+#include <lua.hpp>
 #include "ev/ev_watcher.hpp"
 #include "net/io/net_io_helper.hpp"
 #include "thread/thread_local_buf.hpp"
+#include "system/static_global.hpp"
 
 #ifdef __windows__
     #include <winsock2.h>
@@ -24,6 +26,25 @@ KcpIO::~KcpIO()
     // ★ kcp_ 的生死由 KcpMgr 独占，所以 ~KcpIO 无论跑在哪个线程都不会碰
     //   正在被 backend 使用的 ikcpcb
     release_kcp();
+}
+
+bool IO::init_event(EVIO *w, lua_State *L, int32_t index)
+{
+    int32_t ev = luaL_checkinteger(L, index);
+    StaticGlobal::B->set_watcher_event(w, ev);
+    return true;
+}
+
+bool IO::uninit_event(EVIO *w, lua_State *L, int32_t index)
+{
+    bool flush = lua_toboolean(L, index);
+
+    KcpDelMsg msg;
+    msg.conn_id = w->id_;
+    msg.flush   = flush;
+    StaticGlobal::B->emplace_message(0, 0, ThreadMessage::KCP_DEL,
+                                     &msg, (int32_t)sizeof(msg));
+    return true;
 }
 
 /**

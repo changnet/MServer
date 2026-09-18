@@ -55,7 +55,7 @@ public:
      */
     int32_t set_user_timeout(int32_t timeout);
     // 启用IPV6双栈
-    int32_t set_ipv6only(int32_t fd);
+    int32_t set_ipv6only(int32_t fd) const;
     /**
      * @brief 设置socket读写的事件
      * @param events 事件，例如EV_READ
@@ -80,18 +80,19 @@ public:
      * 启动socket事件监听
      * @param addr 当前worker地址
      * @param fd 文件描述符
-     * @param ev 需要监听的事件 EV_READ等
+     * @param ... 其他数据，比如需要监听的事件 EV_READ等
+     * @return bool 是否成功
      */
-    bool start(int32_t addr, int32_t fd, int32_t ev);
+    int32_t start(lua_State *L);
     /**
      * 停止socket事件监听(等待另一个线程处理完)并自动close
      * @param flush 发送缓冲区中的数据再停止
      * @return 是否成功（如果当前socket未曾调用start，则会停止失败）
      */
-    void stop(bool flush = false);
+    int32_t stop(lua_State *L);
     /**
-     * 收到另一个线程关闭事件时，关闭socket
-     * 不要在业务逻辑中调用此函数
+     * 收到另一个线程关闭事件时，关闭socket，
+     * 不要在业务逻辑中直接调用此函数，应该调用stop
      * @return 错误码
      */
     int32_t close();
@@ -116,20 +117,18 @@ public:
     int32_t address(lua_State *L) const;
     /**
      * @brief 开始监听链接
-     * @param addr worker的地址
      * @param host 监听的ip
      * @param port 监听的端口
      * @return 文件描述符，错误返回-1
      */
-    int32_t listen(int32_t addr, const char *host, int32_t port);
+    int32_t listen(const char *host, int32_t port);
     /**
      * @brief 发起连接
-     * @param addr worker的地址
      * @param host 连接的ip
      * @param port 连接的端口
      * @return 文件描述符，错误返回-1
      */
-    int32_t connect(int32_t addr, const char *host, int32_t port);
+    int32_t connect(const char *host, int32_t port);
 
     /**
      * 尝试接受一个fd
@@ -175,12 +174,9 @@ public:
      * @brief 追加要发送的数据，并且唤醒io线程
      * @param data 需要发送的数据指针
      * @param len 需要发送的数据长度
+     * @return bool 缓冲区是否溢出
      */
-    void send(const void *data, size_t len)
-    {
-        append(data, len);
-        flush();
-    }
+    bool send(const void *data, size_t len);
 
     void* get_io() const
     {
@@ -233,15 +229,6 @@ public:
      * @return 1 投递成功，0 失败
      */
     int32_t start_kcp(lua_State *L);
-
-    /**
-     * @brief 业务拒绝接入：通知io线程把accept表里这个对端直接删掉
-     * （对应tcp的 close(fd)，免得它一直留到16s超时）
-     * lua侧：self.s:drop_kcp_accept(addr)
-     * @param addr 20字节的UdpAddr二进制串
-     * @return 1 投递成功
-     */
-    int32_t drop_kcp_accept(lua_State *L);
 
     // 打包前端发往后端的数据
     int32_t send_clt(lua_State *L);

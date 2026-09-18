@@ -248,9 +248,14 @@ function Socket:connect(host, port, ip)
     self:auto_set_af_type(ip)
     self:auto_set_io()
     local fd = self.s:connect(ADDR, ip, port)
+    if fd < 0 then return false end
 
-    self.status = OPENING
-    return fd > 0
+    if self.s:start(ADDR, fd, EV_READ) then
+        self.status = OPENING
+        return true
+    end
+
+    return false
 end
 
 -- 重新连接，之前必须调用过connect函数，并且完全关闭
@@ -280,9 +285,14 @@ function Socket:reconnect()
 
     self:auto_set_af_type(ip)
     local fd = self.s:connect(ADDR, ip, self.port)
+    if fd < 0 then return false end
 
-    self.status = OPENING
-    return fd > 0
+    if self.s:start(ADDR, fd, EV_READ) then
+        self.status = OPENING
+        return true
+    end
+
+    return false
 end
 
 -- 以https试连接到其他服务器
@@ -306,9 +316,11 @@ function Socket:listen(ip, port)
 
     self:auto_set_af_type(ip)
     self:auto_set_io()
-    local fd = self.s:listen(ADDR, ip, port)
-    if fd > 0 then
-        self.status = OPENED -- 对于监听的socket，不会触io_ready，这里直接设置状态
+    local fd = self.s:listen(ip, port)
+    if fd < 0 then return false end
+
+    if self.s:start(ADDR, fd, EV_READ) then
+        self.status = OPENING
         return true
     end
 
