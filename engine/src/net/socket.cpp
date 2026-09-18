@@ -201,8 +201,7 @@ bool Socket::send(const void *data, size_t len)
     append(data, len);
     flush();
 
-    auto &send_buff = w_->io_->get_send_buffer();
-    return send_buff.is_overflow();
+    return true;
 }
 
 int32_t Socket::set_nonblock(int32_t fd, int32_t flag)
@@ -965,6 +964,8 @@ int32_t Socket::send_clt(lua_State *L)
     // 1是socket本身，数据从2开始
     packet_->pack_clt(L, 2);
 
+    check_send_overflow();
+
     return 0;
 }
 
@@ -972,6 +973,9 @@ int32_t Socket::send_srv(lua_State *L)
 {
     // 1是socket本身，数据从2开始
     packet_->pack_srv(L, 2);
+
+    check_send_overflow();
+
     return 0;
 }
 
@@ -1013,4 +1017,43 @@ bool Socket::is_remote_close() const
 void Socket::set_af_type(int32_t af_type)
 {
     af_type_ = af_type;
+}
+
+bool Socket::check_send_overflow()
+{
+    auto &send_buff = w_->io_->get_send_buffer();
+
+    /**
+     * 一般缓冲区都设置得足够大
+     * 如果都溢出了，说明接收端非常慢，比如断点调试，这时候适当处理一下
+     */
+    if (likely(!send_buff.is_overflow())) return false;
+
+    if (w_->mask_ & EVIO::M_OVERFLOW_KILL)
+    {
+        // 对于客户端这种不重要的，可以断开连接
+        ELOG("socket send buffer overflow, kill conn:%d,buffer size:%d",
+             socket_id_, send_buff.length());
+
+        Socket::stop(nullptr);
+    }
+    else if (w_->mask_ & EVIO::M_OVERFLOW_PEND)
+    {
+        // 如果是服务器之间的连接，考虑阻塞
+        // 这会影响定时器这些，但至少数据不会丢
+        // 在项目中，比如断点调试，可能会导致数据大量堆积。如果是线上项目，应该不会出现
+        flush();
+
+        // sleep一会儿，等待backend线程把数据发送出去
+        for (int32_t i = 0; i < 4; i++)
+        {
+            std::this_thread::sleep_for(std::chrono::microseconds(500));
+            ELOG("socket send buffer overflow, pending,conn:%d,buffer size:%d",
+                 socket_id_, send_buff.length());
+
+            if (!send_buff.is_overflow()) break;
+        };
+    }
+
+    return true;
 }

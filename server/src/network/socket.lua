@@ -7,6 +7,8 @@ local EngineIO = require "engine.IO"
 local EngineSocket = require "engine.Socket"
 
 local EV_READ = SocketMgr.EV_READ
+local EV_CONNECT = SocketMgr.EV_CONNECT
+
 local OPENED = SocketMgr.OPENED
 local OPENING = SocketMgr.OPENING
 local CLOSING = SocketMgr.CLOSING
@@ -22,7 +24,7 @@ local IOT_SSL = EngineSocket.IOT_SSL
 local IOT_UDP = EngineSocket.IOT_UDP
 local IOT_KCP = EngineSocket.IOT_KCP
 
-local ADDR = LOCAL_ADDR
+local LOCAL_ADDR = LOCAL_ADDR
 
 -- 网络连接基类
 local Socket = oo.class("Socket")
@@ -108,6 +110,11 @@ function Socket:set_param()
     return true
 end
 
+-- connect/listen完成后，启动需要监听的事件(业务逻辑不要调用此函数)
+function Socket:start_event(fd, ev)
+    return self.s:start(LOCAL_ADDR, fd, ev)
+end
+
 -- 接受新连接
 function Socket:on_accepting(fd)
     local mt = getmetatable(self) or self
@@ -135,7 +142,7 @@ function Socket:on_accepting(fd)
 
     -- 必须在设置好各种io参数后才能启动
     -- 不然backend线程在set_param完成之前触发读写事件就会出错
-    if not socket.s:start(LOCAL_ADDR, fd, EV_READ) then
+    if not socket:start_event(fd, EV_READ) then
         print("socket accept start fail", self.socket_id, fd)
         return
     end
@@ -247,10 +254,10 @@ function Socket:connect(host, port, ip)
 
     self:auto_set_af_type(ip)
     self:auto_set_io()
-    local fd = self.s:connect(ADDR, ip, port)
+    local fd = self.s:connect(ip, port)
     if fd < 0 then return false end
 
-    if self.s:start(ADDR, fd, EV_READ) then
+    if self:start_event(fd, EV_CONNECT) then
         self.status = OPENING
         return true
     end
@@ -284,10 +291,10 @@ function Socket:reconnect()
     SocketMgr.add(self)
 
     self:auto_set_af_type(ip)
-    local fd = self.s:connect(ADDR, ip, self.port)
+    local fd = self.s:connect(ip, self.port)
     if fd < 0 then return false end
 
-    if self.s:start(ADDR, fd, EV_READ) then
+    if self:start_event(fd, EV_CONNECT) then
         self.status = OPENING
         return true
     end
@@ -319,7 +326,7 @@ function Socket:listen(ip, port)
     local fd = self.s:listen(ip, port)
     if fd < 0 then return false end
 
-    if self.s:start(ADDR, fd, EV_READ) then
+    if self:start(LOCAL_ADDR, fd, SocketMgr.EV_ACCEPT) then
         self.status = OPENING
         return true
     end

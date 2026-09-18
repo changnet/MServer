@@ -249,6 +249,8 @@ public:
     // 在socket关闭时解析剩下的数据，仅http适用
     int32_t unpack_on_closed(lua_State *L);
 
+    bool check_send_overflow();
+
 private:
     int32_t fd_; /// 当前socket的文件描述符
     int32_t socket_id_; // 唯一id，用于回调到C++时区分连接。用fd或者指针地址，都存在复用可能会重复的问题

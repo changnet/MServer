@@ -28,14 +28,14 @@ KcpIO::~KcpIO()
     release_kcp();
 }
 
-bool IO::init_event(EVIO *w, lua_State *L, int32_t index)
+bool KcpIO::init_event(EVIO *w, lua_State *L, int32_t index)
 {
     int32_t ev = luaL_checkinteger(L, index);
     StaticGlobal::B->set_watcher_event(w, ev);
     return true;
 }
 
-bool IO::uninit_event(EVIO *w, lua_State *L, int32_t index)
+bool KcpIO::uninit_event(EVIO *w, lua_State *L, int32_t index)
 {
     bool flush = lua_toboolean(L, index);
 

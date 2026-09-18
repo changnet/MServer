@@ -57,6 +57,12 @@ function UdpSocket:address()
     return (self.main_socket or self.s):get_udp_addr(addr)
 end
 
+function UdpSocket:start_event(fd, ev)
+    -- udp没有accept、connect事件，只有读写事件
+    return self.s:start(LOCAL_ADDR, fd, SocketMgr.EV_READ)
+end
+
+
 -- 监听socket连接
 -- @param ip 监听的ip
 -- @param port 监听的端口

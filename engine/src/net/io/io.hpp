@@ -112,10 +112,6 @@ public:
         return 0;
     }
 
-    // 准备accept所需要数据
-    virtual int32_t prepare_accept() = 0;
-    // 准备connect所需要数据
-    virtual int32_t prepare_connect() = 0;
     // 首次添加到backend线程时调用，在backend线程执行
     virtual void on_backend_add(EVIO *w)
     {

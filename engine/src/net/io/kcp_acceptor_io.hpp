@@ -52,10 +52,6 @@ public:
     /// 监听socket从不发数据
     int32_t send(EVIO *w) override { return EV_NONE; }
 
-    /// ★ 与 TcpIO 一致：监听socket注册成 EV_ACCEPT
-    int32_t prepare_accept() override { return EV_ACCEPT; }
-    int32_t prepare_connect() override { return EV_READ; }
-
     void on_backend_add(EVIO *w) override;
     void on_backend_remove(EVIO *w) override;
 
