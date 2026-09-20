@@ -145,15 +145,16 @@ public:
 
     /**
      * @brief 从accept缓冲区取出一个待处理的连接（此函数在业务线程执行）
-     *
-     * tcp: 成功返回fd，失败返回错误掩码（低32位fd，高32位错误码）
-     * kcp: 没有fd，这里只返回"没有待处理连接"，对端由
-     *      KcpAcceptorIO::pop_accept(addr, conv) 提供
      */
-    virtual int64_t pop_accept()
+    virtual int64_t pop_accept(int32_t &e)
     {
-        return ((int64_t)EINVAL << 32) | (uint32_t)netcompat::INVALID;
+        e = EINVAL;
+        return netcompat::INVALID;
     };
+    /**
+     * @brief 拒绝一个待处理的连接（此函数在业务线程执行）
+     */
+    virtual void reject_accept(int64_t fd) {}
 
     void set_role_type(int32_t role_type)
     {

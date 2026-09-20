@@ -132,9 +132,14 @@ public:
 
     /**
      * 尝试接受一个fd
-     * @return 成功返回fd，失败返回-1
+     * @return 成功返回fd，失败返回-1，后面带错误码
      */
     int32_t accept(lua_State *L);
+    /**
+     * 拒绝一个fd
+     * @return 成功返回fd，失败返回-1
+     */
+    int32_t reject(lua_State *L);
     /**
      * 获取http头数据，仅当前socket的packet为http有效
      */
@@ -217,18 +222,6 @@ public:
      * @return ip地址, 端口
      */
     static int32_t get_udp_addr(lua_State *L);
-
-    /**
-     * @brief 把一条kcp连接交给io线程建会话（服务端对端 / 客户端形态共用）
-     * lua侧：self.s:start_kcp(worker_addr, listen_id, listen_fd, conv, addr)
-     * @param worker_addr 本worker地址（io线程回调投递用）
-     * @param listen_id   服务端对端：监听socket_id；客户端形态：0
-     * @param listen_fd   sendto用的fd（服务端对端=监听fd；客户端=自己的fd）
-     * @param conv        会话号
-     * @param addr        20字节的UdpAddr二进制串；客户端形态传nil（内部用默认值AF_UNSPEC）
-     * @return 1 投递成功，0 失败
-     */
-    int32_t start_kcp(lua_State *L);
 
     // 打包前端发往后端的数据
     int32_t send_clt(lua_State *L);

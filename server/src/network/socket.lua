@@ -112,6 +112,7 @@ end
 
 -- connect/listen完成后，启动需要监听的事件(业务逻辑不要调用此函数)
 function Socket:start_event(fd, ev)
+    -- 不同类型的socket在listen/connect后ev不一样，抽个接口出来方便重载
     return self.s:start(LOCAL_ADDR, fd, ev)
 end
 
@@ -326,7 +327,7 @@ function Socket:listen(ip, port)
     local fd = self.s:listen(ip, port)
     if fd < 0 then return false end
 
-    if self:start(LOCAL_ADDR, fd, SocketMgr.EV_ACCEPT) then
+    if self:start_event(fd, SocketMgr.EV_ACCEPT) then
         self.status = OPENING
         return true
     end

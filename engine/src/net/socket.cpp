@@ -5,6 +5,8 @@
 #include "io/ssl_io.hpp"
 #include "io/tcp_io.hpp"
 #include "io/udp_io.hpp"
+#include "io/kcp_io.hpp"
+#include "packet/kcp_packet.hpp"
 #include "packet/http_packet.hpp"
 #include "packet/ss_stream_packet.hpp"
 #include "packet/udp_packet.hpp"
@@ -12,13 +14,6 @@
 #include "packet/ws_stream_packet.hpp"
 #include "system/static_global.hpp"
 #include "lpp/lcpp.hpp"
-
-#if defined(ENABLE_KCP)
-    #include "io/kcp_acceptor_io.hpp"
-    #include "io/kcp_io.hpp"
-    #include "packet/kcp_packet.hpp"
-    #include "thread/thread_message.hpp"
-#endif
 
 #ifdef __windows__
     #include <winsock2.h>
@@ -123,61 +118,6 @@ int32_t Socket::get_udp_addr(lua_State *L)
     lua_pushinteger(L, ntohs(addr.port_));
 
     return 2;
-}
-
-int32_t Socket::start_kcp(lua_State *L)
-{
-#if defined(ENABLE_KCP)
-    assert(io_type_ == IO::IOT_KCP);
-    assert(w_ && w_->io_);
-
-    // lua侧的数据都从索引2开始（索引1是self）
-    int32_t worker_addr = (int32_t)luaL_checkinteger(L, 2);
-    int32_t listen_id   = (int32_t)luaL_checkinteger(L, 3);
-    int32_t listen_fd   = (int32_t)luaL_checkinteger(L, 4);
-    uint32_t conv       = (uint32_t)luaL_checkinteger(L, 5);
-
-    // 客户端形态不传addr，保持默认值AF_UNSPEC（socket已connect，用::send）
-    size_t len      = 0;
-    const char *raw = lua_tolstring(L, 6, &len);
-    UdpAddr addr; // 默认构造已clear（family_ == AF_UNSPEC）
-    if (raw)
-    {
-        if (len != sizeof(UdpAddr))
-        {
-            ELOG("invalid kcp addr length: %d", (int32_t)len);
-            lua_pushboolean(L, 0);
-            return 1;
-        }
-        memcpy(&addr, raw, sizeof(addr)); // ★ memcpy，不reinterpret_cast
-    }
-
-    // ① 先把引用位和线程地址准备好：
-    //    服务端对端不走 start()，这两项必须在这里补上；
-    //    客户端形态 start() 已经设过，重复设置是幂等的
-    w_->addr_ = worker_addr;
-    w_->mask_ |= EVIO::M_REF_BACKEND;
-
-    KcpIO *io = static_cast<KcpIO *>(w_->io_);
-    io->set_conv(conv);
-
-    // ② 通知io线程建会话（走现成的forward_message，不新造投递函数）
-    KcpAddMsg msg;
-    msg.conn_w    = w_;
-    msg.listen_id = listen_id;
-    msg.listen_fd = listen_fd;
-    msg.conv      = conv;
-    msg.addr      = addr; // ★ 无条件赋值：客户端形态保持默认值(AF_UNSPEC)
-
-    StaticGlobal::B->emplace_message(worker_addr, -1,
-                                               ThreadMessage::KCP_ADD, &msg,
-                                               (int32_t)sizeof(msg));
-    lua_pushboolean(L, 1);
-    return 1;
-#else
-    UNUSED(L);
-    return luaL_error(L, "kcp disabled");
-#endif
 }
 
 void Socket::append(const void *data, size_t len)
@@ -408,6 +348,17 @@ int32_t Socket::start(lua_State *L)
 {
     int32_t fd = luaL_checkinteger(L, 2);
     // fd可能是netcompat::INVALID，udp、kcp连接没有fd，用的主fd收发数据
+    if (fd != netcompat::INVALID)
+    {
+        if (set_nonblock(fd, 0))
+        {
+            int32_t e = netcompat::errorno();
+            ELOG("fd set_nonblock fail, fd = %d, e = %d: %s", fd, e,
+                 netcompat::strerror(e));
+            netcompat::close(fd);
+            return luaL_error(L, "set_nonblock fail");
+        }
+    }
     fd_ = fd;
 
     w_->fd_   = fd;
@@ -762,66 +713,34 @@ int32_t Socket::accept(lua_State *L)
 {
     if (!w_->io_) return push_accept_error(L, -1, "no io set");
 
-#if defined(ENABLE_KCP)
-    /**
-     * kcp没有fd：accept返回 (对端地址, conv)，业务侧据此创建"一条对端连接"。
-     * 与tcp回到lua的协议是同一个，只是多一个返回值：
-     *     tcp: on_accepting(fd)
-     *     kcp: on_accepting(addr, conv)
-     *
-     * 能走到这里说明是监听socket（只有监听socket才会注册成EV_ACCEPT），
-     * 而kcp的监听socket在 Socket::listen() 里已经被换成 KcpAcceptorIO
-     */
-    if (IO::IOT_KCP == io_type_)
-    {
-        KcpAcceptorIO *aio = static_cast<KcpAcceptorIO *>(w_->io_);
+    int32_t e    = 0;
+    int64_t fd = (w_->io_)->pop_accept(e);
 
-        UdpAddr addr;
-        uint32_t conv = 0;
-        if (!aio->pop_accept(addr, conv))
-        {
-            lua_pushinteger(L, netcompat::INVALID); // 没有更多待接入的对端
-            return 1;
-        }
-
-        lua_pushlstring(L, (const char *)&addr, sizeof(addr));
-        lua_pushinteger(L, (lua_Integer)conv);
-        return 2;
-    }
-#endif
-
-    // accept只有tcp才有，udp的socket不会收到EV_ACCEPT事件
-    int64_t mask = (w_->io_)->pop_accept();
-
-    int32_t fd = (int32_t)(mask & 0xFFFFFFFF);
-    int32_t no = (int32_t)(mask >> 32);
     if (fd == netcompat::INVALID)
     {
         // 所有等待的连接已处理完，并不是错误
-        if (0 == no)
+        if (0 == e)
         {
             lua_pushinteger(L, netcompat::INVALID);
             return 1;
         }
         else
         {
-            return push_accept_error(L, no, netcompat::strerror(no));
+            return push_accept_error(L, e, netcompat::strerror(e));
         }
     }
-    no = Socket::validate();
-    if (0 != no) return push_accept_error(L, no, netcompat::strerror(no));
-
-    if (set_nonblock(fd, 0))
-    {
-        int32_t e = netcompat::errorno();
-        ELOG("fd set_nonblock fail, fd = %d, e = %d: %s", fd, e,
-             netcompat::strerror(e));
-        netcompat::close(fd);
-        return push_accept_error(L, e);
-    }
+    e = Socket::validate();
+    if (0 != e) return push_accept_error(L, e, netcompat::strerror(e));
 
     lua_pushinteger(L, fd);
     return 1;
+}
+
+int32_t Socket::reject(lua_State* L)
+{
+    int64_t fd = luaL_checkinteger(L, 2);
+    (w_->io_)->reject_accept(fd);
+    return 0;
 }
 
 int32_t Socket::is_connect_success()

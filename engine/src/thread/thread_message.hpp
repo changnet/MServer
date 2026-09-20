@@ -2,15 +2,6 @@
 
 #include "global/global.hpp"
 
-#if defined(ENABLE_KCP)
-    /**
-     * KcpAddMsg 按值含 UdpAddr，而 udp_addr.hpp 会拉进 winsock2.h/ws2tcpip.h。
-     * 用 #if 圈起来，让这个头依赖只存在于 ENABLE_KCP=ON 的构建里
-     * （socket.hpp 特意只写 `struct UdpAddr;` 前置声明就是为了躲它）
-     */
-    #include "net/udp_addr.hpp"
-#endif
-
 class EVIO;
 
 // 线程数据交互结构
@@ -59,42 +50,9 @@ struct ThreadMessage final
     // 这个结构是flexible array，后面还有自定义数据
 };
 
-#if defined(ENABLE_KCP)
-
-/**
- * kcp 的线程间消息载荷（全部POD，按值塞进 ThreadMessage::buffer()）
- *
- * 控制面（建/删会话）走 ThreadContext 消息队列，数据面走 Buffer + EV_WRITE/EV_READ。
- * 跨线程传 EVIO* 是框架既有做法（add_watcher_event 就是这么干的），
- * 安全性靠 EVIO::M_REF_* 引用计数保证。
- */
-#pragma pack(push, 1)
-
-/// worker → backend：建一条 kcp 会话（服务端对端 / 客户端形态共用）
-struct KcpAddMsg
+/// kcp 会话：添加/删除io线程的kcp连接
+struct KcpMsg
 {
-    EVIO    *conn_w;    // 这条连接的 EVIO（主线程已建好，M_REF_BACKEND 已置位）
-    int32_t  listen_id; // 服务端对端：监听 socket_id；客户端形态：0
-    int32_t  listen_fd; // sendto 用的 fd（服务端对端=监听 fd；客户端=自己的 fd）
-    uint32_t conv;      // 会话号（服务端由首包解码；客户端自己随机）
-    UdpAddr  addr;      // 对端地址（客户端形态保持默认值 AF_UNSPEC）
+    EVIO    *w_;   // 已建立的EVIO，没有就是nullptr
+    int64_t  vfd_; // 监听 socket_id | 虚拟fd
 };
-
-/// worker → backend：删除一条 kcp 会话 / 删除一个 accept 表项
-struct KcpDelMsg
-{
-    int32_t conn_id;
-    bool flush;
-};
-
-#pragma pack(pop)
-
-// EVIO* 在 64 位下是 8 字节，32 位下是 4 字节，所以只在 64 位下固化布局
-static_assert(sizeof(void *) != 8 || offsetof(KcpAddMsg, addr) == 20,
-              "KcpAddMsg layout changed");
-static_assert(sizeof(void *) != 8 || sizeof(KcpAddMsg) == 40,
-              "KcpAddMsg must be 40 bytes");
-static_assert(offsetof(KcpDelMsg, addr) == 8, "KcpDelMsg layout changed");
-static_assert(sizeof(KcpDelMsg) == 28, "KcpDelMsg must be 28 bytes");
-
-#endif

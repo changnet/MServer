@@ -34,7 +34,11 @@ public:
     // 初始化accept所需要数据
     void on_backend_add(EVIO *w) override;
     // 从accept buffer获取一个新的fd
-    int64_t pop_accept() override;
+    int64_t pop_accept(int32_t &e) override;
+    /**
+     * @brief 拒绝一个待处理的连接（此函数在业务线程执行）
+     */
+    void reject_accept(int64_t fd) override;
 
 protected:
     struct AcceptContext

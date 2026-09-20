@@ -116,8 +116,9 @@ function KcpSocket:address()
 end
 
 function KcpSocket:start_event(fd, ev)
-    -- udp没有accept、connect事件，只有读写事件
-    return self.s:start(LOCAL_ADDR, fd, SocketMgr.EV_READ)
+    -- udp没有connect事件，只有读事件
+    local nev = self.listen_ip and SocketMgr.EV_ACCEPT or SocketMgr.EV_READ
+    return self.s:start(LOCAL_ADDR, fd, nev)
 end
 
 -- 监听socket连接

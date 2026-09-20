@@ -44,16 +44,14 @@ public:
      *         EV_NONE   只是已有对端的数据包，不唤醒业务线程
      */
     int32_t accept(EVIO *w) override;
-
-    // ---- accept表：业务线程侧 ----
     /**
      * 取出一个待接入的对端（业务线程收到EV_ACCEPT后循环调用）
-     * @param addr 出参，对端地址
-     * @param conv 出参，会话号
-     * @return true 表示成功取得一份待接入的对端
      */
-    bool pop_accept(UdpAddr &addr, uint32_t &conv);
-
+    int64_t pop_accept(int32_t &e);
+    /**
+     * @brief 拒绝一个待处理的连接（此函数在业务线程执行）
+     */
+    void reject_accept(int64_t fd) override;
     /**
      * 定时调用ikcp_update
      * @return 下次执行的时间戳
@@ -78,14 +76,6 @@ public:
         conv_ = conv;
     }
 
-    int32_t listen_id() const
-    {
-        return listen_id_;
-    }
-    int32_t listen_fd() const
-    {
-        return listen_fd_;
-    }
     const UdpAddr &peer() const
     {
         return peer_;
@@ -95,7 +85,8 @@ private:
     // 未建立连接的对端
     struct AcceptEntry
     {
-        uint32_t conv     = 0;
+        int64_t vfd_      = 0; // 虚拟fd，用socket_id | 虚拟fd 构建
+        uint32_t conv     = 0; // kcp专用的会话id
         int64_t create_ms = 0; // 用于超时回收
         bool notified = false; // 是否已交给业务线程，防止同一对端被accept两次
         std::string data; // 接入前缓存的数据，KCP_MAX_PARKED_DATA封顶
@@ -103,7 +94,8 @@ private:
     // 监听socket用来保存accept相关的上下文
     struct AcceptContext
     {
-        /// accept表：io线程写、业务线程读
+        int32_t fd_seed_ = 0; // 用于生成vfd的种子
+        int32_t socket_id_ = 0; // 对应W->id_
         std::mutex mutex_;
         std::unordered_map<UdpAddr, AcceptEntry, UdpAddrHash> accepting_;
 
@@ -116,17 +108,17 @@ private:
     void do_accept_data(const UdpAddr &addr, const char *data, int32_t len);
     // 按ip输出错误日志
     void log_error(const char *what, const UdpAddr &addr, int32_t extra);
+    // 构建唯一的vfd
+    int64_t make_vfd();
 
     /// 一次EV_READ最多读多少个datagram，防止一个疯狂发包的对端占死backend
     static constexpr int32_t MAX_RECV_PER_EVENT = 64;
 
-    struct IKCPCB *kcp_ = nullptr;
+    uint32_t conv_ = 0;   // kcp的会话id（conversation）
+    UdpAddr peer_;        // 地址只记在这里
+    int32_t main_fd_ = 0; // 作为acceptor时，用于收发数据的fd
 
-    uint32_t conv_ = 0;                      // kcp的会话id（conversation）
-    UdpAddr peer_;                           // 地址只记在这里
-    int32_t listen_id_ = 0;                  // 0 = 客户端形态
-    int32_t listen_fd_ = netcompat::INVALID; // 客户端=自己的fd；服务端对端=监听fd
-
+    struct IKCPCB *kcp_    = nullptr;
     AcceptContext *accept_ = nullptr; // accept数据
 };
 

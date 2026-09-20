@@ -35,6 +35,8 @@ void KcpIO::on_backend_add(EVIO *w)
     {
         assert(!accept_);
         accept_ = new AcceptContext();
+        accept_->socket_id_ = w->id_;
+
         StaticGlobal::B->kcp_mgr().add_acceptor(w->id_, this);
     }
 }
@@ -57,11 +59,10 @@ bool KcpIO::init_event(EVIO *w, lua_State *L, int32_t index)
 
 bool KcpIO::uninit_event(EVIO *w, lua_State *L, int32_t index)
 {
+    // TODO 这个flush后续接口重构后和tcp一样用EV_FLUSH设置到ev变量中
     bool flush = lua_toboolean(L, index);
 
-    KcpDelMsg msg;
-    msg.conn_id = w->id_;
-    msg.flush   = flush;
+    KcpMsg msg{w, 0};
     StaticGlobal::B->emplace_message(0, 0, ThreadMessage::KCP_DEL,
                                      &msg, (int32_t)sizeof(msg));
     return true;
@@ -75,17 +76,15 @@ int32_t KcpIO::output(const char *buf, int32_t len, struct IKCPCB * /*kcp*/,
                       void *user)
 {
     KcpIO *io = static_cast<KcpIO *>(user);
-    int32_t fd = io->listen_fd_;
-    if (fd == netcompat::INVALID) return -1;
 
     // 客户端形态：socket已connect，对端地址是默认值，直接send
-    if (io->peer_.is_default()) return (int32_t)::send(fd, buf, len, 0);
+    if (CONNECTOR == io->role_type_) return (int32_t)::send(fd, buf, len, 0);
 
     struct sockaddr_storage ss;
     socklen_t sl = io->peer_.to_sockaddr(ss);
     if (0 == sl) return -1;
 
-    return (int32_t)::sendto(fd, buf, len, 0, (struct sockaddr *)&ss, sl);
+    return (int32_t)::sendto(io->main_fd_, buf, len, 0, (struct sockaddr *)&ss, sl);
 }
 
 bool KcpIO::create_kcp(uint32_t conv, int32_t listen_id, int32_t listen_fd,
@@ -407,13 +406,15 @@ void KcpIO::do_accept_data(const UdpAddr &addr, const char *data, int32_t len)
     }
 
     AcceptEntry &e = accepting[addr];
+    e.vfd_         = make_vfd();
     e.conv         = ikcp_getconv(data);
     e.create_ms    = timing::steady_clock();
     e.data.assign(data, (size_t)len);
 }
 
-bool KcpIO::pop_accept(UdpAddr &addr, uint32_t &conv)
+int64_t KcpIO::pop_accept(int32_t &e)
 {
+    e = 0;
     std::scoped_lock sl(accept_->mutex_);
 
     for (auto &x : accept_->accepting_)
@@ -423,12 +424,25 @@ bool KcpIO::pop_accept(UdpAddr &addr, uint32_t &conv)
         if (x.second.notified) continue;
 
         x.second.notified = true;
-        addr              = x.first;
-        conv              = x.second.conv;
-        return true;
+
+        return x.second.vfd_;
     }
 
-    return false;
+    return netcompat::INVALID;
+}
+
+void KcpIO::reject_accept(int64_t fd)
+{
+    std::scoped_lock sl(accept_->mutex_);
+
+    for (auto &x : accept_->accepting_)
+    {
+        if (x.second.vfd_ == fd)
+        {
+            accept_->accepting_.erase(x.first);
+            return;
+        }
+    }
 }
 
 void KcpIO::log_error(const char *what, const UdpAddr &addr, int32_t extra)
@@ -436,6 +450,20 @@ void KcpIO::log_error(const char *what, const UdpAddr &addr, int32_t extra)
     char ip[INET6_ADDRSTRLEN];
     ELOG("kcp accept %s, peer=%s:%u, extra=%d", what,
          addr.to_string(ip, sizeof(ip)), (uint32_t)ntohs(addr.port_), extra);
+}
+
+int64_t KcpIO::make_vfd()
+{
+    int32_t seed = ++accept_->fd_seed_;
+    // 生成的vfd只在accept期间使用，不考虑单个监听的socket超过21亿或者
+    // 一个socket很久不accept的情况,因此重置是不会检查重复的
+    if (0x7FFFFFFF == seed)
+    {
+        seed = 1;
+        accept_->fd_seed_ = 1;
+    }
+
+    return ((int64_t)accept_->socket_id_ << 32) | seed;
 }
 
 #endif

@@ -193,7 +193,7 @@ int32_t TcpIO::accept(EVIO *w)
     return EV_ACCEPT;
 }
 
-int64_t TcpIO::pop_accept()
+int64_t TcpIO::pop_accept(int32_t &e)
 {
     if (!accept_)
     {
@@ -208,4 +208,9 @@ int64_t TcpIO::pop_accept()
     accept_->fd_queue_.pop_front();
 
     return fd;
+}
+
+void TcpIO::reject_accept(int64_t fd)
+{
+    netcompat::close(fd);
 }
