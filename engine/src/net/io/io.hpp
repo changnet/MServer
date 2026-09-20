@@ -27,6 +27,14 @@ public:
         IOT_KCP = 4, // kcp（可靠udp）。监听socket会被换成 KcpAcceptorIO
     };
 
+    /// 角色类型
+    enum RoleType
+    {
+        ACCEPTOR  = 0, // 被连接端（通过accept获得）
+        LISTENER  = 1, // 监听端
+        CONNECTOR = 2, // 主动发起连接端
+    };
+
 public:
     virtual ~IO();
     explicit IO();
@@ -49,7 +57,7 @@ public:
         return 0;
     }
     /**
-     * 执行初始化接受的连接
+     * 执行初始化接受的连接，在io线程执行
      * @return int32_t
      */
     virtual int32_t do_init_accept(EVIO *w)
@@ -57,7 +65,7 @@ public:
         return EV_NONE;
     };
     /**
-     * 执行初始化连接
+     * 执行初始化连接，在io线程执行
      * @return int32_t
      */
     virtual int32_t do_init_connect(EVIO *w)
@@ -147,7 +155,13 @@ public:
         return ((int64_t)EINVAL << 32) | (uint32_t)netcompat::INVALID;
     };
 
+    void set_role_type(int32_t role_type)
+    {
+        role_type_ = role_type;
+    }
+
 protected:
+    int32_t role_type_; // 角色类型
     Buffer recv_; // 接收缓冲区，由io线程写，主线程读取并处理数据
     Buffer send_; // 发送缓冲区，由主线程写，io线程发送
 };

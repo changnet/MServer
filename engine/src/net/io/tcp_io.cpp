@@ -103,9 +103,9 @@ int32_t TcpIO::send(EVIO *w)
 
 void TcpIO::on_backend_add(EVIO *w)
 {
-    if (accept_) return;
+    if (accept_ || LISTENER != role_type_) return;
 
-    accept_              = new AcceptBuffer();
+    accept_              = new AcceptContext();
     accept_->reserve_fd_ = dup(1);
 }
 

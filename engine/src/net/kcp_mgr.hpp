@@ -10,7 +10,6 @@
 #if defined(ENABLE_KCP)
 
 class EVIO;
-class KcpAcceptorIO;
 
 /**
  * UdpAddr 的hash函数（UdpAddr 已有 operator==，直接 memcmp 20 字节）
@@ -57,9 +56,9 @@ public:
     void on_del(ThreadMessage *m); // KCP_DEL（含"业务拒绝接入"）
 
     // 添加监听的io
-    void add_acceptor(int32_t listen_id, KcpAcceptorIO *acc);
+    void add_acceptor(int32_t listen_id, KcpIO *acc);
     /// 移除监听的io
-    void remove_acceptor(int32_t listen_id, KcpAcceptorIO *acc);
+    void remove_acceptor(int32_t listen_id, KcpIO *acc);
 
     // ---- 生命周期 ----
     /// 唯一的回收点：释放 ikcpcb + 摘 establishs_/已建立表 + （虚拟连接）解io线程引用
@@ -83,7 +82,7 @@ private:
     std::unordered_map<int32_t, EVIO *> establishs_;
 
     /// listen_id → 监听socket的acceptor（它的表里放着这个监听fd上的所有对端）
-    std::unordered_map<int32_t, KcpAcceptorIO *> acceptors_;
+    std::unordered_map<int32_t, KcpIO *> acceptors_;
 
     int64_t next_accept_timeout_ = 0; // 下一次遍历acceptor回收超时连接时间戳(ms)
 };

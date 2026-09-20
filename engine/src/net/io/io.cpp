@@ -5,6 +5,7 @@
 
 IO::IO()
 {
+    role_type_ = ACCEPTOR;
 }
 
 IO::~IO()

@@ -522,6 +522,7 @@ int32_t Socket::connect(const char *host, int32_t port)
             goto FAIL;
         }
     }
+    w_->io_->set_role_type(IO::CONNECTOR);
 
     return fd;
 
@@ -708,6 +709,7 @@ int32_t Socket::listen(const char *host, int32_t port)
     {
         goto FAIL;
     }
+    w_->io_->set_role_type(IO::LISTENER);
 
     return fd;
 

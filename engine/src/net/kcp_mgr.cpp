@@ -6,7 +6,6 @@
 
 #include "ev/ev_watcher.hpp"
 #include "ev/time.hpp"
-#include "net/io/kcp_acceptor_io.hpp"
 #include "net/io/kcp_io.hpp"
 #include "system/static_global.hpp"
 
@@ -31,7 +30,7 @@ KcpMgr::~KcpMgr()
     acceptors_.clear();
 }
 
-void KcpMgr::add_acceptor(int32_t listen_id, KcpAcceptorIO *acc)
+void KcpMgr::add_acceptor(int32_t listen_id, KcpIO *acc)
 {
     assert(acc);
 
@@ -46,7 +45,7 @@ void KcpMgr::add_acceptor(int32_t listen_id, KcpAcceptorIO *acc)
     acceptors_.emplace(listen_id, acc);
 }
 
-void KcpMgr::remove_acceptor(int32_t listen_id, KcpAcceptorIO *acc)
+void KcpMgr::remove_acceptor(int32_t listen_id, KcpIO *acc)
 {
     acceptors_.erase(listen_id);
 }

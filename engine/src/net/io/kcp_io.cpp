@@ -3,6 +3,7 @@
 #if defined(ENABLE_KCP)
 
 #include <lua.hpp>
+#include "ev/time.hpp"
 #include "ev/ev_watcher.hpp"
 #include "net/io/net_io_helper.hpp"
 #include "thread/thread_local_buf.hpp"
@@ -26,6 +27,25 @@ KcpIO::~KcpIO()
     // ★ kcp_ 的生死由 KcpMgr 独占，所以 ~KcpIO 无论跑在哪个线程都不会碰
     //   正在被 backend 使用的 ikcpcb
     release_kcp();
+}
+
+void KcpIO::on_backend_add(EVIO *w)
+{
+    if (LISTENER == role_type_)
+    {
+        assert(!accept_);
+        accept_ = new AcceptContext();
+        StaticGlobal::B->kcp_mgr().add_acceptor(w->id_, this);
+    }
+}
+
+void KcpIO::on_backend_remove(EVIO *w)
+{
+    if (LISTENER == role_type_)
+    {
+        delete accept_;
+        StaticGlobal::B->kcp_mgr().remove_acceptor(w->id_, this);
+    }
 }
 
 bool KcpIO::init_event(EVIO *w, lua_State *L, int32_t index)
@@ -291,4 +311,131 @@ int64_t KcpIO::update(int64_t now)
 
     return t;
 }
+
+
+int32_t KcpIO::accept(EVIO *w)
+{
+    int32_t fd = w->fd_;
+    assert(fd != netcompat::INVALID);
+
+    thread_local ThreadLocalBuf<UDP_MAX_DGRAM> buf;
+
+    for (int32_t i = 0; i < MAX_RECV_PER_EVENT; i++)
+    {
+        struct sockaddr_storage from;
+        socklen_t from_len = sizeof(from);
+
+        int32_t n = (int32_t)::recvfrom(fd, buf.get(), UDP_MAX_DGRAM, 0,
+                                        (struct sockaddr *)&from, &from_len);
+        if (n < 0)
+        {
+            int32_t e = netcompat::errorno();
+            if (!netcompat::iserror(e)) break;    // EAGAIN，正常结束
+            if (is_icmp_unreachable(e)) continue; // 忽略ICMP不可达
+
+            w->errno_ = e;
+            ELOG("kcp acceptor recv fd=%d:%s(%d)", fd, netcompat::strerror(e), e);
+            return EV_ERROR;
+        }
+
+        UdpAddr addr;
+        addr.from_sockaddr((struct sockaddr *)&from); // 内部已clear
+
+        do_accept_data(addr, buf.get(), n);
+    }
+
+    return EV_NONE;
+}
+
+void KcpIO::do_accept_data(const UdpAddr &addr, const char *data, int32_t len)
+{
+    // ① 已建立 → 直接喂给那条连接的ikcp（和数据面同线程，无锁）
+    auto est = accept_->established_.find(addr);
+    if (est != accept_->established_.end())
+    {
+        EVIO *w   = est->second;
+        KcpIO *io = static_cast<KcpIO *>(w->io_);
+
+        int32_t ret = io->input(data, len);
+        if (ret > 0)
+        {
+            StaticGlobal::B->dispatch_event(w, EV_READ);
+        }
+        else if (ret < 0)
+        {
+            ELOG("kcp input error, conn=%d", w->id_);
+            StaticGlobal::B->kcp_mgr().remove(w->id_, true); // 协议错误 → 回收
+        }
+        return;
+    }
+
+    // ② 未建立 → 放进accept表
+    std::scoped_lock sl(accept_->mutex_);
+
+    auto &accepting = accept_->accepting_;
+    auto it = accepting.find(addr);
+    if (it != accepting.end())
+    {
+        /**
+         * 已经在accept表里：还没在业务逻辑那边建立连接，
+         * 继续往这条对端的缓冲区里攒，KCP_ADD时会按序回放
+         */
+        AcceptEntry &e = it->second;
+        if (e.data.size() + (size_t)len > (size_t)KCP_MAX_PARKED_DATA)
+        {
+            log_error("parked overflow", addr, (int32_t)e.data.size() + len);
+        }
+        else
+        {
+            e.data.append(data, (size_t)len);
+        }
+        return;
+    }
+
+    if (accepting.size() >= (size_t)KCP_MAX_PARKED)
+    {
+        log_error("table full", addr, KCP_MAX_PARKED);
+        return;
+    }
+
+    // ikcp_getconv 不检测指针长度，要防止收到其他程序的非kcp包
+    IUINT32 conv = 0;
+    if (len < sizeof(conv))
+    {
+        log_error("kcp dgram too short", addr, len);
+        return;
+    }
+
+    AcceptEntry &e = accepting[addr];
+    e.conv         = ikcp_getconv(data);
+    e.create_ms    = timing::steady_clock();
+    e.data.assign(data, (size_t)len);
+}
+
+bool KcpIO::pop_accept(UdpAddr &addr, uint32_t &conv)
+{
+    std::scoped_lock sl(accept_->mutex_);
+
+    for (auto &x : accept_->accepting_)
+    {
+        // 已经交给业务线程了（KCP_ADD 可能还在路上），不要重复accept
+        // 这里数量不会很多，for循环一下问题应该不大，没必要做两个结构
+        if (x.second.notified) continue;
+
+        x.second.notified = true;
+        addr              = x.first;
+        conv              = x.second.conv;
+        return true;
+    }
+
+    return false;
+}
+
+void KcpIO::log_error(const char *what, const UdpAddr &addr, int32_t extra)
+{
+    char ip[INET6_ADDRSTRLEN];
+    ELOG("kcp accept %s, peer=%s:%u, extra=%d", what,
+         addr.to_string(ip, sizeof(ip)), (uint32_t)ntohs(addr.port_), extra);
+}
+
 #endif
