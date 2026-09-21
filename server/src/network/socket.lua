@@ -3,7 +3,6 @@
 -- xzc
 
 local util = require "engine.util"
-local EngineIO = require "engine.IO"
 local EngineSocket = require "engine.Socket"
 
 local EV_READ = SocketMgr.EV_READ
@@ -69,13 +68,13 @@ function Socket:auto_set_io()
         assert(pio)
 
         local sni = self.sni or self.host
-        if sni then EngineIO.set_ssl_sni(pio, sni) end
+        if sni then self.s:set_io_option("ssl_sni", sni) end
         local cert_host = self.cert_host or self.host
         if cert_host and cert_host ~= "" then
-            EngineIO.set_ssl_cert_host(pio, cert_host)
+            self.s:set_io_option("ssl_host", cert_host)
         end
         local mode = self.verify_mode
-        if mode then EngineIO.set_ssl_verify_mode(pio, mode) end
+        if mode then self.s:set_io_option("ssl_mode", mode) end
     else
         local params = self.default_param
         local io_type = params.io_type or IOT_TCP
@@ -113,7 +112,7 @@ end
 -- connect/listen完成后，启动需要监听的事件(业务逻辑不要调用此函数)
 function Socket:start_event(fd, ev)
     -- 不同类型的socket在listen/connect后ev不一样，抽个接口出来方便重载
-    return self.s:start(LOCAL_ADDR, fd, ev)
+    return self.s:start(fd, LOCAL_ADDR, ev)
 end
 
 -- 接受新连接
@@ -342,6 +341,12 @@ end
 function Socket:listen_s(ip, port, ssl)
     self.ssl = assert(ssl)
     return self:listen(ip, port)
+end
+
+-- 在accept时拒绝接入（创建对应的socket前，比如黑名单、人数满等）
+-- @param fd accept返回的fd
+function Socket:reject(fd)
+    return self.s:reject(fd)
 end
 
 -- 关闭链接

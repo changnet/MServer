@@ -88,38 +88,13 @@ public:
         return send_;
     }
     /**
-     * @brief 设置ssl的alpn(Application-Layer Protocol Negotiation )
-     * @param alpn 应该层协议协商
+     * @brief 由业务层设置不同io使用的参数，比如ssl指针、ssl_alpn等
      */
-    virtual int32_t set_ssl_alpn(int32_t alpn)
+    virtual int32_t set_option(lua_State *L)
     {
         return 0;
     }
-    /**
-     * @brief 设置ssl的sni(service name indicator)
-     * @param sni service name indicator
-     */
-    virtual int32_t set_ssl_sni(const char *sni)
-    {
-        return 0;
-    }
-    /**
-     * @brief 设置ssl的证书host
-     * @param host ssl证书对应的地址
-     */
-    virtual int32_t set_ssl_cert_host(const char *host)
-    {
-        return 0;
-    }
-    /**
-     * @brief 设置ssl的验证模式
-     * @param mode 值必须对应 SSL_VERIFY_PEER 等宏定义
-     */
-    virtual int32_t set_ssl_verify_mode(int32_t mode)
-    {
-        return 0;
-    }
-
+ 
     // 首次添加到backend线程时调用，在backend线程执行
     virtual void on_backend_add(EVIO *w)
     {

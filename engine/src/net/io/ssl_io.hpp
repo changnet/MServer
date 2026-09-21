@@ -10,8 +10,9 @@ class SSLIO final: public TcpIO
 {
 public:
     ~SSLIO();
-    explicit SSLIO(TlsCtx *tls_ctx);
+    explicit SSLIO();
 
+    int32_t set_option(lua_State *L) override;
     /* 接收数据（此函数在io线程执行）
      * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
      * @byte: 接收的数据长度
@@ -36,26 +37,26 @@ public:
      * @return int32_t
      */
     virtual int32_t do_init_connect(EVIO *w) override;
-    /**
-     * @brief 设置ssl的alpn
-     */
-    virtual int32_t set_ssl_alpn(int32_t alpn) override;
-    /**
-     * @brief 设置ssl的sni(service name indicator)
-     */
-    virtual int32_t set_ssl_sni(const char *sni) override;
-    /**
-     * @brief 设置ssl的证书host
-     */
-    virtual int32_t set_ssl_cert_host(const char *host) override;
-    /**
-     * @brief 设置ssl的验证模式
-     */
-    virtual int32_t set_ssl_verify_mode(int32_t mode) override;
 
 private:
     int32_t init_ssl_ctx(int32_t fd);
+    /**
+     * @brief 设置ssl的alpn
+     */
+    int32_t set_ssl_alpn(int32_t alpn);
+    /**
+     * @brief 设置ssl的sni(service name indicator)
+     */
+    int32_t set_ssl_sni(const char *sni);
+    /**
+     * @brief 设置ssl的证书host
+     */
+    int32_t set_ssl_cert_host(const char *host);
+    /**
+     * @brief 设置ssl的验证模式
+     */
+    int32_t set_ssl_verify_mode(int32_t mode);
 
 private:
-    SSL *ssl_;
+    SSL *ssl_ = nullptr;
 };

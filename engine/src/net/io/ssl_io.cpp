@@ -1,4 +1,5 @@
 
+#include <lua.hpp>
 #include "ssl_io.hpp"
 
 #include "system/static_global.hpp"
@@ -15,9 +16,39 @@ SSLIO::~SSLIO()
     }
 }
 
-SSLIO::SSLIO(TlsCtx *tls_ctx)
+SSLIO::SSLIO()
 {
-    ssl_ = SSL_new(tls_ctx->get());
+}
+
+int32_t SSLIO::set_option(lua_State *L)
+{
+    const char *key = luaL_checkstring(L, 2);
+    if (0 == std::strcmp(key, "ssl"))
+    {
+        assert(!ssl_);
+        TlsCtx **tls_ctx = (TlsCtx **)luaL_checkudata(L, 3, "TlsCtx");
+        ssl_ = SSL_new((*tls_ctx)->get());
+    }
+    else if (0 == std::strcmp(key, "ssl_alpn"))
+    {
+        set_ssl_alpn(luaL_checkinteger(L, 3));
+    }
+    else if (0 == std::strcmp(key, "ssl_sni"))
+    {
+        set_ssl_sni(luaL_checkstring(L, 3));
+    }
+    else if (0 == std::strcmp(key, "ssl_host"))
+    {
+        set_ssl_cert_host(luaL_checkstring(L, 3));
+    }
+    else if (0 == std::strcmp(key, "ssl_mode"))
+    {
+        set_ssl_verify_mode(luaL_checkinteger(L, 3));
+    }
+    else
+    {
+        luaL_error(L, "uknow kcp option:%s", key);
+    }
 }
 
 int32_t SSLIO::recv(EVIO *w)

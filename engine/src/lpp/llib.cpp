@@ -211,8 +211,7 @@ static void luaopen_socket(lua_State *L)
     lc.def<&Socket::io_init_connect>("io_init_connect");
     lc.def<&Socket::send_pkt>("send_pkt");
     lc.def<&Socket::get_udp_addr>("get_udp_addr");
-    lc.def<&Socket::start_kcp>("start_kcp");
-    lc.def<&Socket::drop_kcp_accept>("drop_kcp_accept");
+    lc.def<&Socket::set_io_option>("set_io_option");
     lc.def<&Socket::send_clt>("send_clt");
     lc.def<&Socket::send_srv>("send_srv");
     lc.def<&Socket::send_ctrl>("send_ctrl");
@@ -243,16 +242,6 @@ static void luaopen_socket(lua_State *L)
     lc.set(AF_INET6, "AF_INET6");
     lc.set(SOCK_STREAM, "SOCK_STREAM");
     lc.set(SOCK_DGRAM, "SOCK_DGRAM");
-}
-
-static void luaopen_socket_io(lua_State *L)
-{
-    lcpp::Class<IO> lc(L, "engine.IO");
-
-    lc.def_pointer_call<&IO::set_ssl_sni>("set_ssl_sni");
-    lc.def_pointer_call<&IO::set_ssl_alpn>("set_ssl_alpn");
-    lc.def_pointer_call<&IO::set_ssl_cert_host>("set_ssl_cert_host");
-    lc.def_pointer_call<&IO::set_ssl_verify_mode>("set_ssl_verify_mode");
 }
 
 static void luaopen_lua_codec(lua_State *L)
@@ -510,7 +499,6 @@ void open_cpp(lua_State *L)
     luaopen_worker_thread(L);
     luaopen_tls(L);
     luaopen_socket(L);
-    luaopen_socket_io(L);
     luaopen_lua_codec(L);
     luaopen_pbc_codec(L);
     luaopen_mysql(L);

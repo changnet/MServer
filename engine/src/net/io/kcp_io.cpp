@@ -29,6 +29,19 @@ KcpIO::~KcpIO()
     release_kcp();
 }
 
+int32_t KcpIO::set_option(lua_State* L)
+{
+    const char *key = luaL_checkstring(L, 2);
+    if (0 == std::strcmp(key, "conv"))
+    {
+        conv_ = lua_tointeger(L, 3);
+    }
+    else
+    {
+        luaL_error(L, "uknow kcp option:%s", key);
+    }
+}
+
 void KcpIO::on_backend_add(EVIO *w)
 {
     if (LISTENER == role_type_)
@@ -53,6 +66,7 @@ void KcpIO::on_backend_remove(EVIO *w)
 bool KcpIO::init_event(EVIO *w, lua_State *L, int32_t index)
 {
     int32_t ev = luaL_checkinteger(L, index);
+    int64_t vfd = luaL_checkinteger(L, index + 1);
     StaticGlobal::B->set_watcher_event(w, ev);
     return true;
 }

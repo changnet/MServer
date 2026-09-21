@@ -58,41 +58,6 @@ function KcpSocket:__init(addr, main_socket, conv)
     end
 end
 
--- 接受一个新对端（由 socket_mgr.lua 的 do_accept 调用）
--- ★ 参数与tcp不同：tcp是 fd，kcp是 (对端地址二进制串, conv)
---   但调用路径完全一致：io线程派发EV_ACCEPT → business线程 do_accept 循环
-function KcpSocket:on_accepting(addr, conv)
-    -- 服务端对端：复用监听socket的fd收发数据，不建新的fd。
-    -- KcpSocket.__init 内部已经做了 init_virtual + set_param + start_kcp
-    -- （start_kcp 会向io线程递KCP_ADD，把它从accept表晋升到已建立连接表，
-    --   并按序回放接入窗口内缓存的数据）
-    local mt = getmetatable(self) or self
-    local socket = mt(addr, self, conv)
-
-    -- 继承监听socket的业务回调
-    -- 必须用rawget，避免取到元表的函数，那样会影响热更
-    -- 如果需要逻辑里要覆盖这几个回调，那应该在table中覆盖而不是元表
-    socket.on_message = rawget(self, "on_message")
-    socket.on_accepted = rawget(self, "on_accepted")
-    socket.on_connected = rawget(self, "on_connected")
-    socket.on_disconnected = rawget(self, "on_disconnected")
-
-    -- 注意这个事件socket并未连接完成，不可发放数据，on_connected事件才完成
-    socket:on_accepted()
-
-    -- kcp没有握手过程，直接标记就绪
-    socket:io_ready()
-end
-
--- 业务拒绝接入（黑名单、人数满等）
--- 直接把accept表里的这一项删掉，不建会话。对应tcp的 close(fd)
--- 不调用它的话，这一项要等16秒超时才会被回收
--- @param addr on_accepting 的第一个参数（对端地址）
--- @return 是否投递成功
-function KcpSocket:reject(addr)
-    return self.s:drop_kcp_accept(addr)
-end
-
 -- 关闭链接
 -- @param flush 关闭前是否发送缓冲区的数据
 function KcpSocket:close(flush)
@@ -116,9 +81,21 @@ function KcpSocket:address()
 end
 
 function KcpSocket:start_event(fd, ev)
-    -- udp没有connect事件，只有读事件
-    local nev = self.listen_ip and SocketMgr.EV_ACCEPT or SocketMgr.EV_READ
-    return self.s:start(LOCAL_ADDR, fd, nev)
+    local vfd = 0
+    if ev == SocketMgr.EV_READ then
+        -- kcp的read事件表明它是一个acceptor，fd其实是一个vfd
+        vfd = fd
+        fd = -1
+        ev = SocketMgr.EV_READ
+    elseif ev == SocketMgr.EV_CONNECT then
+        ev = SocketMgr.EV_READ -- udp没有connect事件，只有读事件
+
+        -- 作为客户端时，构建kcp的conv
+        local conv = math.random(1, 0x7FFFFFFF)
+        self.s:set_io_option("conv", conv)
+    end
+
+    return self.s:start(LOCAL_ADDR, fd, ev, vfd)
 end
 
 -- 监听socket连接

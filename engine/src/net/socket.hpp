@@ -188,11 +188,16 @@ public:
         return w_ ? w_->io_ : nullptr;
     }
     /**
-     * @brief 设置io读写的参数
+     * @brief 设置io读写的类型，并创建对应的读写对象
      * @param io_type io读写方式，io或者ssl_io
-     * @param ls_ctx 如果为ssl_io，需要指定ssl指针
      */
-    void *set_io(int32_t io_type, TlsCtx *tls_ctx);
+    void *set_io(int32_t io_type);
+    /**
+     * @brief 设置io的参数
+     * @param key 参数key
+     * @param val 参数val
+     */
+    int32_t set_io_option(lua_State *L);
     /**
      * @brief 设置消息打包的类型
      * @param packet_type PT_HTTP等类型

@@ -805,7 +805,7 @@ int32_t Socket::unpack_on_closed(lua_State *L)
     return packet_->unpack_on_closed(L);
 }
 
-void *Socket::set_io(int32_t io_type, TlsCtx *tls_ctx)
+void *Socket::set_io(int32_t io_type)
 {
     if (!w_ || w_->io_) return nullptr;
 
@@ -813,10 +813,7 @@ void *Socket::set_io(int32_t io_type, TlsCtx *tls_ctx)
     switch (io_type)
     {
     case IO::IOT_TCP: io = new TcpIO(); break;
-    case IO::IOT_SSL:
-        if (!tls_ctx) return nullptr;
-        io = new SSLIO(tls_ctx);
-        break;
+    case IO::IOT_SSL:io = new SSLIO();break;
     case IO::IOT_UDP: io = new UdpIO(); break;
 #if defined(ENABLE_KCP)
     case IO::IOT_KCP: io = new KcpIO(); break;
@@ -828,6 +825,12 @@ void *Socket::set_io(int32_t io_type, TlsCtx *tls_ctx)
     w_->set_io(io);
 
     return io;
+}
+
+int32_t Socket::set_io_option(lua_State *L)
+{
+    w_->io_->set_option(L);
+    return 0;
 }
 
 int32_t Socket::set_packet(int32_t packet_type)
