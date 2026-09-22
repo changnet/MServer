@@ -59,7 +59,7 @@ public:
     int64_t update(int64_t now);
 
     // ---- backend 专用 ----
-    /// 建会话（KcpMgr::on_add 调用）
+    /// 建会话（KcpMgr::do_add_message 调用）
     bool create_kcp(uint32_t conv, int32_t listen_id, int32_t listen_fd,
                     const UdpAddr &addr);
     /// ★ 唯一的 ikcp_release 出口，且幂等
@@ -102,6 +102,8 @@ private:
         /// 已建立表：仅io线程访问，无需锁
         std::unordered_map<UdpAddr, EVIO *, UdpAddrHash> established_;
     };
+
+    // kcp库用于发送数据的接口
     static int32_t output(const char *buf, int32_t len, struct IKCPCB *kcp,
                           void *user);
     // 处理处于accept状态的数据
@@ -114,10 +116,11 @@ private:
     /// 一次EV_READ最多读多少个datagram，防止一个疯狂发包的对端占死backend
     static constexpr int32_t MAX_RECV_PER_EVENT = 64;
 
-    uint32_t conv_ = 0;   // kcp的会话id（conversation）
-    UdpAddr peer_;        // 地址只记在这里
-    int32_t main_fd_ = 0; // 作为acceptor时，用于收发数据的fd
+    uint32_t conv_ = 0; // kcp的会话id（conversation）
+    int32_t fd_ = 0; // output用于发送数据的fd，作为acceptor时它是监听socket的fd
+    int64_t main_id_ = 0; // 作为acceptor时监听socket的socket_id
 
+    UdpAddr peer_; // 地址只记在这里
     struct IKCPCB *kcp_    = nullptr;
     AcceptContext *accept_ = nullptr; // accept数据
 };

@@ -79,42 +79,19 @@ void KcpMgr::remove(int32_t conn_id, bool notify_worker)
     if (w->fd_ == netcompat::INVALID) w->del_ref(EVIO::M_REF_BACKEND);
 }
 
-void KcpMgr::on_add(ThreadMessage *m)
+void KcpMgr::do_add_message(ThreadMessage *m)
 {
-    const KcpAddMsg *msg = reinterpret_cast<const KcpAddMsg *>(m->buffer());
-    EVIO *w              = msg->conn_w;
-    KcpIO *io            = w ? static_cast<KcpIO *>(w->io_) : nullptr;
+    const WatcherMsg *msg = reinterpret_cast<const WatcherMsg *>(m->buffer());
 
-    if (!io)
+    EVIO *w              = msg->w_;
+    KcpIO *io            = static_cast<KcpIO *>(w->io_);
+
+    switch (io->get_role_type())
     {
-        // 脚本报错导致io没建出来。这条连接io线程不会再管，必须让worker关掉，
-        // 否则 M_REF_BACKEND 永远放不掉
-        ELOG("kcp add no io, conn=%d", w ? w->id_ : -1);
-        if (w)
-        {
-            StaticGlobal::B->notify_watcher(w, EV_CLOSE);
-            if (w->fd_ == netcompat::INVALID) w->del_ref(EVIO::M_REF_BACKEND);
-        }
-        drop_accepting(msg);
-        return;
+    case IO::ACCEPTOR: break;
+    case IO::LISTENER: break;
+    case IO::CONNECTOR: break;
     }
-
-    if (establishs_.size() >= (size_t)KCP_MAX_SESSION)
-    {
-        PLOG("kcp session full, drop conn=%d", w->id_);
-
-        // 会话已满：不建ikcpcb，直接让worker关掉这条连接。
-        // worker收到EV_CLOSE后走do_close → stop() → 又递一条KCP_DEL，
-        // 那时conns_里没有它，remove()直接返回，幂等。
-        StaticGlobal::B->notify_watcher(w, EV_CLOSE);
-
-        // 虚拟连接没有fd，不会走epoll关闭路径，这里自己解引用（规则同remove()）
-        if (w->fd_ == netcompat::INVALID) w->del_ref(EVIO::M_REF_BACKEND);
-
-        drop_accepting(msg);
-        return;
-    }
-
     int64_t now = timing::steady_clock();
 
     // ① 建ikcpcb（参数来自config.hpp）
@@ -175,7 +152,7 @@ void KcpMgr::drop_accepting(const KcpAddMsg *msg)
     if (it != acceptors_.end()) it->second->drop_accepting(msg->addr);
 }
 
-void KcpMgr::on_del(ThreadMessage *m)
+void KcpMgr::do_del_message(ThreadMessage *m)
 {
     const KcpDelMsg *msg = reinterpret_cast<const KcpDelMsg *>(m->buffer());
 
@@ -196,7 +173,7 @@ void KcpMgr::on_del(ThreadMessage *m)
      *   这里不需要再通知一次。
      *
      * ★ 虚拟连接（服务端对端，fd == -1）没有 epoll 关闭路径：
-     *   stop() 里的 add_watcher_event(EV_CLOSE) 走到 modify_watcher 时，
+     *   stop() 里的 append_watcher_event(EV_CLOSE) 走到 modify_watcher 时，
      *   fd_mgr_.get(-1) == nullptr 会直接 return 0，EV_CLOSE 永远派发不到worker，
      *   于是 do_close 不会执行（on_disconnected 不回调、SocketMgr 里还留着对象，
      *   __socket_hash 又持有强引用，对象永远不会被GC）。

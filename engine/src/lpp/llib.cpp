@@ -224,7 +224,6 @@ static void luaopen_socket(lua_State *L)
     lc.def<&Socket::set_keep_alive>("set_keep_alive");
     lc.def<&Socket::set_user_timeout>("set_user_timeout");
     lc.def<&Socket::set_nodelay>("set_nodelay");
-    lc.def<&Socket::set_watcher_event>("set_watcher_event");
     lc.def<&Socket::set_af_type>("set_af_type");
 
     lc.set(Packet::PT_HTTP, "PT_HTTP");

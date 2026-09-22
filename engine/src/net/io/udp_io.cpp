@@ -3,7 +3,6 @@
 #include <cstddef> // offsetof
 
 #include "ev/ev_watcher.hpp"
-#include "net/io/net_io_helper.hpp" // is_icmp_unreachable
 #include "net/net_compat.hpp"
 #include "thread/thread_local_buf.hpp"
 

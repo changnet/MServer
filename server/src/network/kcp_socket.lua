@@ -81,10 +81,10 @@ function KcpSocket:address()
 end
 
 function KcpSocket:start_event(fd, ev)
-    local vfd = 0
     if ev == SocketMgr.EV_READ then
         -- kcp的read事件表明它是一个acceptor，fd其实是一个vfd
-        vfd = fd
+        self.s:set_io_option("vfd", fd)
+
         fd = -1
         ev = SocketMgr.EV_READ
     elseif ev == SocketMgr.EV_CONNECT then

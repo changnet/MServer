@@ -135,6 +135,10 @@ public:
     {
         role_type_ = role_type;
     }
+    int32_t get_role_type() const
+    {
+        return role_type_;
+    }
 
 protected:
     int32_t role_type_; // 角色类型

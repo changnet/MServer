@@ -44,9 +44,6 @@ static constexpr int32_t KCP_RCV_WND = 128;
 // ikcp_waitsnd 上限。超过就丢这一条 + 计数，不 sleep、不阻塞整条 fd
 static constexpr int32_t KCP_MAX_WAIT_SND = 256;
 
-// 同时存在的 kcp 会话上限（客户端形态 + 服务端对端，全进程）
-static constexpr int32_t KCP_MAX_SESSION = 4096;
-
 // 未建立连接时，等待的地址数量，超过此数量后续的新地址将会被丢弃
 static constexpr int32_t KCP_MAX_PARKED = 1024;
 

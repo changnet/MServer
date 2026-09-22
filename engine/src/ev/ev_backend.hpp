@@ -68,11 +68,11 @@ public:
      * @brief 往backend给指定watcher追加一个事件，该事件和已有事件堆叠
      * 主要解决socket频繁发送数据，需要不断追加EV_WRITE事件的问题
      */
-    void add_watcher_event(EVIO *w, int32_t ev);
+    void append_watcher_event(EVIO *w, int32_t ev);
     /**
-     * @brief 设置backend中指定watcher的事件，其他事件将会被覆盖
+     * @brief 添加一个由io线程执行的EVIO消息
      */
-    void set_watcher_event(EVIO *w, int32_t ev);
+    void add_watcher_message(EVIO *w, int32_t type, int64_t udata);
     /**
      * @brief 创建一个backend实例
      */
@@ -86,17 +86,7 @@ public:
 #endif
 
 protected:
-    struct WatcherEvent
-    {
-        int32_t e_;
-        EVIO *w_;
-        WatcherEvent(int32_t e, EVIO* w)
-        {
-            e_ = e;
-            w_ = w;
-        }
-    };
-protected:
+    void do_watcher_backend_event(EVIO *w);
     /**
      * @brief 处理收到来自其他线程的事件
      */
@@ -138,9 +128,9 @@ private:
      */
     virtual void do_wait_event(int32_t ev_count) = 0;
     /**
-     * @brief 处理收到的事件
+     * @brief 处理收到的WATCHER_EV事件
      */
-    void do_watcher_events();
+    void do_watcher_message(ThreadMessage *m);
     /**
      * @brief 处理读写后的io状态
      * @param w 待处理的watcher
@@ -171,7 +161,6 @@ private:
 protected:
     std::atomic<bool> done_;     /// 是否终止进程
     bool modify_protected_; // 当前禁止修改poll等数组结构
-    bool busy_; // 是否繁忙(还有未处理完的事)
     std::thread thread_;
 
     std::vector<EVIO *> pending_events_; // backend线程自己收到，等待异步处理的事件
@@ -180,9 +169,7 @@ protected:
     // 和基类 ThreadContext::mutex_（保护消息队列）是两个不同的锁，
     // EVBackend的代码里出现的 mutex_ 都是这一个
     std::mutex mutex_;
-    std::vector<EVIO *> watcher_events_;       // 收到其他线程的事件
-    std::vector<EVIO *> swap_watcher_events_; // swap用，避免临时变量分配
-    WatcherMgr fd_mgr_;                        // 管理epoll中的所有fd
+    WatcherMgr fd_mgr_; // 管理epoll中的所有fd
 
 #if defined(ENABLE_KCP)
     KcpMgr kcp_mgr_; // kcp会话管理器，backend独占

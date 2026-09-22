@@ -5,7 +5,6 @@
 #include <lua.hpp>
 #include "ev/time.hpp"
 #include "ev/ev_watcher.hpp"
-#include "net/io/net_io_helper.hpp"
 #include "thread/thread_local_buf.hpp"
 #include "system/static_global.hpp"
 
@@ -35,6 +34,11 @@ int32_t KcpIO::set_option(lua_State* L)
     if (0 == std::strcmp(key, "conv"))
     {
         conv_ = lua_tointeger(L, 3);
+    }
+    else if (0 == std::strcmp(key, "vfd"))
+    {
+        int64_t vfd = lua_tointeger(L, 3);
+        main_id_    = vfd;
     }
     else
     {
@@ -66,39 +70,34 @@ void KcpIO::on_backend_remove(EVIO *w)
 bool KcpIO::init_event(EVIO *w, lua_State *L, int32_t index)
 {
     int32_t ev = luaL_checkinteger(L, index);
-    int64_t vfd = luaL_checkinteger(L, index + 1);
-    StaticGlobal::B->set_watcher_event(w, ev);
+
+    StaticGlobal::B->add_watcher_message(w, ThreadMessage::KCP_ADD, ev);
+
     return true;
 }
 
 bool KcpIO::uninit_event(EVIO *w, lua_State *L, int32_t index)
 {
-    // TODO 这个flush后续接口重构后和tcp一样用EV_FLUSH设置到ev变量中
     bool flush = lua_toboolean(L, index);
 
-    KcpMsg msg{w, 0};
-    StaticGlobal::B->emplace_message(0, 0, ThreadMessage::KCP_DEL,
-                                     &msg, (int32_t)sizeof(msg));
+    StaticGlobal::B->add_watcher_message(w, ThreadMessage::KCP_DEL, flush);
     return true;
 }
 
-/**
- * 唯一真正 sendto 的地方，跑在 backend 线程
- * 对端地址直接用 peer_，不需要每帧携带（见设计 §2.2）
- */
 int32_t KcpIO::output(const char *buf, int32_t len, struct IKCPCB * /*kcp*/,
                       void *user)
 {
     KcpIO *io = static_cast<KcpIO *>(user);
 
     // 客户端形态：socket已connect，对端地址是默认值，直接send
-    if (CONNECTOR == io->role_type_) return (int32_t)::send(fd, buf, len, 0);
+    if (CONNECTOR == io->role_type_)
+        return (int32_t)::send(io->fd_, buf, len, 0);
 
     struct sockaddr_storage ss;
     socklen_t sl = io->peer_.to_sockaddr(ss);
     if (0 == sl) return -1;
 
-    return (int32_t)::sendto(io->main_fd_, buf, len, 0, (struct sockaddr *)&ss, sl);
+    return (int32_t)::sendto(io->fd_, buf, len, 0, (struct sockaddr *)&ss, sl);
 }
 
 bool KcpIO::create_kcp(uint32_t conv, int32_t listen_id, int32_t listen_fd,

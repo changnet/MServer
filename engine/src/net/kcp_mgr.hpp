@@ -52,8 +52,8 @@ public:
     /// io线程join之后由 ~EVBackend 触发，释放所有残留会话
     ~KcpMgr();
 
-    void on_add(ThreadMessage *m); // KCP_ADD
-    void on_del(ThreadMessage *m); // KCP_DEL（含"业务拒绝接入"）
+    void do_add_message(ThreadMessage *m); // KCP_ADD
+    void do_del_message(ThreadMessage *m); // KCP_DEL（含"业务拒绝接入"）
 
     // 添加监听的io
     void add_acceptor(int32_t listen_id, KcpIO *acc);

@@ -28,11 +28,7 @@ EVBackend *EVBackend::instance()
 EVBackend::EVBackend()
 {
     done_.store(false, std::memory_order_release);
-    busy_             = false;
     modify_protected_ = false;
-
-    watcher_events_.reserve(256);
-    swap_watcher_events_.reserve(256);
 }
 
 EVBackend::~EVBackend()
@@ -67,9 +63,10 @@ void EVBackend::do_thread_message()
         switch (m->type_)
         {
 #if defined(ENABLE_KCP)
-        case ThreadMessage::KCP_ADD: kcp_mgr_.on_add(m); break;
-        case ThreadMessage::KCP_DEL: kcp_mgr_.on_del(m); break;
+        case ThreadMessage::KCP_ADD: kcp_mgr_.do_add_message(m); break;
+        case ThreadMessage::KCP_DEL: kcp_mgr_.do_del_message(m); break;
 #endif
+        case ThreadMessage::WATCHER_EV: do_watcher_message(m); break;
         default:
             ELOG("backend unknow message type: %d", m->type_);
             break;
@@ -80,19 +77,6 @@ void EVBackend::do_thread_message()
 
 void EVBackend::backend_once(int32_t ev_count, int64_t now)
 {
-    /**
-     * ★ 先处理来自其他线程的消息（KCP_ADD / KCP_DEL）。
-     *
-     * 必须排在 do_watcher_events 之前：start_kcp() 投递 KCP_ADD 与紧随其后的
-     * flush()（EV_WRITE）是两次独立入队，若先跑 do_watcher_events，EV_WRITE
-     * 会拿到 kcp_ 还是 nullptr 的 KcpIO —— 不崩，但那一帧会卡在 send_ 里
-     * 直到下一次 flush（延迟 bug）。
-     *
-     * 另外 backend() 开头那次 backend_once(0, last) 也走这里，
-     * 正好补上"第一次进入wait前就要处理消息"的窗口
-     */
-    do_thread_message();
-
     // poll等结构在处理事件时需要for循环遍历所有fd列表
     // 中间禁止调用modify_fd来删除这个列表
     // epoll则是可以删除的
@@ -100,7 +84,7 @@ void EVBackend::backend_once(int32_t ev_count, int64_t now)
     do_wait_event(ev_count);
     modify_protected_ = false;
 
-    do_watcher_events();
+    do_thread_message();
     do_pending_events();
 }
 
@@ -117,7 +101,7 @@ void EVBackend::backend()
 
     while (!done_.load(std::memory_order_acquire))
     {
-        int32_t timeout = busy_ ? min_wait : max_wait;
+        int32_t timeout = max_wait;
 
 #if defined(ENABLE_KCP)
         /**
@@ -130,17 +114,12 @@ void EVBackend::backend()
          * epoll_wait 传0会退化成非阻塞轮询，主循环会空转烧CPU
          */
         int64_t k = kcp_mgr_.update(timing::steady_clock());
-        if (k >= 0)
-        {
-            // 不用 min_wait 这个名字：下面有个 `#define min_wait 0`，
-            // 虽然它在文本上更靠后、不会污染这一行，但没必要留这个雷
-            if (k < 1) k = 1;
-            if (k < timeout) timeout = (int32_t)k;
-        }
+        if (k < timeout) timeout = (int32_t)k;
 #endif
 
+        if (timeout < min_wait) timeout = min_wait;
         int32_t ev_count = wait(timeout);
-        if (ev_count < 0) break;
+        if (ev_count < 0) break; // epoll等返回不可恢复的错误
 
         int64_t now = timing::steady_clock();
 
@@ -316,6 +295,15 @@ void EVBackend::do_io_status(EVIO *w, int32_t ev, int32_t status,
     }
 }
 
+void EVBackend::do_watcher_backend_event(EVIO *w)
+{
+    // 使用atomic exchange读取并清零事件
+    int32_t e = w->b_ev_.exchange(0, std::memory_order_acq_rel);
+    if (0 == e) return; // 被其他线程清零
+
+    do_watcher_event(w, e, true);
+}
+
 void EVBackend::do_watcher_event(EVIO *w, int32_t revents, bool add)
 {
     assert(revents);
@@ -485,36 +473,17 @@ void EVBackend::do_kernel_event(EVIO *w, int32_t revents)
     if (kevents != b_kevents) modify_later(w, kevents);
 }
 
-void EVBackend::do_watcher_events()
+void EVBackend::do_watcher_message(ThreadMessage *m)
 {
-    // 使用swap策略: 只加锁一次，交换整个队列到本地处理
-    // 由于b_ev_改为atomic，可以在锁外安全地读取和清零
+    const WatcherMsg *msg = reinterpret_cast<const WatcherMsg *>(m->buffer());
+    if (0 == msg->udata_)
     {
-        std::scoped_lock<std::mutex> sl(mutex_);
-        std::swap(watcher_events_, swap_watcher_events_);
-        busy_ = !swap_watcher_events_.empty();
-        if (!busy_) return;
+        do_watcher_backend_event(msg->w_);
     }
-
-    for (auto w : swap_watcher_events_)
+    else
     {
-        // 使用atomic exchange读取并清零事件
-        int32_t e = w->b_ev_.exchange(0, std::memory_order_acq_rel);
-        if (0 == e) continue; // 可能在swap后被其他线程清零
-
-        int32_t hig = e >> 16;
-        if (unlikely(0 != hig))
-        {
-            do_watcher_event(w, hig, false);
-            e = e & 0xFFFF;
-            if (0 != e) do_watcher_event(w, e, true);
-        }
-        else
-        {
-            do_watcher_event(w, e, true);
-        }
+        do_watcher_event(msg->w_, msg->udata_, false);
     }
-    swap_watcher_events_.clear();
 }
 
 void EVBackend::dispatch_event(EVIO *w, int32_t ev)
@@ -556,7 +525,7 @@ bool EVBackend::remove_watcher(EVIO *w, int32_t fd)
     return has_ref;
 }
 
-void EVBackend::add_watcher_event(EVIO *w, int32_t ev)
+void EVBackend::append_watcher_event(EVIO *w, int32_t ev)
 {
     // 逻辑线程和EVBackend线程的数据交换，已经换了几种方案，详见project/network_threading_analysis.md
 
@@ -564,38 +533,26 @@ void EVBackend::add_watcher_event(EVIO *w, int32_t ev)
     int32_t old = w->b_ev_.fetch_or(ev, std::memory_order_acq_rel);
     if (0 != old) return; // 已有事件在队列中，无需重复入队
 
+    std::scoped_lock<std::mutex> sl(mutex_);
+    // 必须锁内检测M_REF_BACKEND，防止主线程设置完事件，backend线程刚好把watcher删除了
+    // 没了M_REF_BACKEND主线程会把w删掉，backend线程处理事件时指针就是无效的
+    // mask_和b_ev_在同一cache line，大部分情况应该和操作一个普通int变量没有太大性能差异
+    if (0 == (w->mask_.load(std::memory_order_acquire) & EVIO::M_REF_BACKEND))
     {
-        std::scoped_lock<std::mutex> sl(mutex_);
-        // 必须锁内检测M_REF_BACKEND，防止主线程设置完事件，backend线程刚好把watcher删除了
-        // 没了M_REF_BACKEND主线程会把w删掉，backend线程处理事件时指针就是无效的
-        // mask_和b_ev_在同一cache line，大部分情况应该和操作一个普通int变量没有太大性能差异
-        if (0 == (w->mask_.load(std::memory_order_acquire) & EVIO::M_REF_BACKEND))
-        {
-            return;
-        }
-        watcher_events_.push_back(w);
-        if (watcher_events_.size() > 1) return; // 大于1说明已经唤醒过线程
+        return;
     }
-    wake();
+    WatcherMsg msg{w, 0};
+    emplace_message(0, 0, ThreadMessage::WATCHER_EV, &msg, sizeof(msg));
 }
 
-void EVBackend::set_watcher_event(EVIO *w, int32_t ev)
+void EVBackend::add_watcher_message(EVIO *w, int32_t type, int64_t udata)
 {
-    // 使用atomic exchange设置事件（高位表示优先执行）
-    // 覆盖旧的事件并设置在高位，低位可以继续追加其他事件
-    // TODO 不能按先后设置多个事件，但目前够用了就暂时不改
-    int32_t old = w->b_ev_.exchange(ev << 16, std::memory_order_acq_rel);
-    if (0 != old) return; // 已有事件在队列中，无需重复入队
-
+    std::scoped_lock<std::mutex> sl(mutex_);
+    // 没了M_REF_BACKEND说明另一个线程已经关闭当前socket，只是当前线程未处理
+    if (0 == (w->mask_.load(std::memory_order_acquire) & EVIO::M_REF_BACKEND))
     {
-        std::scoped_lock<std::mutex> sl(mutex_);
-        // 没了M_REF_BACKEND说明另一个线程已经关闭当前socket，只是当前线程未处理
-        if (0 == (w->mask_.load(std::memory_order_acquire) & EVIO::M_REF_BACKEND))
-        {
-            return;
-        }
-        watcher_events_.push_back(w);
-        if (watcher_events_.size() > 1) return;
+        return;
     }
-    wake();
+    WatcherMsg msg{w, udata};
+    emplace_message(0, 0, type, &msg, sizeof(msg));
 }

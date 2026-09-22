@@ -57,11 +57,6 @@ public:
     // 启用IPV6双栈
     int32_t set_ipv6only(int32_t fd) const;
     /**
-     * @brief 设置socket读写的事件
-     * @param events 事件，例如EV_READ
-     */
-    int32_t set_watcher_event(int32_t events);
-    /**
      * @brief 设置当前socket的版本
      * @param af_type 高16位表示AF_INET/AF_INET6，8位表示TCP/UDP，8位表示其他参数：0x01=ipv6only
      */

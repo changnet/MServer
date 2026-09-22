@@ -133,7 +133,7 @@ void Socket::append(const void *data, size_t len)
 
 void Socket::flush()
 {
-    StaticGlobal::B->add_watcher_event(w_, EV_WRITE);
+    StaticGlobal::B->append_watcher_event(w_, EV_WRITE);
 }
 
 bool Socket::send(const void *data, size_t len)
@@ -769,26 +769,6 @@ int32_t Socket::is_connect_success()
     return 0;
 }
 
-int32_t Socket::set_watcher_event(int32_t events)
-{
-    if (!w_) return -1;
-
-    /**
-     * ★ 虚拟连接（kcp服务端对端，fd == INVALID）没有内核对象，绝不能落到epoll上：
-     * modify_watcher 对 fd == INVALID 会走 FD_OP_ADD → fd_mgr_.set(-1) →
-     * epoll_ctl(-1) EBADF（debug下 epoll_backend 直接 assert(false) abort）。
-     *
-     * 这类连接的事件一律由io线程的 notify_watcher 直接派发，
-     * 所以这里静默成功即可 —— 这样 Socket:io_ready() 对kcp对端也能复用
-     * （对照：add_watcher_event(EV_WRITE) 天然安全，因为 EV_WRITE 不在
-     *  do_watcher_event 的 EV 掩码里，kevents 归零后不会 modify_later）
-     */
-    if (netcompat::INVALID == w_->fd_) return 0;
-
-    StaticGlobal::B->set_watcher_event(w_, events);
-    return 0;
-}
-
 int32_t Socket::unpack(lua_State *L)
 {
     /* 在脚本报错的情况下，可能无法设置 io和packet */
@@ -869,7 +849,8 @@ int32_t Socket::io_init_accept()
 {
     if (!w_) return -1;
 
-    StaticGlobal::B->set_watcher_event(w_, EV_INIT_ACPT);
+    StaticGlobal::B->add_watcher_message(w_, ThreadMessage::WATCHER_EV,
+                                         EV_INIT_ACPT);
 
     return 0;
 }
@@ -878,7 +859,8 @@ int32_t Socket::io_init_connect()
 {
     if (!w_) return -1;
 
-    StaticGlobal::B->set_watcher_event(w_, EV_INIT_CONN);
+    StaticGlobal::B->add_watcher_message(w_, ThreadMessage::WATCHER_EV,
+                                         EV_INIT_CONN);
 
     return 0;
 }
