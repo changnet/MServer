@@ -84,13 +84,14 @@ public:
 #if defined(ENABLE_KCP)
     KcpMgr &kcp_mgr() { return kcp_mgr_; }
 #endif
-
-protected:
     void do_watcher_backend_event(EVIO *w);
     /**
      * @brief 处理收到来自其他线程的事件
      */
     void do_watcher_event(EVIO *w, int32_t revents, bool add);
+
+protected:
+
     /**
      * @brief 处理从epoll、poll收到的事件
      */

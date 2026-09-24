@@ -27,27 +27,27 @@ KcpMgr::~KcpMgr()
     }
 
     establishs_.clear();
-    acceptors_.clear();
+    listeners_.clear();
 }
 
 void KcpMgr::add_acceptor(int32_t listen_id, KcpIO *acc)
 {
     assert(acc);
 
-    auto it = acceptors_.find(listen_id);
-    if (it != acceptors_.end())
+    auto it = listeners_.find(listen_id);
+    if (it != listeners_.end())
     {
         ELOG("KcpMgr acceptor already exist:%d", listen_id);
         it->second = acc;
         return;
     }
 
-    acceptors_.emplace(listen_id, acc);
+    listeners_.emplace(listen_id, acc);
 }
 
 void KcpMgr::remove_acceptor(int32_t listen_id, KcpIO *acc)
 {
-    acceptors_.erase(listen_id);
+    listeners_.erase(listen_id);
 }
 
 void KcpMgr::remove(int32_t conn_id, bool notify_worker)
@@ -64,8 +64,8 @@ void KcpMgr::remove(int32_t conn_id, bool notify_worker)
     // ② 摘"已建立表"（表在监听socket的acceptor上）
     if (io && io->listen_id() != 0)
     {
-        auto a = acceptors_.find(io->listen_id());
-        if (a != acceptors_.end()) a->second->unestablish(io->peer());
+        auto a = listeners_.find(io->listen_id());
+        if (a != listeners_.end()) a->second->unestablish(io->peer());
     }
 
     // ③ 摘身份表
@@ -89,7 +89,19 @@ void KcpMgr::do_add_message(ThreadMessage *m)
     switch (io->get_role_type())
     {
     case IO::ACCEPTOR: break;
-    case IO::LISTENER: break;
+    case IO::LISTENER:
+    {
+        auto it = listeners_.find(w->id_);
+        if (it != listeners_.end())
+        {
+            ELOG("kcp listen already exist:%d", w->id_);
+            return;
+        }
+        assert(false); // on_backend_add那里会添加，应该是重复了
+        listeners_[w->id_] = io;
+        StaticGlobal::B->do_watcher_event(w, msg->udata_, false);
+        break;
+    }
     case IO::CONNECTOR: break;
     }
     int64_t now = timing::steady_clock();
@@ -122,8 +134,8 @@ void KcpMgr::do_add_message(ThreadMessage *m)
     std::string cached;
     if (msg->listen_id != 0)
     {
-        auto it = acceptors_.find(msg->listen_id);
-        if (it != acceptors_.end())
+        auto it = listeners_.find(msg->listen_id);
+        if (it != listeners_.end())
         {
             it->second->promote(msg->addr, w, cached);
         }
@@ -148,8 +160,8 @@ void KcpMgr::drop_accepting(const KcpAddMsg *msg)
 {
     if (0 == msg->listen_id) return;
 
-    auto it = acceptors_.find(msg->listen_id);
-    if (it != acceptors_.end()) it->second->drop_accepting(msg->addr);
+    auto it = listeners_.find(msg->listen_id);
+    if (it != listeners_.end()) it->second->drop_accepting(msg->addr);
 }
 
 void KcpMgr::do_del_message(ThreadMessage *m)
@@ -162,8 +174,8 @@ void KcpMgr::do_del_message(ThreadMessage *m)
      */
     if (0 == msg->conn_id)
     {
-        auto it = acceptors_.find(msg->listen_id);
-        if (it != acceptors_.end()) it->second->drop_accepting(msg->addr);
+        auto it = listeners_.find(msg->listen_id);
+        if (it != listeners_.end()) it->second->drop_accepting(msg->addr);
         return;
     }
 
@@ -190,7 +202,7 @@ int64_t KcpMgr::update(int64_t now)
     // ① 每5秒扫一次accept表，回收N秒还没建立的连接
     if (now >= next_accept_timeout_)
     {
-        for (auto &x : acceptors_)
+        for (auto &x : listeners_)
         {
             x.second->remove_accept_timeout(now);
         }

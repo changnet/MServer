@@ -81,8 +81,8 @@ private:
     /// 已建立的连接：socket_id → 连接 EVIO
     std::unordered_map<int32_t, EVIO *> establishs_;
 
-    /// listen_id → 监听socket的acceptor（它的表里放着这个监听fd上的所有对端）
-    std::unordered_map<int32_t, KcpIO *> acceptors_;
+    /// 监听的socket，以socket_id为key
+    std::unordered_map<int32_t, KcpIO *> listeners_;
 
     int64_t next_accept_timeout_ = 0; // 下一次遍历acceptor回收超时连接时间戳(ms)
 };

@@ -115,7 +115,7 @@ bool KcpIO::create_kcp(uint32_t conv, int32_t listen_id, int32_t listen_fd,
 
     /**
      * 是否启用流模式，启用流模式后，kcp会把多次ikcp_send的数据拼到一个mtu包里
-     * ikcp_recv会只收到一次，需要业务层拆包
+     * ikcp_recv会只收到一次，需要业务层拆包 
      */
     kcp_->stream = KCP_STREAM;
 
