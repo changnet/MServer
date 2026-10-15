@@ -34,9 +34,10 @@ public:
     virtual bool init_event(EVIO *w, lua_State *L, int32_t index) override;
     // socket关闭，通知backend线程移除事件，在业务线程执行
     virtual bool uninit_event(EVIO *w, lua_State *L, int32_t index) override;
-
-    void on_backend_add(EVIO *w) override;
-    void on_backend_remove(EVIO *w) override;
+    // 添加到kcpmgr时初始化kcp相关逻辑
+    bool on_kcpmgr_add(EVIO *w);
+    // 从kcpmgr移除时销毁kcp相关数据
+    void on_kcpmgr_remove();
 
     /**
      * 监听fd可读：recvfrom + 路由（与 TcpIO::accept 同构，跑在io线程）
@@ -53,22 +54,26 @@ public:
      */
     void reject_accept(int64_t fd) override;
     /**
+     * @brief 建立一个待处理的连接（此函数在backend线程执行）
+     */
+    bool establish_accept(EVIO *w);
+    /**
+     * @brief 建立一个待处理的连接（此函数在backend线程执行）
+     */
+    bool remove_establish(EVIO *w);
+    /**
      * 定时调用ikcp_update
      * @return 下次执行的时间戳
      */
     int64_t update(int64_t now);
 
-    // ---- backend 专用 ----
-    /// 建会话（KcpMgr::do_add_message 调用）
-    bool create_kcp(uint32_t conv, int32_t listen_id, int32_t listen_fd,
-                    const UdpAddr &addr);
-    /// ★ 唯一的 ikcp_release 出口，且幂等
-    void release_kcp();
     /**
      * 把一段数据喂给kcp，输出有序的业务数据
      * @return <0=出错 0=kcp控制报文 >0=数据长度
      */
     int32_t input(const char *data, int32_t len);
+    // 移除超时未建立的链接
+    void remove_accept_timeout(int64_t now);
 
     // 设置kcp的会话id
     void set_conv(uint32_t conv)
@@ -81,6 +86,11 @@ public:
         return peer_;
     }
 
+    int64_t get_main_id() const
+    {
+        return main_id_;
+    }
+
 private:
     // 未建立连接的对端
     struct AcceptEntry
@@ -89,6 +99,7 @@ private:
         uint32_t conv     = 0; // kcp专用的会话id
         int64_t create_ms = 0; // 用于超时回收
         bool notified = false; // 是否已交给业务线程，防止同一对端被accept两次
+        UdpAddr addr; // 地址
         std::string data; // 接入前缓存的数据，KCP_MAX_PARKED_DATA封顶
     };
     // 监听socket用来保存accept相关的上下文

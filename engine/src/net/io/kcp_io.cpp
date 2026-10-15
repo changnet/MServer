@@ -21,11 +21,7 @@ KcpIO::KcpIO()
 
 KcpIO::~KcpIO()
 {
-    // 兜底：正常路径下 KCP_DEL 已经在 KcpMgr::remove() 里 release 过，
-    // 这里只是防止漏网。
-    // ★ kcp_ 的生死由 KcpMgr 独占，所以 ~KcpIO 无论跑在哪个线程都不会碰
-    //   正在被 backend 使用的 ikcpcb
-    release_kcp();
+    on_kcpmgr_remove();
 }
 
 int32_t KcpIO::set_option(lua_State* L)
@@ -46,24 +42,68 @@ int32_t KcpIO::set_option(lua_State* L)
     }
 }
 
-void KcpIO::on_backend_add(EVIO *w)
+bool KcpIO::on_kcpmgr_add(EVIO *w)
 {
-    if (LISTENER == role_type_)
+    switch (role_type_)
+    {
+    case LISTENER:
     {
         assert(!accept_);
-        accept_ = new AcceptContext();
+        accept_             = new AcceptContext();
         accept_->socket_id_ = w->id_;
-
-        StaticGlobal::B->kcp_mgr().add_acceptor(w->id_, this);
+        break;
     }
+    case ACCEPTOR: [[fallthrough]];
+    case CONNECTOR:
+    {
+        assert(!kcp_);
+        assert(conv_);
+
+        // conv_等参数应当已经在逻辑线程通过set_io_option初始化完成
+
+        kcp_ = ikcp_create(conv_, this);
+        if (!kcp_)
+        {
+            ELOG("ikcp_create fail"); // 只有内存不足才会返回false
+            return false;
+        }
+
+        /**
+         * 是否启用流模式，启用流模式后，kcp会把多次ikcp_send的数据拼到一个mtu包里
+         * ikcp_recv会只收到一次，需要业务层拆包
+         */
+        kcp_->stream = KCP_STREAM;
+
+        ikcp_setoutput(kcp_, &KcpIO::output);
+        ikcp_setmtu(kcp_, KCP_MTU);
+        ikcp_nodelay(kcp_, KCP_NODELAY, KCP_INTERVAL, KCP_RESEND, KCP_NC);
+        ikcp_wndsize(kcp_, KCP_SND_WND, KCP_RCV_WND);
+        break;
+    }
+    }
+
+    return true;
 }
 
-void KcpIO::on_backend_remove(EVIO *w)
+void KcpIO::on_kcpmgr_remove()
 {
-    if (LISTENER == role_type_)
+    switch (role_type_)
     {
+    case LISTENER:
+    {
+        if (!accept_) return;
         delete accept_;
-        StaticGlobal::B->kcp_mgr().remove_acceptor(w->id_, this);
+        break;
+    }
+    case ACCEPTOR: [[fallthrough]];
+    case CONNECTOR:
+    {
+        if (!kcp_) return;
+
+        ikcp_release(kcp_);
+        kcp_ = nullptr;
+        break;
+    }
     }
 }
 
@@ -98,40 +138,6 @@ int32_t KcpIO::output(const char *buf, int32_t len, struct IKCPCB * /*kcp*/,
     if (0 == sl) return -1;
 
     return (int32_t)::sendto(io->fd_, buf, len, 0, (struct sockaddr *)&ss, sl);
-}
-
-bool KcpIO::create_kcp(uint32_t conv, int32_t listen_id, int32_t listen_fd,
-                       const UdpAddr &addr)
-{
-    assert(!kcp_);
-
-    conv_      = conv;
-    listen_id_ = listen_id;
-    listen_fd_ = listen_fd;
-    peer_      = addr;
-
-    kcp_ = ikcp_create(conv, this);
-    if (!kcp_) return false;
-
-    /**
-     * 是否启用流模式，启用流模式后，kcp会把多次ikcp_send的数据拼到一个mtu包里
-     * ikcp_recv会只收到一次，需要业务层拆包 
-     */
-    kcp_->stream = KCP_STREAM;
-
-    ikcp_setoutput(kcp_, &KcpIO::output);
-    ikcp_setmtu(kcp_, KCP_MTU);
-    ikcp_nodelay(kcp_, KCP_NODELAY, KCP_INTERVAL, KCP_RESEND, KCP_NC);
-    ikcp_wndsize(kcp_, KCP_SND_WND, KCP_RCV_WND);
-
-    return true;
-}
-
-void KcpIO::release_kcp()
-{
-    if (!kcp_) return;
-    ikcp_release(kcp_);
-    kcp_ = nullptr;
 }
 
 int32_t KcpIO::input(const char *data, int32_t len)
@@ -375,8 +381,8 @@ void KcpIO::do_accept_data(const UdpAddr &addr, const char *data, int32_t len)
         }
         else if (ret < 0)
         {
-            ELOG("kcp input error, conn=%d", w->id_);
-            StaticGlobal::B->kcp_mgr().remove(w->id_, true); // 协议错误 → 回收
+            PLOG("kcp input error, conn=%d", w->id_);
+            StaticGlobal::B->kcp_mgr().remove(w, EV_CLOSE); // 协议错误 → 回收
         }
         return;
     }
@@ -422,6 +428,7 @@ void KcpIO::do_accept_data(const UdpAddr &addr, const char *data, int32_t len)
     e.vfd_         = make_vfd();
     e.conv         = ikcp_getconv(data);
     e.create_ms    = timing::steady_clock();
+    e.addr         = addr;
     e.data.assign(data, (size_t)len);
 }
 
@@ -458,6 +465,74 @@ void KcpIO::reject_accept(int64_t fd)
     }
 }
 
+bool KcpIO::establish_accept(EVIO *w)
+{
+    KcpIO *io = static_cast<KcpIO *>(w->io_);
+
+    int64_t fd = io->get_main_id();
+    AcceptEntry entry;
+    {
+        std::scoped_lock sl(accept_->mutex_);
+        for (auto &x : accept_->accepting_)
+        {
+            if (x.second.vfd_ == fd)
+            {
+                entry = std::move(x.second);
+                accept_->accepting_.erase(x.first);
+                break;
+            }
+        }
+    }
+
+    if (entry.vfd_ != fd)
+    {
+        ELOG("kcp establish_accept no fd found %d", w->id_);
+        return false;
+    }
+
+    assert(entry.notified);
+
+    io->conv_ = entry.conv;
+    if (!io->on_kcpmgr_add(w)) return false;
+
+    auto &established = accept_->established_;
+    auto est = established.find(entry.addr);
+    if (est != established.end())
+    {
+        ELOG("kcp establish_accept addr already establish %d", w->id_);
+        return false;
+    }
+
+    established[entry.addr] = w;
+
+    // 客户端已经下发了数据，要及时处理
+    if (entry.data.empty()) return true;
+
+    if (io->input(entry.data.data(), (int32_t)entry.data.size()))
+    {
+        ELOG("kcp establish_accept data error %d", w->id_);
+        return false;
+    }
+    int32_t ret = io->input(entry.data.data(), (int32_t)entry.data.size());
+    if (ret > 0)
+    {
+        StaticGlobal::B->dispatch_event(w, EV_READ);
+        return true;
+    }
+    else if (ret < 0)
+    {
+        ELOG("kcp establish_accept data error %d", w->id_);
+        return false;
+    }
+
+    return true;
+}
+
+bool KcpIO::remove_establish(EVIO *w)
+{
+    return true;
+}
+
 void KcpIO::log_error(const char *what, const UdpAddr &addr, int32_t extra)
 {
     char ip[INET6_ADDRSTRLEN];
@@ -479,4 +554,27 @@ int64_t KcpIO::make_vfd()
     return ((int64_t)accept_->socket_id_ << 32) | seed;
 }
 
+void KcpIO::remove_accept_timeout(int64_t now)
+{
+    std::scoped_lock sl(accept_->mutex_);
+
+    auto &accepting = accept_->accepting_;
+    static constexpr int64_t KCP_ACCEPT_TIMEOUT_MS = 60 * 1000;
+    for (auto it = accepting.begin(); it != accepting.end();)
+    {
+        if (now - it->second.create_ms < KCP_ACCEPT_TIMEOUT_MS)
+        {
+            ++it;
+            continue;
+        }
+
+        char ip[INET6_ADDRSTRLEN];
+        PLOG("kcp accept timeout(%llds), drop peer=%s:%u",
+             (long long)(KCP_ACCEPT_TIMEOUT_MS / 1000),
+             it->first.to_string(ip, sizeof(ip)),
+             (uint32_t)ntohs(it->first.port_));
+
+        it = accepting.erase(it);
+    }
+}
 #endif

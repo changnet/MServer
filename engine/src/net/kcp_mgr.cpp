@@ -30,55 +30,6 @@ KcpMgr::~KcpMgr()
     listeners_.clear();
 }
 
-void KcpMgr::add_acceptor(int32_t listen_id, KcpIO *acc)
-{
-    assert(acc);
-
-    auto it = listeners_.find(listen_id);
-    if (it != listeners_.end())
-    {
-        ELOG("KcpMgr acceptor already exist:%d", listen_id);
-        it->second = acc;
-        return;
-    }
-
-    listeners_.emplace(listen_id, acc);
-}
-
-void KcpMgr::remove_acceptor(int32_t listen_id, KcpIO *acc)
-{
-    listeners_.erase(listen_id);
-}
-
-void KcpMgr::remove(int32_t conn_id, bool notify_worker)
-{
-    auto it = establishs_.find(conn_id);
-    if (it == establishs_.end()) return;
-
-    EVIO *w   = it->second;
-    KcpIO *io = static_cast<KcpIO *>(w->io_);
-
-    // ① 释放ikcpcb（此后kcp_为nullptr，~KcpIO不会再碰它）
-    if (io) io->release_kcp();
-
-    // ② 摘"已建立表"（表在监听socket的acceptor上）
-    if (io && io->listen_id() != 0)
-    {
-        auto a = listeners_.find(io->listen_id());
-        if (a != listeners_.end()) a->second->unestablish(io->peer());
-    }
-
-    // ③ 摘身份表
-    establishs_.erase(it);
-
-    // ④ 通知worker（io线程主动回收时要通知，worker自己发起时不需要）
-    if (notify_worker) StaticGlobal::B->dispatch_event(w, EV_CLOSE);
-
-    // ⑤ 虚拟连接没有fd，不会走epoll关闭路径，所以这里必须自己解引用
-    //    客户端形态有真实fd，M_REF_BACKEND由io线程常规关闭路径释放
-    if (w->fd_ == netcompat::INVALID) w->del_ref(EVIO::M_REF_BACKEND);
-}
-
 void KcpMgr::do_add_message(ThreadMessage *m)
 {
     const WatcherMsg *msg = reinterpret_cast<const WatcherMsg *>(m->buffer());
@@ -88,113 +39,160 @@ void KcpMgr::do_add_message(ThreadMessage *m)
 
     switch (io->get_role_type())
     {
-    case IO::ACCEPTOR: break;
+    case IO::ACCEPTOR:
+    {
+        auto eit = establishs_.find(w->id_);
+        if (eit != establishs_.end())
+        {
+            ELOG("kcp accept already exist:%d", w->id_);
+            StaticGlobal::B->dispatch_event(w, EV_CLOSE);
+            return;
+        }
+        int64_t main_id = io->get_main_id();
+        auto it = listeners_.find(main_id);
+        if (it != listeners_.end())
+        {
+            ELOG("kcp accept listener not found:%d %d", w->id_, main_id);
+            StaticGlobal::B->dispatch_event(w, EV_CLOSE);
+            return;
+        }
+
+        if (!io->establish_accept(w))
+        {
+            StaticGlobal::B->dispatch_event(w, EV_CLOSE);
+            return;
+        }
+
+        establishs_[w->id_] = w;
+        // udp的acceptor不参与读写事件循环，由监听socket负责
+        // StaticGlobal::B->do_watcher_event(w, msg->udata_, false);
+        break;
+    }
     case IO::LISTENER:
     {
         auto it = listeners_.find(w->id_);
         if (it != listeners_.end())
         {
             ELOG("kcp listen already exist:%d", w->id_);
+            StaticGlobal::B->dispatch_event(w, EV_CLOSE);
             return;
         }
-        assert(false); // on_backend_add那里会添加，应该是重复了
+        if (!io->on_kcpmgr_add(w))
+        {
+            StaticGlobal::B->dispatch_event(w, EV_CLOSE);
+            return;
+        }
+
         listeners_[w->id_] = io;
+        establishs_[w->id_] = w;
         StaticGlobal::B->do_watcher_event(w, msg->udata_, false);
         break;
     }
-    case IO::CONNECTOR: break;
-    }
-    int64_t now = timing::steady_clock();
-
-    // ① 建ikcpcb（参数来自config.hpp）
-    if (!io->create_kcp(msg->conv, msg->listen_id, msg->listen_fd, msg->addr))
+    case IO::CONNECTOR:
     {
-        ELOG("kcp create fail, conn=%d", w->id_);
-        StaticGlobal::B->notify_watcher(w, EV_CLOSE);
-        if (w->fd_ == netcompat::INVALID) w->del_ref(EVIO::M_REF_BACKEND);
-        drop_accepting(msg);
-        return;
-    }
-
-    // ② ★ 必须先update一次：把updated置1并初始化ts_flush。
-    //    否则 ikcp_check 恒返回 current（照它排期会死循环），ikcp_flush 也是no-op
-    io->update((IUINT32)now);
-
-    // ③ 登记身份表
-    establishs_[w->id_] = w;
-
-    /**
-     * ④ ★ 服务端对端：把这条连接从accept表晋升到"已建立表"，同时取回接入
-     *    窗口内缓存的数据。
-     *
-     *    手序很重要：必须在 create_kcp 之后、且"摘accept表 + 挂已建立表"在
-     *    同一次临界区内完成。反过来做的话，中间到达的包会路由到这条连接但
-     *    io->kcp() 还是 nullptr，被 input 返回 -1 误判成协议错误而回收
-     */
-    std::string cached;
-    if (msg->listen_id != 0)
-    {
-        auto it = listeners_.find(msg->listen_id);
-        if (it != listeners_.end())
+        auto it = establishs_.find(w->id_);
+        if (it != establishs_.end())
         {
-            it->second->promote(msg->addr, w, cached);
-        }
-    }
-
-    // ⑤ 按序回放接入窗口内缓存的包（零丢包、零额外RTO）
-    if (!cached.empty())
-    {
-        bool has_data = false;
-        if (0 != io->input(cached.data(), (int32_t)cached.size(), has_data))
-        {
-            ELOG("kcp replay fail, conn=%d", w->id_);
-            remove(w->id_, true);
+            ELOG("kcp connect already exist:%d", w->id_);
+            StaticGlobal::B->dispatch_event(w, EV_CLOSE);
             return;
         }
-        if (has_data) StaticGlobal::B->notify_watcher(w, EV_READ);
+        if (!io->on_kcpmgr_add(w))
+        {
+            StaticGlobal::B->dispatch_event(w, EV_CLOSE);
+            return;
+        }
+
+        establishs_[w->id_] = w;
+        StaticGlobal::B->do_watcher_event(w, msg->udata_, false);
+        break;
     }
+    }
+
+    int64_t now = timing::steady_clock();
+
+    // 必须先update一次：把updated置1并初始化ts_flush。
+    // 否则 ikcp_check 恒返回 current（照它排期会死循环），ikcp_flush 也是no-op
+    io->update((IUINT32)now);
 }
 
-/// KCP_ADD 失败/被拒时，把accept表里对应的项删掉（否则它会一直留到16s超时）
-void KcpMgr::drop_accepting(const KcpAddMsg *msg)
+void KcpMgr::remove(EVIO *w, int32_t event)
 {
-    if (0 == msg->listen_id) return;
+    KcpIO *io = static_cast<KcpIO *>(w->io_);
 
-    auto it = listeners_.find(msg->listen_id);
-    if (it != listeners_.end()) it->second->drop_accepting(msg->addr);
+    switch (io->get_role_type())
+    {
+    case IO::ACCEPTOR:
+    {
+        auto eit = establishs_.find(w->id_);
+        if (eit == establishs_.end())
+        {
+            ELOG("kcp accept not exist:%d", w->id_);
+            StaticGlobal::B->dispatch_event(w, EV_CLOSE);
+            return;
+        }
+        int64_t main_id = io->get_main_id();
+        auto it         = listeners_.find(main_id);
+        if (it != listeners_.end())
+        {
+            ELOG("kcp accept listener not found:%d %d", w->id_, main_id);
+            StaticGlobal::B->dispatch_event(w, EV_CLOSE);
+            return;
+        }
+
+        establishs_[w->id_] = w;
+        io->remove_establish(w);
+
+        StaticGlobal::B->dispatch_event(w, EV_CLOSE);
+        break;
+    }
+    case IO::LISTENER:
+    {
+        auto it = listeners_.find(w->id_);
+        if (it == listeners_.end())
+        {
+            ELOG("kcp listen not exist:%d", w->id_);
+            StaticGlobal::B->dispatch_event(w, EV_CLOSE);
+            return;
+        }
+
+        listeners_[w->id_]  = io;
+        establishs_[w->id_] = w;
+
+        // 执行close事件，从epoll等移除。可能包含EV_FLUSH事件，必须先执行
+        StaticGlobal::B->do_watcher_event(w, event, false);
+
+        // 这个不能在这里执行，因为EV_FLUSH还需要kcp的结构
+        // 而EV_FLUSH执行完后主线程可能
+        // io->on_kcpmgr_remove(w);
+
+        break;
+    }
+    case IO::CONNECTOR:
+    {
+        auto it = establishs_.find(w->id_);
+        if (it != establishs_.end())
+        {
+            ELOG("kcp connect already exist:%d", w->id_);
+            StaticGlobal::B->dispatch_event(w, EV_CLOSE);
+            return;
+        }
+
+        // 同样不能在外网执行
+        // io->on_kcpmgr_remove(w);
+
+        establishs_[w->id_] = w;
+        StaticGlobal::B->do_watcher_event(w, event, false);
+        break;
+    }
+    }
 }
 
 void KcpMgr::do_del_message(ThreadMessage *m)
 {
-    const KcpDelMsg *msg = reinterpret_cast<const KcpDelMsg *>(m->buffer());
+    const WatcherMsg *msg = reinterpret_cast<const WatcherMsg *>(m->buffer());
 
-    /**
-     * conn_id == 0：业务拒绝接入。
-     * 这时候这条对端还没晋升成会话（没有socket_id），删的是accept表项
-     */
-    if (0 == msg->conn_id)
-    {
-        auto it = listeners_.find(msg->listen_id);
-        if (it != listeners_.end()) it->second->drop_accepting(msg->addr);
-        return;
-    }
-
-    /**
-     * worker自己发起的关闭：
-     *   客户端形态有真实fd，EV_CLOSE 会由 epoll 的关闭路径派发到worker，
-     *   这里不需要再通知一次。
-     *
-     * ★ 虚拟连接（服务端对端，fd == -1）没有 epoll 关闭路径：
-     *   stop() 里的 append_watcher_event(EV_CLOSE) 走到 modify_watcher 时，
-     *   fd_mgr_.get(-1) == nullptr 会直接 return 0，EV_CLOSE 永远派发不到worker，
-     *   于是 do_close 不会执行（on_disconnected 不回调、SocketMgr 里还留着对象，
-     *   __socket_hash 又持有强引用，对象永远不会被GC）。
-     *   所以这里必须替它把 EV_CLOSE 补上。
-     */
-    auto it   = establishs_.find(msg->conn_id);
-    bool virt = (it != establishs_.end()) && (it->second->fd_ == netcompat::INVALID);
-
-    remove(msg->conn_id, virt);
+    remove(msg->w_, msg->udata_);
 }
 
 int64_t KcpMgr::update(int64_t now)

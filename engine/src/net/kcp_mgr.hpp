@@ -55,14 +55,8 @@ public:
     void do_add_message(ThreadMessage *m); // KCP_ADD
     void do_del_message(ThreadMessage *m); // KCP_DEL（含"业务拒绝接入"）
 
-    // 添加监听的io
-    void add_acceptor(int32_t listen_id, KcpIO *acc);
-    /// 移除监听的io
-    void remove_acceptor(int32_t listen_id, KcpIO *acc);
-
-    // ---- 生命周期 ----
-    /// 唯一的回收点：释放 ikcpcb + 摘 establishs_/已建立表 + （虚拟连接）解io线程引用
-    void remove(int32_t conn_id, bool notify_worker);
+    /// 移除一个kcp连接
+    void remove(EVIO *w, int32_t event);
 
     /**
      * @brief 驱动所有会话的定时器，返回下一轮主循环建议的wait超时(ms)
@@ -75,8 +69,6 @@ public:
     int64_t update(int64_t now);
 
 private:
-    /// KCP_ADD 失败/被拒时，把accept表里对应的项删掉
-    void drop_accepting(const KcpAddMsg *msg);
 
     /// 已建立的连接：socket_id → 连接 EVIO
     std::unordered_map<int32_t, EVIO *> establishs_;
