@@ -86,9 +86,15 @@ public:
         return peer_;
     }
 
-    int64_t get_main_id() const
+    int64_t get_vfd() const
     {
-        return main_id_;
+        return vfd_;
+    }
+
+    // 作为acceptor时，获取所属主socket的socket_id
+    int32_t get_main_id() const
+    {
+        return vfd_ >> 32;
     }
 
 private:
@@ -129,7 +135,7 @@ private:
 
     uint32_t conv_ = 0; // kcp的会话id（conversation）
     int32_t fd_ = 0; // output用于发送数据的fd，作为acceptor时它是监听socket的fd
-    int64_t main_id_ = 0; // 作为acceptor时监听socket的socket_id
+    int64_t vfd_ = 0; // 作为acceptor时监听socket的socket_id
 
     UdpAddr peer_; // 地址只记在这里
     struct IKCPCB *kcp_    = nullptr;

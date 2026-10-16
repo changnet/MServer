@@ -29,17 +29,18 @@ int32_t KcpIO::set_option(lua_State* L)
     const char *key = luaL_checkstring(L, 2);
     if (0 == std::strcmp(key, "conv"))
     {
-        conv_ = lua_tointeger(L, 3);
+        conv_ = (uint32_t)lua_tointeger(L, 3);
     }
     else if (0 == std::strcmp(key, "vfd"))
     {
         int64_t vfd = lua_tointeger(L, 3);
-        main_id_    = vfd;
+        vfd_    = vfd;
     }
     else
     {
         luaL_error(L, "uknow kcp option:%s", key);
     }
+    return 0;
 }
 
 bool KcpIO::on_kcpmgr_add(EVIO *w)
@@ -109,7 +110,7 @@ void KcpIO::on_kcpmgr_remove()
 
 bool KcpIO::init_event(EVIO *w, lua_State *L, int32_t index)
 {
-    int32_t ev = luaL_checkinteger(L, index);
+    int32_t ev = (int32_t)luaL_checkinteger(L, index);
 
     StaticGlobal::B->add_watcher_message(w, ThreadMessage::KCP_ADD, ev);
 
@@ -469,13 +470,13 @@ bool KcpIO::establish_accept(EVIO *w)
 {
     KcpIO *io = static_cast<KcpIO *>(w->io_);
 
-    int64_t fd = io->get_main_id();
+    int64_t vfd = io->get_vfd();
     AcceptEntry entry;
     {
         std::scoped_lock sl(accept_->mutex_);
         for (auto &x : accept_->accepting_)
         {
-            if (x.second.vfd_ == fd)
+            if (x.second.vfd_ == vfd)
             {
                 entry = std::move(x.second);
                 accept_->accepting_.erase(x.first);
@@ -484,7 +485,7 @@ bool KcpIO::establish_accept(EVIO *w)
         }
     }
 
-    if (entry.vfd_ != fd)
+    if (entry.vfd_ != vfd)
     {
         ELOG("kcp establish_accept no fd found %d", w->id_);
         return false;

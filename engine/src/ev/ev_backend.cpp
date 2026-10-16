@@ -57,21 +57,25 @@ void EVBackend::stop()
 
 void EVBackend::do_thread_message()
 {
-    ThreadMessage *m = nullptr;
-    while (nullptr != (m = pop_message()))
+    // 使用swap策略: 只加锁一次，交换整个队列到本地处理，比不断加锁pop队列效率高一点
     {
-        switch (m->type_)
+        std::scoped_lock<std::mutex> sl(mutex_);
+        std::swap(threads_events_, backend_events_);
+    }
+    
+    for (const auto &m : backend_events_)
+    {
+        switch (m.type_)
         {
 #if defined(ENABLE_KCP)
-        case ThreadMessage::KCP_ADD: kcp_mgr_.do_add_message(m); break;
-        case ThreadMessage::KCP_DEL: kcp_mgr_.do_del_message(m); break;
+        case ThreadMessage::KCP_ADD: kcp_mgr_.do_add_message(&m); break;
+        case ThreadMessage::KCP_DEL: kcp_mgr_.do_del_message(&m); break;
 #endif
-        case ThreadMessage::WATCHER_EV: do_watcher_message(m); break;
+        case ThreadMessage::WATCHER_EV: do_watcher_message(&m); break;
         default:
-            ELOG("backend unknow message type: %d", m->type_);
+            ELOG("backend unknow message type: %d", m.type_);
             break;
         }
-        ThreadContext::dispose_message(m);
     }
 }
 
@@ -473,16 +477,15 @@ void EVBackend::do_kernel_event(EVIO *w, int32_t revents)
     if (kevents != b_kevents) modify_later(w, kevents);
 }
 
-void EVBackend::do_watcher_message(ThreadMessage *m)
+void EVBackend::do_watcher_message(const WatcherMsg *m)
 {
-    const WatcherMsg *msg = reinterpret_cast<const WatcherMsg *>(m->buffer());
-    if (0 == msg->udata_)
+    if (0 == m->udata_)
     {
-        do_watcher_backend_event(msg->w_);
+        do_watcher_backend_event(m->w_);
     }
     else
     {
-        do_watcher_event(msg->w_, msg->udata_, false);
+        do_watcher_event(m->w_, (int32_t)m->udata_, false);
     }
 }
 
@@ -508,18 +511,18 @@ bool EVBackend::add_watcher(EVIO* w)
 bool EVBackend::remove_watcher(EVIO *w, int32_t fd)
 {
     bool has_ref = true;
-    fd_mgr_.unset(fd); // 这里不能取w->fd_了，因为可能已经被逻辑线程关闭
+    fd_mgr_.unset(fd);
     {
         std::scoped_lock<std::mutex> sl(mutex_);
 
-        // 这个必须放到锁里，backend关闭socket，发了事件给主线程但主线程还未处理
-        // 这时候主线程往socket写入数据时，要依赖这个M_REF_BACKEND判断是否插入数据
+        // 这个必须放到锁里，否则backend移除了watcher，
+        // 主线程还会往backend写入该数据，要依赖这个M_REF_BACKEND判断是否能与入数据
         if (!w->del_ref(EVIO::M_REF_BACKEND)) has_ref = false;
 
-        watcher_events_.erase(std::remove_if(watcher_events_.begin(),
-                                             watcher_events_.end(),
-                                             [w](auto &x) { return x == w; }),
-                              watcher_events_.end());
+        threads_events_.erase(std::remove_if(threads_events_.begin(),
+                                             threads_events_.end(),
+                                             [w](auto &x) { return x.w_ == w; }),
+                              threads_events_.end());
     }
 
     return has_ref;
@@ -533,26 +536,32 @@ void EVBackend::append_watcher_event(EVIO *w, int32_t ev)
     int32_t old = w->b_ev_.fetch_or(ev, std::memory_order_acq_rel);
     if (0 != old) return; // 已有事件在队列中，无需重复入队
 
-    std::scoped_lock<std::mutex> sl(mutex_);
-    // 必须锁内检测M_REF_BACKEND，防止主线程设置完事件，backend线程刚好把watcher删除了
-    // 没了M_REF_BACKEND主线程会把w删掉，backend线程处理事件时指针就是无效的
-    // mask_和b_ev_在同一cache line，大部分情况应该和操作一个普通int变量没有太大性能差异
-    if (0 == (w->mask_.load(std::memory_order_acquire) & EVIO::M_REF_BACKEND))
     {
-        return;
+        std::scoped_lock<std::mutex> sl(mutex_);
+        // 必须锁内检测M_REF_BACKEND，防止主线程设置完事件，backend线程刚好把watcher删除了
+        // 没了M_REF_BACKEND主线程会把w删掉，backend线程处理事件时指针就是无效的
+        // mask_和b_ev_在同一cache line，大部分情况应该和操作一个普通int变量没有太大性能差异
+        if (0 == (w->mask_.load(std::memory_order_acquire) & EVIO::M_REF_BACKEND))
+        {
+            return;
+        }
+        threads_events_.emplace_back(ThreadMessage::WATCHER_EV, w, 0);
+        if (threads_events_.size() > 1) return;
     }
-    WatcherMsg msg{w, 0};
-    emplace_message(0, 0, ThreadMessage::WATCHER_EV, &msg, sizeof(msg));
+    wake();
 }
 
 void EVBackend::add_watcher_message(EVIO *w, int32_t type, int64_t udata)
 {
-    std::scoped_lock<std::mutex> sl(mutex_);
-    // 没了M_REF_BACKEND说明另一个线程已经关闭当前socket，只是当前线程未处理
-    if (0 == (w->mask_.load(std::memory_order_acquire) & EVIO::M_REF_BACKEND))
     {
-        return;
+        std::scoped_lock<std::mutex> sl(mutex_);
+        // 没了M_REF_BACKEND说明另一个线程已经关闭当前socket，只是当前线程未处理
+        if (0 == (w->mask_.load(std::memory_order_acquire) & EVIO::M_REF_BACKEND))
+        {
+            return;
+        }
+        threads_events_.emplace_back(type, w, udata);
+        if (threads_events_.size() > 1) return;
     }
-    WatcherMsg msg{w, udata};
-    emplace_message(0, 0, type, &msg, sizeof(msg));
+    wake();
 }

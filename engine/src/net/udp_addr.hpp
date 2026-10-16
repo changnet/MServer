@@ -13,6 +13,8 @@
     #include <sys/socket.h> /* sockaddr sockaddr_storage */
 #endif
 
+#pragma pack(push, 1)
+
 /**
  * 定长的udp地址，用于把地址塞进缓冲区随数据一起传递。
  *
@@ -26,7 +28,6 @@
  * 以后谁往里加字段都不会悄悄变成22字节而让lua侧的key长度对不上。
  * 它没有性能代价：这里全是memcpy，不受对齐影响。
  */
-#pragma pack(push, 1)
 struct UdpAddr
 {
     uint16_t family_;   // AF_INET / AF_INET6 / AF_UNSPEC(已connect，用::send发送)
@@ -151,6 +152,25 @@ struct UdpAddr
     }
 };
 #pragma pack(pop)
+
+
+/**
+ * UdpAddr 的hash函数（UdpAddr 已有 operator==，直接 memcmp 20 字节）
+ */
+struct UdpAddrHash
+{
+    size_t operator()(const UdpAddr &a) const
+    {
+        const uint8_t *p = reinterpret_cast<const uint8_t *>(&a);
+        size_t h         = 1469598103934665603ull; // FNV-1a
+        for (size_t i = 0; i < sizeof(UdpAddr); ++i)
+        {
+            h ^= p[i];
+            h *= 1099511628211ull;
+        }
+        return h;
+    }
+};
 
 static_assert(sizeof(UdpAddr) == 20, "UdpAddr must be 20 bytes");
 static_assert(alignof(UdpAddr) == 1, "UdpAddr must be packed");

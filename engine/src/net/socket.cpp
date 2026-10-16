@@ -346,7 +346,7 @@ int32_t Socket::get_addr_info(std::vector<std::string> &addrs, const char *host,
 
 int32_t Socket::start(lua_State *L)
 {
-    int32_t fd = luaL_checkinteger(L, 2);
+    int32_t fd = (int32_t)luaL_checkinteger(L, 2);
     // fd可能是netcompat::INVALID，udp、kcp连接没有fd，用的主fd收发数据
     if (fd != netcompat::INVALID)
     {
@@ -362,7 +362,7 @@ int32_t Socket::start(lua_State *L)
     fd_ = fd;
 
     w_->fd_   = fd;
-    w_->addr_ = luaL_checkinteger(L, 3);
+    w_->addr_ = (int32_t)luaL_checkinteger(L, 3);
     w_->mask_ |= EVIO::M_REF_BACKEND; // 当前worker线程一个，backend线程一个
 
     bool ret = w_->io_->init_event(w_, L, 4);

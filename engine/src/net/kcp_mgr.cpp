@@ -12,29 +12,17 @@
 /// accept表里对端的回收扫描间隔（超时本身是16s，5s的粒度足够）
 static constexpr int64_t KCP_ACCEPT_TIMEOUT = 5000;
 
-KcpMgr::~KcpMgr()
+KcpMgr::KcpMgr()
 {
-    // io线程已经join，这里独占访问。
-    // ikcpcb 必须在这里放掉，否则 ~KcpIO 会在worker线程碰它
-    for (auto &x : establishs_)
-    {
-        EVIO *w   = x.second;
-        KcpIO *io = static_cast<KcpIO *>(w->io_);
-        if (io) io->release_kcp();
-
-        // 虚拟连接不在 fd_mgr_ 里，io线程不会走epoll关闭路径替它解引用
-        if (w->fd_ == netcompat::INVALID) w->del_ref(EVIO::M_REF_BACKEND);
-    }
-
-    establishs_.clear();
-    listeners_.clear();
 }
 
-void KcpMgr::do_add_message(ThreadMessage *m)
+KcpMgr::~KcpMgr()
 {
-    const WatcherMsg *msg = reinterpret_cast<const WatcherMsg *>(m->buffer());
+}
 
-    EVIO *w              = msg->w_;
+void KcpMgr::do_add_message(const WatcherMsg *m)
+{
+    EVIO *w              = m->w_;
     KcpIO *io            = static_cast<KcpIO *>(w->io_);
 
     switch (io->get_role_type())
@@ -48,7 +36,7 @@ void KcpMgr::do_add_message(ThreadMessage *m)
             StaticGlobal::B->dispatch_event(w, EV_CLOSE);
             return;
         }
-        int64_t main_id = io->get_main_id();
+        int32_t main_id = io->get_main_id();
         auto it = listeners_.find(main_id);
         if (it != listeners_.end())
         {
@@ -85,7 +73,7 @@ void KcpMgr::do_add_message(ThreadMessage *m)
 
         listeners_[w->id_] = io;
         establishs_[w->id_] = w;
-        StaticGlobal::B->do_watcher_event(w, msg->udata_, false);
+        StaticGlobal::B->do_watcher_event(w, (int32_t)m->udata_, false);
         break;
     }
     case IO::CONNECTOR:
@@ -104,7 +92,7 @@ void KcpMgr::do_add_message(ThreadMessage *m)
         }
 
         establishs_[w->id_] = w;
-        StaticGlobal::B->do_watcher_event(w, msg->udata_, false);
+        StaticGlobal::B->do_watcher_event(w, (int32_t)m->udata_, false);
         break;
     }
     }
@@ -131,7 +119,7 @@ void KcpMgr::remove(EVIO *w, int32_t event)
             StaticGlobal::B->dispatch_event(w, EV_CLOSE);
             return;
         }
-        int64_t main_id = io->get_main_id();
+        int32_t main_id = io->get_main_id();
         auto it         = listeners_.find(main_id);
         if (it != listeners_.end())
         {
@@ -188,11 +176,9 @@ void KcpMgr::remove(EVIO *w, int32_t event)
     }
 }
 
-void KcpMgr::do_del_message(ThreadMessage *m)
+void KcpMgr::do_del_message(const WatcherMsg *m)
 {
-    const WatcherMsg *msg = reinterpret_cast<const WatcherMsg *>(m->buffer());
-
-    remove(msg->w_, msg->udata_);
+    remove(m->w_, (int32_t)m->udata_);
 }
 
 int64_t KcpMgr::update(int64_t now)

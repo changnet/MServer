@@ -10,24 +10,7 @@
 #if defined(ENABLE_KCP)
 
 class EVIO;
-
-/**
- * UdpAddr 的hash函数（UdpAddr 已有 operator==，直接 memcmp 20 字节）
- */
-struct UdpAddrHash
-{
-    size_t operator()(const UdpAddr &a) const
-    {
-        const uint8_t *p = reinterpret_cast<const uint8_t *>(&a);
-        size_t h         = 1469598103934665603ull; // FNV-1a
-        for (size_t i = 0; i < sizeof(UdpAddr); ++i)
-        {
-            h ^= p[i];
-            h *= 1099511628211ull;
-        }
-        return h;
-    }
-};
+class KcpIO;
 
 /**
  * kcp 会话管理器（io线程独占，单例挂在 EVBackend 上）
@@ -49,11 +32,11 @@ struct UdpAddrHash
 class KcpMgr
 {
 public:
-    /// io线程join之后由 ~EVBackend 触发，释放所有残留会话
+    KcpMgr();
     ~KcpMgr();
 
-    void do_add_message(ThreadMessage *m); // KCP_ADD
-    void do_del_message(ThreadMessage *m); // KCP_DEL（含"业务拒绝接入"）
+    void do_add_message(const WatcherMsg *m);    // KCP_ADD
+    void do_del_message(const WatcherMsg *m); // KCP_DEL
 
     /// 移除一个kcp连接
     void remove(EVIO *w, int32_t event);

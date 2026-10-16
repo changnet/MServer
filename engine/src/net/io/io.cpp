@@ -14,7 +14,7 @@ IO::~IO()
 
 bool IO::init_event(EVIO *w, lua_State *L, int32_t index)
 {
-    int32_t ev = luaL_checkinteger(L, index);
+    int32_t ev = (int32_t)luaL_checkinteger(L, index);
     StaticGlobal::B->add_watcher_message(w, ThreadMessage::WATCHER_EV, ev);
     return true;
 }
@@ -23,7 +23,7 @@ bool IO::uninit_event(EVIO *w, lua_State *L, int32_t index)
 {
     bool flush = lua_toboolean(L, index);
 
-    // EV_FLUSH不要和EV_CLOSE同时发送，不然EV_FLUSH会失效，这在另一个线程有特殊处理
+    // EV_FLUSH涓嶈鍜孍V_CLOSE鍚屾椂鍙戦�侊紝涓嶇劧EV_FLUSH浼氬け鏁堬紝杩欏湪鍙︿竴涓嚎绋嬫湁鐗规畩澶勭悊
     StaticGlobal::B->append_watcher_event(w, flush ? EV_FLUSH : EV_CLOSE);
     return true;
 }

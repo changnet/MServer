@@ -21,9 +21,9 @@ public:
 
     void after_stop() override;
     bool before_start() override;
-    void wake() override;
 
 private:
+    void wake() override;
     int32_t wait(int32_t timeout) override;
     void do_wait_event(int32_t ev_count) override;
     int32_t modify_fd(int32_t fd, int32_t op, int32_t new_ev) override;

@@ -95,7 +95,7 @@ function KcpSocket:start_event(fd, ev)
         self.s:set_io_option("conv", conv)
     end
 
-    return self.s:start(LOCAL_ADDR, fd, ev, vfd)
+    return self.s:start(LOCAL_ADDR, fd, ev)
 end
 
 -- 监听socket连接

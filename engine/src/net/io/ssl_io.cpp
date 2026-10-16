@@ -31,7 +31,7 @@ int32_t SSLIO::set_option(lua_State *L)
     }
     else if (0 == std::strcmp(key, "ssl_alpn"))
     {
-        set_ssl_alpn(luaL_checkinteger(L, 3));
+        set_ssl_alpn((int32_t)luaL_checkinteger(L, 3));
     }
     else if (0 == std::strcmp(key, "ssl_sni"))
     {
@@ -43,12 +43,13 @@ int32_t SSLIO::set_option(lua_State *L)
     }
     else if (0 == std::strcmp(key, "ssl_mode"))
     {
-        set_ssl_verify_mode(luaL_checkinteger(L, 3));
+        set_ssl_verify_mode((int32_t)luaL_checkinteger(L, 3));
     }
     else
     {
         luaL_error(L, "uknow kcp option:%s", key);
     }
+    return 0;
 }
 
 int32_t SSLIO::recv(EVIO *w)

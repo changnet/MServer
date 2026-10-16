@@ -53,6 +53,14 @@ struct ThreadMessage final
 // EVIO与backend通信的消息结构
 struct WatcherMsg
 {
+    uint16_t type_; // 消息类型
     EVIO *w_; // 已建立的EVIO，没有就是nullptr
     int64_t udata_; // 自定义数值，根据不同的消息类型表示的意义不一样
+
+    WatcherMsg(uint16_t type, EVIO* w, int64_t udata)
+    {
+        type_ = type;
+        w_    = w;
+        udata_ = udata;
+    }
 };

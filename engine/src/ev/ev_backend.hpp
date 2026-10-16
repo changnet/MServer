@@ -12,10 +12,9 @@
 /**
  * @brief 用于执行io操作的后台基类，统一epoll、poll等不同内核接口。该io操作在一个独立的线程
  *
- * 继承 ThreadContext 是为了拿到线程消息队列（kcp的建/删会话是控制面，
- * 走消息队列；业务数据是数据面，走 Buffer + EV_READ/EV_WRITE）
+ * 不继承 ThreadContext，那个消息队列对backend来说有点重，效率不够高
  */
-class EVBackend : public ThreadContext
+class EVBackend
 {
 public:
     /**
@@ -30,15 +29,6 @@ public:
 public:
     EVBackend();
     virtual ~EVBackend();
-
-    // ---- ThreadContext ----
-    /// backend不导出给lua
-    int32_t push(lua_State *L, bool gc) override
-    {
-        UNUSED(L);
-        UNUSED(gc);
-        return 0;
-    }
 
     // 启动backend线程
     virtual bool before_start() = 0;
@@ -78,7 +68,7 @@ public:
      */
     static EVBackend *instance();
 
-    // 派发事件给watcher对应的线程
+    // 派发事件给watcher对应的业务线程
     void dispatch_event(EVIO *w, int32_t ev);
 
 #if defined(ENABLE_KCP)
@@ -131,7 +121,7 @@ private:
     /**
      * @brief 处理收到的WATCHER_EV事件
      */
-    void do_watcher_message(ThreadMessage *m);
+    void do_watcher_message(const WatcherMsg *m);
     /**
      * @brief 处理读写后的io状态
      * @param w 待处理的watcher
@@ -159,10 +149,15 @@ private:
     */
     void modify_later(EVIO *w, int32_t events);
 
+    virtual void wake() = 0;
+
 protected:
     std::atomic<bool> done_;     /// 是否终止进程
     bool modify_protected_; // 当前禁止修改poll等数组结构
     std::thread thread_;
+
+    std::vector<WatcherMsg> threads_events_; // 业务线程发给backend的消息
+    std::vector<WatcherMsg> backend_events_; // backend收到业务线程的消息
 
     std::vector<EVIO *> pending_events_; // backend线程自己收到，等待异步处理的事件
 
