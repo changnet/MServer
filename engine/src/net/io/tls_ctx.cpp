@@ -153,7 +153,7 @@ int32_t TlsCtx::init(const char *cert_file, const char *key_file,
         dump_error("load verify fail");
         goto FAIL;
     }
-    ctx_ = ctx;
+
     // 没有证书时，默认使用DEFAULT_FILE作名字，仅客户端连接可以没有证书，服务端必须有
 
     /* 建立ssl时，客户端的证书是在握手阶段由服务器发给客户端的
@@ -205,9 +205,11 @@ int32_t TlsCtx::init(const char *cert_file, const char *key_file,
         goto FAIL;
     }
 
+    ctx_ = ctx;
     return 0;
 
 FAIL:
     SSL_CTX_free(ctx);
+
     return -1;
 }
