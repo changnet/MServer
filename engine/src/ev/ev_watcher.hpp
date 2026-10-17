@@ -112,7 +112,8 @@ public:
         uint32_t ufd = ((uint32_t)fd);
         if (ufd < HUGE_FD)
         {
-            if (unlikely(fd_watcher_.size() < ufd))
+            // 必须用 >= ：fd 恰好等于当前 size 时下标就是越界的
+            if (unlikely(fd_watcher_.size() <= ufd))
             {
                 fd_watcher_.resize(ufd + 1024);
             }
