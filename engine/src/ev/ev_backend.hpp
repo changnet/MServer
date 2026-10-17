@@ -54,6 +54,14 @@ public:
      * @return 该watcher是否还有效（被其他线程引用）
      */
     bool remove_watcher(EVIO *w, int32_t fd);
+
+#if defined(ENABLE_KCP)
+    // kcp会话管理器，只有backend线程能操作
+    KcpMgr &kcp_mgr()
+    {
+        return kcp_mgr_;
+    }
+#endif
     /**
      * @brief 往backend给指定watcher追加一个事件，该事件和已有事件堆叠
      * 主要解决socket频繁发送数据，需要不断追加EV_WRITE事件的问题

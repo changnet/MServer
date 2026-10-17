@@ -27,8 +27,14 @@ Test.describe("socket test", function()
     local udp_clt1 = nil
     local udp_clt2 = nil
 
+    local kcp_srv = nil
+    local kcp_clt1 = nil
+    local kcp_clt2 = nil
+
     local ss_port = 2098
     local sc_port = 2099
+    -- kcp跑在udp上，不能和上面的udp测试共用端口
+    local kcp_port = 2101
     local local_host = TEST_IPV4 and "127.0.0.1" or "::1"
 
     local Buffer = require "engine.Buffer"
@@ -358,6 +364,86 @@ Test.describe("socket test", function()
         Test.wait(4000)
     end)
 
+    Test.it("kcp socket test", function()
+        local count = 10
+        local KcpSocket = require "network.kcp_socket"
+
+        -- kcp没有连接过程，listen、connect失败这里是唯一能发现问题的地方，必须断言
+        kcp_srv = KcpSocket()
+        assert(kcp_srv:listen(local_host, kcp_port), "kcp listen fail")
+
+        -- 服务端每个对端都是一条独立连接：数据到达后端之后才建对端，
+        -- 由 Socket:on_accepting 创建对象，监听socket上设置的回调会被继承下去。
+        -- on_connected 对每个对端调用一次，用它记录服务端建了几条连接
+        local srv_peers = {}
+        kcp_srv.on_connected = function(self)
+            table.insert(srv_peers, self)
+        end
+
+        -- kcp的包不带对端地址(一条连接就对应一个对端)，回调参数是 (ud, size)
+        kcp_srv.on_message = Test.cb(function(self, ud, size)
+            self:send_pkt(ud, size)
+        end)
+
+        -- 每轮的内容都不一样(带序号和随机数)，确保回来的是这一轮发出去的数据；
+        -- 第5轮用超过mtu(1400)的大包，同时验证kcp的分片重组和lua侧的4字节长度帧
+        local big_str = string.rep("0123456789", 800)
+        local function clt_send(clt, prefix)
+            local idx = (clt.send_count or 0) + 1
+            clt.send_count = idx
+
+            local last_send = string.format("%s_%d_%d", prefix, idx,
+                                            math.random(10000, 1000000))
+            if 5 == idx then last_send = last_send .. big_str end
+
+            clt.last_send = last_send
+            clt:send_pkt(last_send, #last_send)
+        end
+
+        local count1 = 0
+        local count2 = 0
+
+        local done = false
+        local function check_done()
+            -- 只有两个客户端都收到足够的包才算完成，不能提前关闭socket
+            if done or count1 < count or count2 < count then return end
+            done = true
+
+            -- 两个客户端两条连接，服务端应该accept出两条
+            Test.equal(#srv_peers, 2)
+
+            Test.done()
+        end
+
+        kcp_clt1 = KcpSocket()
+        kcp_clt1.on_message = Test.cb(function(self, ud, size)
+            Test.equal(Buffer.lightud_tostring(ud, size), self.last_send)
+
+            count1 = count1 + 1
+            if count1 >= count then return check_done() end
+
+            clt_send(self, "clt1")
+        end)
+        assert(kcp_clt1:connect(local_host, kcp_port), "kcp connect fail")
+
+        kcp_clt2 = KcpSocket()
+        kcp_clt2.on_message = Test.cb(function(self, ud, size)
+            Test.equal(Buffer.lightud_tostring(ud, size), self.last_send)
+
+            count2 = count2 + 1
+            if count2 >= count then return check_done() end
+
+            clt_send(self, "clt2")
+        end)
+        assert(kcp_clt2:connect(local_host, kcp_port), "kcp connect fail")
+
+        clt_send(kcp_clt1, "clt1")
+        clt_send(kcp_clt2, "clt2")
+
+        -- kcp的flush间隔是40ms，一个来回至少两跳，10轮留够时间
+        Test.wait(5000)
+    end)
+
     Test.after(function()
         if sc_clt then sc_clt:close() end
         if sc_srv then sc_srv:close() end
@@ -369,6 +455,11 @@ Test.describe("socket test", function()
         if udp_srv then udp_srv:close() end
         if udp_clt1 then udp_clt1:close() end
         if udp_clt2 then udp_clt2:close() end
+
+        if kcp_clt1 then kcp_clt1:close() end
+        if kcp_clt2 then kcp_clt2:close() end
+        -- 关监听会把名下的对端一起回收
+        if kcp_srv then kcp_srv:close() end
 
         _G.pingpong_b = nil
     end)

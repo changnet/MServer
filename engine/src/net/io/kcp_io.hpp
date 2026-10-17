@@ -4,8 +4,6 @@
 
 #if defined(ENABLE_KCP)
 
-#include <vector>
-
 #include "ikcp.h"
 #include "io.hpp"
 #include "net/udp_addr.hpp"
@@ -52,8 +50,8 @@ public:
     void remove_establish(EVIO *w);
     // 回收超时未接入的对端（backend线程）
     void remove_accept_timeout(int64_t now);
-    // 复制一份已建立的对端，供关闭监听时级联处理（backend线程）
-    std::vector<EVIO *> peers();
+    // 关闭监听时，把名下的对端逐个交给 KcpMgr 回收（backend线程）
+    void remove_establish_peers(bool flush);
 
     // 驱动定时器，返回距离下次需要执行的毫秒数
     int64_t update(int64_t now);

@@ -64,9 +64,10 @@ end
 -- 根据配置信息自动设置io读写（TCP、SSL、UDP）
 function Socket:auto_set_io()
     if self.ssl then
-        local pio = self.s:set_io(IOT_SSL, self.ssl)
+        local pio = self.s:set_io(IOT_SSL)
         assert(pio)
 
+        self.s:set_io_option("ssl", self.ssl)
         local sni = self.sni or self.host
         if sni then self.s:set_io_option("ssl_sni", sni) end
         local cert_host = self.cert_host or self.host

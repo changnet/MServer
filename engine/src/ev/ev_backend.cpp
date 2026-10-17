@@ -71,6 +71,9 @@ void EVBackend::do_thread_message()
     
     for (const auto &m : backend_events_)
     {
+        // 同一条w的消息可能有多条，前一条处理时已经把它关闭并释放了
+        if (!m.w_) continue;
+
         switch (m.type_)
         {
 #if defined(ENABLE_KCP)
@@ -83,6 +86,12 @@ void EVBackend::do_thread_message()
             break;
         }
     }
+
+    /**
+     * 队列用的是swap复用，不清空的话这些已处理的消息会在下一轮被换回
+     * threads_events_，再下一轮又被换回来重新执行一次
+     */
+    backend_events_.clear();
 }
 
 void EVBackend::backend_once(int32_t ev_count, int64_t now)
@@ -527,7 +536,8 @@ bool EVBackend::add_watcher(EVIO* w)
 bool EVBackend::remove_watcher(EVIO *w, int32_t fd)
 {
     bool has_ref = true;
-    fd_mgr_.unset(fd);
+    // udp/kcp的连接没有fd
+    if (netcompat::INVALID != fd) fd_mgr_.unset(fd);
     {
         std::scoped_lock<std::mutex> sl(mutex_);
 
@@ -535,10 +545,21 @@ bool EVBackend::remove_watcher(EVIO *w, int32_t fd)
         // 主线程还会往backend写入该数据，要依赖这个M_REF_BACKEND判断是否能与入数据
         if (!w->del_ref(EVIO::M_REF_BACKEND)) has_ref = false;
 
+        // threads_events_只能删不能把w_=nullptr，因为append_watcher_event依赖
+        // 数量判断是否唤醒线程
         threads_events_.erase(std::remove_if(threads_events_.begin(),
                                              threads_events_.end(),
                                              [w](auto &x) { return x.w_ == w; }),
                               threads_events_.end());
+    }
+
+    /**
+     * 本轮已换出来等待处理的消息里可能还有同一个w，此时w可能已经被释放。
+     * 这里不能erase（调用方可能正在遍历），断掉指向让循环跳过
+     */
+    for (auto &x : backend_events_)
+    {
+        if (x.w_ == w) x.w_ = nullptr;
     }
 
     return has_ref;

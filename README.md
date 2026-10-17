@@ -9,7 +9,7 @@
 ## 核心功能
 - Lua热更新
 - Lua面向对象编程（可选）
-- 网络：Tcp、Http、Websocket，支持SSL
+- 网络：Tcp、Http、Websocket（支持SSL），Udp、[Kcp](https://github.com/skywind3000/kcp)
 - RPC（支持协程、异步回调）
 - Protobuf
 - 数据库：MySQL/MariaDB、MongoDB

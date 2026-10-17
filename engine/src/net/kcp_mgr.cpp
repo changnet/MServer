@@ -2,10 +2,8 @@
 
 #if defined(ENABLE_KCP)
 
-#include <vector>
-
-#include "ev/ev_watcher.hpp"
 #include "ev/time.hpp"
+#include "ev/ev_watcher.hpp"
 #include "net/io/kcp_io.hpp"
 #include "system/static_global.hpp"
 
@@ -20,10 +18,16 @@ KcpMgr::~KcpMgr()
 
 void KcpMgr::drop_watcher(EVIO *w)
 {
-    // 还没进epoll的socket：置关闭标记、通知业务线程、放掉backend引用
+    // 还没进epoll的socket：先置关闭标记，业务线程收到EV_CLOSE才能去关fd
     w->mask_ |= EVIO::M_BACKEND_CLOSE;
     StaticGlobal::B->dispatch_event(w, EV_CLOSE);
-    w->del_ref(EVIO::M_REF_BACKEND);
+
+    /**
+     * 不能直接 del_ref：remove_watcher 把"放引用"和"清理消息队列里同一条w的消息"
+     * 放在同一把锁里，业务线程入队侧也在锁里判 M_REF_BACKEND，两者才不会交错。
+     * ACCEPTOR 是虚拟连接，fd_ 为 INVALID，对 fd_mgr_ 是空操作
+     */
+    StaticGlobal::B->remove_watcher(w, w->fd_);
 }
 
 void KcpMgr::do_add_message(const WatcherMsg *m)
@@ -70,10 +74,15 @@ void KcpMgr::do_add_message(const WatcherMsg *m)
             return;
         }
 
+        /**
+         * 这里不需要先手动update一次。ikcp_check在updated==0时返回current，
+         * KcpIO::update看到(t - now) <= 0就会补一次ikcp_update，第一次flush
+         * 随即发生。而do_thread_message处理完消息后紧接着就是下一轮主循环的
+         * KcpMgr::update，中间不做任何等待，所以这里少调一次不影响首次发送时机
+         */
         establishs_[w->id_] = w;
-
-        // 必须先update一次：把updated置1并初始化ts_flush。
-        // 否则ikcp_flush是no-op（一包都发不出去），ikcp_check恒返回current（照它排期会空转）
+        // kcp建立后必须update过一次ikcp_flush才会发送数据
+        // 这里不update只能等下次循环，期间启用了NODEALY的在send里的flush不生效
         io->update(timing::steady_clock());
         return;
     }
@@ -90,9 +99,9 @@ void KcpMgr::do_add_message(const WatcherMsg *m)
         establishs_[w->id_] = w;
 
         // 客户端的真实fd只关心可读：kcp没有connect事件
+        // 建立后的第一次flush同样交给主循环的 KcpMgr::update，理由见ACCEPTOR分支
         StaticGlobal::B->do_watcher_event(w, (int32_t)m->udata_, false);
 
-        // 同ACCEPTOR：这次update是ikcp_flush和ikcp_check能正常工作的前提
         io->update(timing::steady_clock());
         return;
     }
@@ -101,16 +110,15 @@ void KcpMgr::do_add_message(const WatcherMsg *m)
 
 void KcpMgr::remove(EVIO *w, bool flush)
 {
-    KcpIO *io = static_cast<KcpIO *>(w->io_);
+    KcpIO *io          = static_cast<KcpIO *>(w->io_);
+    const int32_t role = io->get_role_type();
 
     // 监听socket：没有ikcpcb，关闭时把它名下的对端一并回收
-    if (IO::LISTENER == io->get_role_type())
+    if (IO::LISTENER == role)
     {
         if (0 == listeners_.erase(w->id_)) return;
 
-        std::vector<EVIO *> peers = io->peers();
-        for (EVIO *p : peers) remove(p, flush);
-
+        io->remove_establish_peers(flush);
         io->on_kcpmgr_remove();
 
         // 监听有真实fd，走和tcp一样的事件
@@ -120,7 +128,7 @@ void KcpMgr::remove(EVIO *w, bool flush)
 
     if (0 == establishs_.erase(w->id_)) return; // 已经关过了
 
-    if (IO::ACCEPTOR == io->get_role_type())
+    if (IO::ACCEPTOR == role)
     {
         auto it = listeners_.find(io->get_main_id());
         if (it != listeners_.end()) it->second->remove_establish(w);
@@ -130,9 +138,9 @@ void KcpMgr::remove(EVIO *w, bool flush)
     if (flush) io->flush(w);
     io->on_kcpmgr_remove();
 
-    if (netcompat::INVALID == w->fd_)
+    // ACCEPTOR没有内核对象，epoll和fd_mgr_里都没有它，只能自己完成关闭
+    if (IO::ACCEPTOR == role)
     {
-        // 虚拟连接不在fd_mgr_里，epoll无关，只能自己完成关闭
         drop_watcher(w);
     }
     else
@@ -144,7 +152,7 @@ void KcpMgr::remove(EVIO *w, bool flush)
 
 void KcpMgr::do_del_message(const WatcherMsg *m)
 {
-    remove(m->w_, 0 != m->udata_);
+    remove(m->w_, 0 != (m->udata_ & EV_FLUSH));
 }
 
 int64_t KcpMgr::update(int64_t now)
@@ -182,13 +190,14 @@ void KcpMgr::clear()
 {
     for (auto &x : establishs_)
     {
-        EVIO *w   = x.second;
-        KcpIO *io = static_cast<KcpIO *>(w->io_);
+        EVIO *w            = x.second;
+        KcpIO *io          = static_cast<KcpIO *>(w->io_);
+        const int32_t role = io->get_role_type();
 
         io->on_kcpmgr_remove();
 
-        // 虚拟连接不在fd_mgr_里，backend引用只能自己放
-        if (netcompat::INVALID == w->fd_) w->del_ref(EVIO::M_REF_BACKEND);
+        // ACCEPTOR是虚拟连接，不在fd_mgr_里，backend引用只能自己放
+        if (IO::ACCEPTOR == role) w->del_ref(EVIO::M_REF_BACKEND);
     }
     establishs_.clear();
 

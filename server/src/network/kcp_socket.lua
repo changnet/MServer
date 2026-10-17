@@ -98,7 +98,10 @@ function KcpSocket:connect(host, port, ip)
     end
 
     -- kcp没有握手，也不会有EV_CONNECT，连接建立即就绪
-    return self:io_ready()
+    -- 注意不能直接返回io_ready，它返回的是on_connected的结果(一般是nil)
+    self:io_ready()
+
+    return true
 end
 
 -- 发送数据的实际实现

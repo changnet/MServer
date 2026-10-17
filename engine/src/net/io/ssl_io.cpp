@@ -26,7 +26,7 @@ int32_t SSLIO::set_option(lua_State *L)
     if (0 == std::strcmp(key, "ssl"))
     {
         assert(!ssl_);
-        TlsCtx **tls_ctx = (TlsCtx **)luaL_checkudata(L, 3, "TlsCtx");
+        TlsCtx **tls_ctx = (TlsCtx **)luaL_checkudata(L, 3, "engine.TlsCtx");
         ssl_ = SSL_new((*tls_ctx)->get());
     }
     else if (0 == std::strcmp(key, "ssl_alpn"))

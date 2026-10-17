@@ -3,7 +3,9 @@
 #if defined(ENABLE_KCP)
 
 #include <lua.hpp>
+#include <vector>
 
+#include "ev/ev_backend.hpp"
 #include "ev/ev_watcher.hpp"
 #include "ev/time.hpp"
 #include "system/static_global.hpp"
@@ -220,8 +222,14 @@ int32_t KcpIO::send(EVIO *w)
         char *frame = send_.peek_buffer(size, 2);
         assert(frame);
 
-        const char *payload = frame + sizeof(uint32_t);
-        int32_t len         = (int32_t)(size - sizeof(uint32_t));
+        /**
+         * 帧头[u32 size]必须一起交给kcp，不能只发payload：
+         * 对端的 KcpPacket::unpack 靠这个长度切分逻辑包(流模式下kcp会把
+         * 多次send的数据拼到一个mtu包里)，kcp本身只保证字节流按序送达。
+         * 收发两端必须严格对称，否则对端读到的"长度"其实是payload的前4字节
+         */
+        const char *payload = frame;
+        int32_t len         = (int32_t)size;
 
         /**
          * >0 成功写入队列的字节数，消息模式等于len，流模式可能小于len
@@ -455,14 +463,18 @@ void KcpIO::reject_accept(int64_t fd)
     }
 }
 
-std::vector<EVIO *> KcpIO::peers()
+void KcpIO::remove_establish_peers(bool flush)
 {
-    std::vector<EVIO *> ret;
-    ret.reserve(accept_->established_.size());
+    auto &m = accept_->established_;
 
-    for (auto &x : accept_->established_) ret.emplace_back(x.second);
+    for (auto it = m.begin(); it != m.end();)
+    {
+        // 先摘再关：KcpMgr::remove 里要按对端地址回查这张表
+        EVIO *p = it->second;
+        it      = m.erase(it);
 
-    return ret;
+        StaticGlobal::B->kcp_mgr().remove(p, flush);
+    }
 }
 
 bool KcpIO::establish_accept(EVIO *w)
