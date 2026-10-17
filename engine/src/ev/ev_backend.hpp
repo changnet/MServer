@@ -71,9 +71,6 @@ public:
     // 派发事件给watcher对应的业务线程
     void dispatch_event(EVIO *w, int32_t ev);
 
-#if defined(ENABLE_KCP)
-    KcpMgr &kcp_mgr() { return kcp_mgr_; }
-#endif
     void do_watcher_backend_event(EVIO *w);
     /**
      * @brief 处理收到来自其他线程的事件

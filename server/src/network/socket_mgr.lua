@@ -150,8 +150,7 @@ end
 local function do_accept(socket)
     local s = socket.s
     while true do
-        -- tcp: fd = 新连接的文件描述符，e = nil
-        -- kcp: fd = 对端地址(20字节二进制串)，e = conv（见 KcpSocket:on_accepting）
+        -- fd = 新连接的fd，kcp返回的是vfd，用法一致；e 只有出错时才有值
         local fd, e = s:accept()
         if -1 == fd then
             if not e then return end

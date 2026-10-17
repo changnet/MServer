@@ -58,8 +58,8 @@ function UdpSocket:address()
 end
 
 function UdpSocket:start_event(fd, ev)
-    -- udp没有accept、connect事件，只有读写事件
-    return self.s:start(LOCAL_ADDR, fd, SocketMgr.EV_READ)
+    -- udp没有accept、connect事件，监听fd上的数据由UdpIO自己拆出对端地址
+    return self.s:start(fd, LOCAL_ADDR, SocketMgr.EV_READ)
 end
 
 

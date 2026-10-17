@@ -41,9 +41,10 @@ struct UdpAddr
 
     void clear()
     {
-        family_  = AF_UNSPEC;
-        port_    = 0;
-        addr_[0] = '\0';
+        family_ = AF_UNSPEC;
+        port_   = 0;
+        // v4只用前4字节，其余必须是0：整个结构体会原样传给lua当hash key
+        memset(addr_, 0, sizeof(addr_));
     }
 
     bool operator==(const UdpAddr &o) const

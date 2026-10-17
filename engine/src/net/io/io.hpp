@@ -10,10 +10,9 @@ class EVIO;
 class Buffer;
 struct lua_State;
 
-/* socket input output control
- * 这里只定义与传输层无关的公共部分（缓冲区、ssl握手等），
- * 具体的数据收发由 TcpIO / UdpIO / SSLIO 实现。
- * accept相关的数据只在tcp下有意义，已下沉到 TcpIO。
+/**
+ * socket input output
+ * 这里只定义socket的读写方式，具体由 TcpIO / UdpIO / KcpIO 等派生类实现
  */
 class IO
 {
@@ -21,10 +20,10 @@ public:
     /// io类型
     enum IOType
     {
-        IOT_TCP = 1, // 默认IO类型，无特别处理(tcp)
+        IOT_TCP = 1, // tcp
         IOT_SSL = 2, // 使用SSL加密的TCP
         IOT_UDP = 3, // udp
-        IOT_KCP = 4, // kcp（可靠udp）。监听socket会被换成 KcpAcceptorIO
+        IOT_KCP = 4, // kcp
     };
 
     /// 角色类型
@@ -120,6 +119,7 @@ public:
 
     /**
      * @brief 从accept缓冲区取出一个待处理的连接（此函数在业务线程执行）
+     * @return tcp是新连接的fd，kcp是对端的vfd，没有则 INVALID（e为0表示队列已空）
      */
     virtual int64_t pop_accept(int32_t &e)
     {
@@ -128,6 +128,7 @@ public:
     };
     /**
      * @brief 拒绝一个待处理的连接（此函数在业务线程执行）
+     * @param fd accept返回的值（tcp是fd，kcp是vfd）
      */
     virtual void reject_accept(int64_t fd) {}
 

@@ -197,20 +197,27 @@ int64_t TcpIO::pop_accept(int32_t &e)
 {
     if (!accept_)
     {
-        int64_t mask = EINVAL;
-        return ((mask << 32) | (uint32_t)netcompat::INVALID);
+        e = EINVAL;
+        return netcompat::INVALID;
     }
 
     std::scoped_lock<std::mutex> sl(accept_->mutex_);
-    if (accept_->fd_queue_.empty()) return (uint32_t)netcompat::INVALID;
+    if (accept_->fd_queue_.empty()) return netcompat::INVALID;
 
-    int64_t fd = accept_->fd_queue_.front();
+    int64_t v = accept_->fd_queue_.front();
     accept_->fd_queue_.pop_front();
 
-    return fd;
+    // 高32位是backend塞进来的错误码，见 TcpIO::accept 的EMFILE分支
+    if ((uint32_t)v == (uint32_t)netcompat::INVALID)
+    {
+        e = (int32_t)(v >> 32);
+        return netcompat::INVALID;
+    }
+
+    return v;
 }
 
 void TcpIO::reject_accept(int64_t fd)
 {
-    netcompat::close(fd);
+    netcompat::close((int32_t)fd);
 }

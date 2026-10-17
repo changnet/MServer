@@ -67,18 +67,12 @@ Socket::~Socket()
      * 正常情况下，脚本调用stop函数通知io线程，后续收到回调到再析构对象
      * 但socket对象在Lua管理，有可能出现脚本报错导致部分数据未正确设置的情况
      * 因此这里析构对象时，不要影响另一个线程
-     *
      */
-
     delete packet_;
     packet_ = nullptr;
 
-    
-    if (!w_->del_ref(EVIO::M_REF_WORKER))
-    {
-        // delete w_; // del_ref会销毁自己
-        w_ = nullptr;
-    }
+    w_->del_ref(EVIO::M_REF_WORKER);
+    w_ = nullptr;
 }
 
 int32_t Socket::stop(lua_State *L)
@@ -713,10 +707,10 @@ int32_t Socket::accept(lua_State *L)
 {
     if (!w_->io_) return push_accept_error(L, -1, "no io set");
 
-    int32_t e    = 0;
-    int64_t fd = (w_->io_)->pop_accept(e);
+    int32_t e  = 0;
+    int64_t fd = w_->io_->pop_accept(e);
 
-    if (fd == netcompat::INVALID)
+    if (netcompat::INVALID == fd)
     {
         // 所有等待的连接已处理完，并不是错误
         if (0 == e)
@@ -724,13 +718,9 @@ int32_t Socket::accept(lua_State *L)
             lua_pushinteger(L, netcompat::INVALID);
             return 1;
         }
-        else
-        {
-            return push_accept_error(L, e, netcompat::strerror(e));
-        }
+
+        return push_accept_error(L, e, netcompat::strerror(e));
     }
-    e = Socket::validate();
-    if (0 != e) return push_accept_error(L, e, netcompat::strerror(e));
 
     lua_pushinteger(L, fd);
     return 1;
@@ -766,6 +756,15 @@ int32_t Socket::is_connect_success()
         return ecode;
     }
 
+    return 0;
+}
+
+int32_t Socket::set_watcher_event(int32_t events)
+{
+    // 虚拟连接（kcp服务端对端）没有内核对象，事件由io线程直接派发，不能落到epoll上
+    if (netcompat::INVALID == w_->fd_) return 0;
+
+    StaticGlobal::B->append_watcher_event(w_, events);
     return 0;
 }
 

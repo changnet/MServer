@@ -12,10 +12,10 @@ function Socket:fd()
 end
 
 --- 启动socket事件监听
+---@param fd 文件描述符，虚拟连接(kcp服务端对端)传-1
 ---@param addr 当前worker地址
----@param fd 文件描述符
 ---@param ev 需要监听的事件 EV_READ等
-function Socket:start(addr, fd, ev)
+function Socket:start(fd, addr, ev)
 end
 
 --- 停止socket事件监听(等待另一个线程处理完)并自动close
@@ -25,38 +25,20 @@ function Socket:stop(flush)
 end
 
 ---@brief 开始监听链接
----@param addr worker的地址
 ---@param host 监听的ip
 ---@param port 监听的端口
 ---@return 文件描述符，错误返回-1
-function Socket:listen(addr, host, port)
+function Socket:listen(host, port)
 end
 
 ---@brief 发起连接
----@param addr worker的地址
 ---@param host 连接的ip
 ---@param port 连接的端口
 ---@return 文件描述符，错误返回-1
-function Socket:connect(addr, host, port)
+function Socket:connect(host, port)
 end
 
----@brief 监听udp端口
----@param addr worker的地址
----@param host 监听的ip
----@param port 监听的端口
----@return 文件描述符，错误返回-1
-function Socket:udp_listen(addr, host, port)
-end
-
----@brief 发起udp连接，udp的connect只是设置一个默认地址，并不会真正连接
----@param addr worker的地址
----@param host 连接的ip
----@param port 连接的端口
----@return 文件描述符，错误返回-1
-function Socket:udp_connect(addr, host, port)
-end
-
---- 尝试接受一个fd
+--- 尝试接受一个fd（kcp返回的是vfd，用法和fd一致）
 ---@return 成功返回fd，失败返回-1
 function Socket:accept()
 end

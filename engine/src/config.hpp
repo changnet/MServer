@@ -49,3 +49,10 @@ static constexpr int32_t KCP_MAX_PARKED = 1024;
 
 // 连接未建立时，同一个地址仅缓冲N字节的数据，防止被攻击
 static constexpr int32_t KCP_MAX_PARKED_DATA = 64 * 1024;
+
+// 未接入对端的扫描间隔(ms)
+static constexpr int64_t KCP_ACCEPT_SCAN_MS = 5 * 1000;
+
+// 未接入对端的存活时间(ms)，超过就丢出accept表
+static constexpr int64_t KCP_ACCEPT_TIMEOUT_MS = 60 * 1000;
+

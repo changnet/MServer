@@ -33,6 +33,12 @@ EVBackend::EVBackend()
 
 EVBackend::~EVBackend()
 {
+#if defined(ENABLE_KCP)
+    // 必须在清fd引用之前：fd_mgr_.iter会销毁EVIO（连带io_），
+    // 而kcp的表里存的是这些EVIO的指针
+    kcp_mgr_.clear();
+#endif
+
     fd_mgr_.iter([](EVIO *w) { w->del_ref(EVIO::M_REF_BACKEND); });
     fd_mgr_.clear();
 }
@@ -111,8 +117,8 @@ void EVBackend::backend()
         /**
          * ★ 用kcp的定时收紧wait超时。
          *
-         * 到点的会话已经在这一句里面完成了 ikcp_update（重传/ACK/窗口探测
-         * 都发出去了），返回值是"最近的会话还差多少毫秒需要被处理"。
+         * kcp_mgr_.update 内部已经把到点的会话处理掉了，返回的是
+         * "最近的会话还差多少毫秒需要被处理"（相对值）。
          *
          * min_wait 的下限必须保住：返回0意味着"立刻要处理"，但给
          * epoll_wait 传0会退化成非阻塞轮询，主循环会空转烧CPU
@@ -250,6 +256,14 @@ void EVBackend::do_io_status(EVIO *w, int32_t ev, int32_t status,
     case EV_READ:
         // ssl握手需要继续读取数据时，需要添加可读事件
         kevents |= EV_READ;
+        break;
+    case EV_ACCEPT:
+        /**
+         * 监听socket上有新连接/新对端要交给业务线程。
+         * tcp的accept恒返回它；kcp只有真的出现新对端时才返回，
+         * 已有对端的数据包返回EV_NONE（不唤醒业务线程）
+         */
+        events |= EV_ACCEPT;
         break;
     case EV_WRITE:
         kevents |= EV_WRITE;
@@ -438,6 +452,8 @@ void EVBackend::do_kernel_event(EVIO *w, int32_t revents)
             }
             else if (b_kevents & EV_ACCEPT)
             {
+                // udp的accept事件会包含数据读取，只能根据返回值处理，不能统一返回
+                // events |= EV_ACCEPT;
                 auto status = w->io_->accept(w);
                 do_io_status(w, EV_ACCEPT, status, events, kevents);
             }
