@@ -7,7 +7,7 @@
 
 /* udp的io读写
  *
- * 缓冲区中的帧格式为 [u32 size][UdpAddr 20B][payload]，size含自身。
+ * 缓冲区中的帧格式为 [u32 size][UdpAddr 24B][payload]，size含自身。
  * 地址只用于本机的sendto，不会被发送出去，因此不需要考虑字节序。
  */
 class UdpIO final : public IO

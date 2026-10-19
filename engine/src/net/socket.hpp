@@ -223,7 +223,7 @@ public:
     int32_t send_pkt(lua_State *L);
 
     /**
-     * @brief 把unpack返回的20字节地址解析成ip和port
+     * @brief 把unpack返回的24字节地址解析成ip和port（link-local的ip带%scope）
      * @return ip地址, 端口
      */
     static int32_t get_udp_addr(lua_State *L);

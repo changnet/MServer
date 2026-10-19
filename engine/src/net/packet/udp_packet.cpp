@@ -33,7 +33,7 @@ int32_t UdpPacket::unpack(lua_State *L, Buffer &buffer)
         return unpack_return(L, PC_MORE);
     }
 
-    // 跳过4字节size，取出20字节地址
+    // 跳过4字节size，取出24字节地址
     buffer.remove_head_data(sizeof(size));
 
     char addr_raw[sizeof(UdpAddr)];
@@ -45,7 +45,7 @@ int32_t UdpPacket::unpack(lua_State *L, Buffer &buffer)
     int32_t len = (int32_t)(size - UDP_FRAME_HEAD);
 
     lua_pushinteger(L, PC_DATA);
-    lua_pushlstring(L, addr_raw, sizeof(UdpAddr)); // 20字节原样给Lua当key
+    lua_pushlstring(L, addr_raw, sizeof(UdpAddr)); // 24字节原样给Lua当key
 
     // 空包也返回ud和size，保证lua侧的回调参数固定为(ud, size)
     char *ud = nullptr;
@@ -69,7 +69,7 @@ int32_t UdpPacket::pack_clt(lua_State *L, int32_t index)
 
 int32_t UdpPacket::pack_srv(lua_State *L, int32_t index)
 {
-    // index    : addr_key，20字节二进制串
+    // index    : addr_key，24字节二进制串
     // index + 1: payload，lua string或者lightuserdata
     // index + 2: size，payload为lightuserdata时必填
     size_t addr_len = 0;

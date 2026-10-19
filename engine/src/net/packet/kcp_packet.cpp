@@ -15,7 +15,7 @@ KcpPacket::~KcpPacket()
 
 int32_t KcpPacket::unpack(lua_State *L, Buffer &buffer)
 {
-    // 与UdpPacket同构，只是帧头从 [u32 size][UdpAddr 20B] 变成 [u32 size]
+    // 与UdpPacket同构，只是帧头从 [u32 size][UdpAddr 24B] 变成 [u32 size]
     // 为了避免拷贝，这里直接返回buffer中的指针并标记下次需要删除的数据
     if (to_remove_)
     {

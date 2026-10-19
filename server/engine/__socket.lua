@@ -99,7 +99,7 @@ end
 function Socket:send_udp()
 end
 
----@brief 把unpack返回的20字节地址解析成ip和port
+---@brief 把unpack返回的24字节地址解析成ip和port（link-local的ip会带%scope后缀）
 ---@return ip地址, 端口
 function Socket:get_udp_addr()
 end

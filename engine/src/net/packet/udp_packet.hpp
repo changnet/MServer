@@ -7,9 +7,9 @@
 /*
  * udp的数据打包
  *
- * 缓冲区帧格式：[u32 size][UdpAddr 20B][payload]，size含自身(4 + 20 + payload)
+ * 缓冲区帧格式：[u32 size][UdpAddr 24B][payload]，size含自身(4 + 24 + payload)
  *
- * unpack返回：PC_DATA, addr_key(20字节二进制串，直接作为session的key),
+ * unpack返回：PC_DATA, addr_key(24字节二进制串，直接作为session的key),
  *             ud(lightuserdata), size(payload长度)
  *
  * 与tcp不同，udp不返回PC_ERROR。一个恶意的大包不应该关掉整个udp服务，

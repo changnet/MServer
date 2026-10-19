@@ -127,11 +127,12 @@ int32_t KcpIO::output(const char *buf, int32_t len, struct IKCPCB * /*kcp*/,
     if (CONNECTOR == io->role_type_)
         return (int32_t)::send(io->fd_, buf, len, 0);
 
-    struct sockaddr_storage ss;
-    socklen_t sl = io->peer_.to_sockaddr(ss);
-    if (0 == sl) return -1;
+    // ACCEPTOR：对端地址在建连时已经转成 sockaddr 了，这里直接拿来用。
+    // 这是kcp发送的热路径，只剩一次长度校验，不再做地址转换
+    if (unlikely(0 == io->peer_sa_.len)) return -1;
 
-    return (int32_t)::sendto(io->fd_, buf, len, 0, (struct sockaddr *)&ss, sl);
+    return (int32_t)::sendto(io->fd_, buf, len, 0, &io->peer_sa_.sa,
+                             io->peer_sa_.len);
 }
 
 int32_t KcpIO::input(const char *data, int32_t len)
@@ -509,7 +510,7 @@ bool KcpIO::establish_accept(EVIO *w)
      * 地址是收包时就算好的，fd是监听socket的（对端借它发数据）
      */
     io->conv_ = entry.conv;
-    io->peer_ = entry.addr;
+    io->set_peer(entry.addr); // peer_ + peer_sa_ 一起赋值，热路径不再转换地址
     io->fd_   = fd_;
 
     if (!io->on_kcpmgr_add(w)) return false;

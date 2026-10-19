@@ -99,10 +99,13 @@ int32_t UdpIO::send(EVIO *w)
         //   3. 省掉 UdpAddr 临时对象和它那次构造里的清零
         uint16_t family = 0;
         uint16_t port   = 0;
+        uint32_t scope  = 0;
         memcpy(&family, frame + sizeof(size) + offsetof(UdpAddr, family_),
                sizeof(family));
         memcpy(&port, frame + sizeof(size) + offsetof(UdpAddr, port_),
                sizeof(port));
+        memcpy(&scope, frame + sizeof(size) + offsetof(UdpAddr, scope_id_),
+               sizeof(scope));
         const uint8_t *peer =
             (const uint8_t *)(frame + sizeof(size) + offsetof(UdpAddr, addr_));
 
@@ -130,8 +133,9 @@ int32_t UdpIO::send(EVIO *w)
         {
             struct sockaddr_in6 s6;
             memset(&s6, 0, sizeof(s6));
-            s6.sin6_family = AF_INET6;
-            s6.sin6_port   = port;
+            s6.sin6_family   = AF_INET6;
+            s6.sin6_port     = port;
+            s6.sin6_scope_id = scope; // link-local必须带上，否则内核不知道走哪条链路
             memcpy(&s6.sin6_addr, peer, sizeof(s6.sin6_addr));
 
             ret = (int32_t)::sendto(fd, payload, len, 0,

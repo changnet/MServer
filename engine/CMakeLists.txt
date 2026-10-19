@@ -180,6 +180,7 @@ if(WINDOWS)
         Rpcrt4 # uuidCreate
         Dbghelp # MiniDumpWriteDump
         Winmm # timeBeginPeriod，提升系统定时器精度到1ms
+        iphlpapi # if_nametoindex，解析 "fe80::1%eth0" 里的接口名
         ${LUA_LIBRARIES}
         OpenSSL::SSL OpenSSL::Crypto
         unofficial::libmariadb

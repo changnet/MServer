@@ -410,6 +410,19 @@ int32_t Socket::connect(const char *host, int32_t port)
     struct sockaddr_in host_addr_v4;
     struct sockaddr_in6 host_addr_v6;
 
+    /*
+     * 支持 "ip%zone" 写法：ipv6的link-local(fe80::/10)只在一条链路上有效，
+     * 必须带上作用域(接口索引)，否则内核不知道从哪块网卡发出去。
+     * inet_pton 不认 "%"，所以要先切掉。
+     */
+    char host_only[INET6_ADDRSTRLEN];
+    uint32_t scope = 0;
+    if (!split_scope(host, host_only, sizeof(host_only), scope))
+    {
+        ELOG("invalid host format: %s", host);
+        goto FAIL;
+    }
+
     if (set_ipv6only(fd))
     {
         int32_t e = netcompat::errorno();
@@ -422,16 +435,19 @@ int32_t Socket::connect(const char *host, int32_t port)
         memset(&host_addr_v4, 0, sizeof(host_addr_v4));
         host_addr_v4.sin_family = AF_INET;
         host_addr_v4.sin_port   = htons((uint16_t)port);
-        ok                   = inet_pton(AF_INET, host, &host_addr_v4.sin_addr);
+        ok                      = inet_pton(AF_INET, host_only,
+                                            &host_addr_v4.sin_addr);
         addr_size = sizeof(host_addr_v4);
-        sock_addr               = (struct sockaddr *)&host_addr_v4;
+        sock_addr = (struct sockaddr *)&host_addr_v4;
     }
     else if (af == AF_INET6)
     {
         memset(&host_addr_v6, 0, sizeof(host_addr_v6));
-        host_addr_v6.sin6_family = AF_INET6;
-        host_addr_v6.sin6_port   = htons((uint16_t)port);
-        ok        = inet_pton(AF_INET6, host, &host_addr_v6.sin6_addr);
+        host_addr_v6.sin6_family   = AF_INET6;
+        host_addr_v6.sin6_port     = htons((uint16_t)port);
+        host_addr_v6.sin6_scope_id = scope; // link-local的链路选择器
+
+        ok        = inet_pton(AF_INET6, host_only, &host_addr_v6.sin6_addr);
         addr_size = sizeof(host_addr_v6);
         sock_addr = (struct sockaddr *)&host_addr_v6;
     }
@@ -582,6 +598,16 @@ int32_t Socket::listen(const char *host, int32_t port)
     int32_t optval = 1;
     size_t addr_size;
     struct sockaddr *sock_addr;
+
+    // 支持 "ip%zone"：bind到link-local地址时必须带作用域（见split_scope）
+    char host_only[INET6_ADDRSTRLEN];
+    uint32_t scope = 0;
+    if (!split_scope(host, host_only, sizeof(host_only), scope))
+    {
+        ELOG("invalid host format: %s", host);
+        goto FAIL;
+    }
+
     /*
      * enable address reuse.it will help when the socket is in TIME_WAIT status.
      * for example:
@@ -610,7 +636,7 @@ int32_t Socket::listen(const char *host, int32_t port)
         host_addr.sin_family = AF_INET;
         host_addr.sin_port   = htons((uint16_t)port);
 
-        ok        = inet_pton(AF_INET, host, &host_addr.sin_addr);
+        ok        = inet_pton(AF_INET, host_only, &host_addr.sin_addr);
         addr_size = sizeof(host_addr);
         sock_addr = (struct sockaddr *)&host_addr;
     }
@@ -618,10 +644,11 @@ int32_t Socket::listen(const char *host, int32_t port)
     {
         struct sockaddr_in6 host_addr;
         memset(&host_addr, 0, sizeof(host_addr));
-        host_addr.sin6_family = AF_INET6;
-        host_addr.sin6_port   = htons((uint16_t)port);
+        host_addr.sin6_family   = AF_INET6;
+        host_addr.sin6_port     = htons((uint16_t)port);
+        host_addr.sin6_scope_id = scope; // bind到link-local地址时必须带
 
-        ok        = inet_pton(AF_INET6, host, &host_addr.sin6_addr);
+        ok        = inet_pton(AF_INET6, host_only, &host_addr.sin6_addr);
         addr_size = sizeof(host_addr);
         sock_addr = (struct sockaddr *)&host_addr;
     }

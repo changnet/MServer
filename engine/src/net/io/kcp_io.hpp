@@ -65,6 +65,19 @@ public:
         return peer_;
     }
 
+    /**
+     * 建立时一次性设置对端地址（backend线程，只在establish_accept里调用）
+     *
+     * peer_ 是路由表/已建立表的key，peer_sa_ 是发送用的现成结构。
+     * 两者必须一起赋值：地址只在建连时转换一次，output热路径不再重复转换。
+     * 分开赋值会出现"key对了但发到别处"这种静默错误，所以只留这一个入口。
+     */
+    void set_peer(const UdpAddr &addr)
+    {
+        peer_ = addr;
+        addr.to_sockaddr(peer_sa_);
+    }
+
     int64_t get_vfd() const
     {
         return vfd_;
@@ -116,6 +129,7 @@ private:
     int32_t fd_       = 0; // output用的fd：CONNECTOR自己的，ACCEPTOR借监听的
     int64_t vfd_      = 0; // ACCEPTOR：accept时发给lua的虚拟fd，编码了所属监听socket
     UdpAddr peer_;         // ACCEPTOR：对端地址
+    UdpSockAddr peer_sa_;  // ACCEPTOR：peer_ 预先转好的发送结构(32B)，热路径直接用
 
     struct IKCPCB *kcp_    = nullptr;
     AcceptContext *accept_ = nullptr; // 监听socket的accept上下文
