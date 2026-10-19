@@ -317,20 +317,29 @@ int32_t Socket::get_addr_info(std::vector<std::string> &addrs, const char *host,
     }
     else
     {
-        char buf[INET6_ADDRSTRLEN];
+        // 后面可能还要拼"%4294967295"，留够位置
+        char buf[INET6_ADDRSTRLEN + 12];
         for (struct addrinfo *rp = result; rp != nullptr; rp = rp->ai_next)
         {
-            if (inet_ntop(rp->ai_family,
-                          &((struct sockaddr_in6 *)rp->ai_addr)->sin6_addr, buf,
-                          sizeof(buf)))
-            {
-                addrs.emplace_back(buf);
-            }
-            else
+            auto *s6 = (struct sockaddr_in6 *)rp->ai_addr;
+            if (!inet_ntop(rp->ai_family, &s6->sin6_addr, buf, sizeof(buf)))
             {
                 ELOG("inet_ntop error in %s: %s", __FUNCTION__, strerror(errno));
                 return -1;
             }
+
+            // link-local地址(fe80::/10)必须连着接口一起用，否则后面connect时会
+            // 选错网卡(内核默认挑一块)，或者两个链路上同名的fe80被当成同一个地址。
+            // getaddrinfo解析"fe80::1%7"时会把7填进sin6_scope_id，但inet_ntop
+            // 只输出128位地址，这里要把作用域原样拼回去。
+            if (AF_INET6 == rp->ai_family && 0 != s6->sin6_scope_id)
+            {
+                size_t n = strlen(buf);
+                snprintf(buf + n, sizeof(buf) - n, "%%%u",
+                         (uint32_t)s6->sin6_scope_id);
+            }
+
+            addrs.emplace_back(buf);
         }
     }
     freeaddrinfo(result);

@@ -15,6 +15,44 @@ cs_param.recv_byte_max = 64 * 1024 * 1024
 
 local TEST_IPV4 = false
 
+-- 找一个本机的link-local地址(fe80::/10)。
+-- link-local只在一条链路上有效，每块网卡都各有一个，发数据时必须带上%接口(scope)，
+-- 所以返回的字符串形如 "fe80::b50a:d267:b9a7:7209%7"。
+-- 每台机器的地址都不一样，也可以用 --lladdr 手工指定，如 --lladdr "fe80::1%12"
+local function get_link_local_addr()
+    local ll = g_sharedata:get("--lladdr")
+    if ll and "" ~= ll then return ll end
+
+    local cmd
+    if WINDOWS then
+        cmd = "ipconfig"
+    else
+        -- -o 把每个地址压成一行，接口名就在行首
+        cmd = "ip -o -6 addr show scope link"
+    end
+
+    local pipe = io.popen(cmd)
+    if not pipe then return nil end
+    local text = pipe:read("a")
+    pipe:close()
+    if not text then return nil end
+
+    if WINDOWS then
+        -- 本地链接 IPv6 地址. . . . . . . . : fe80::b50a:d267:b9a7:7209%7
+        return text:match("(fe80:[%x:]+%%%d+)")
+    end
+
+    -- 2: eth0    inet6 fe80::xxxx/64 scope link \ ...
+    for line in text:gmatch("[^\n]+") do
+        local name, addr =
+            line:match("^%s*%d+:%s+([%w%._%-]+):?.-inet6%s+(fe80:[%x:]+)/")
+        if name and addr then return addr .. "%" .. name end
+    end
+
+    return nil
+end
+
+
 Test.describe("socket test", function()
     local sc_srv = nil
     local sc_clt = nil
@@ -31,10 +69,15 @@ Test.describe("socket test", function()
     local kcp_clt1 = nil
     local kcp_clt2 = nil
 
+    -- link-local是独立的测试，单独一套socket和端口
+    local kcp_ll_srv = nil
+    local kcp_ll_clt = nil
+
     local ss_port = 2098
     local sc_port = 2099
     -- kcp跑在udp上，不能和上面的udp测试共用端口
     local kcp_port = 2101
+    local kcp_ll_port = 2102
     local local_host = TEST_IPV4 and "127.0.0.1" or "::1"
 
     local Buffer = require "engine.Buffer"
@@ -444,6 +487,54 @@ Test.describe("socket test", function()
         Test.wait(5000)
     end)
 
+    -- link-local(fe80::/10)只在一条链路上有效，必须带上%接口(scope)才能发出去。
+    -- 地址里的scope一旦在哪个环节丢了，要么sendto选错网卡，要么不同链路上同名的
+    -- fe80被当成同一个客户端，都是不报错的静默故障，所以单独跑一遍完整收发。
+    -- 注意标题里不要写 "link-local"：--filter 是lua模式匹配，"-" 是量词，
+    -- 用 --filter "link-local" 会一个测试都匹配不到
+    Test.it("kcp link local test", function()
+        local ll_addr = get_link_local_addr()
+        if not ll_addr then
+            -- 机器上没有开启ipv6时不算失败，跳过即可
+            print("no link-local ipv6 address found, skip kcp link-local test")
+            return Test.done()
+        end
+        print("kcp link-local test addr", ll_addr)
+
+        local KcpSocket = require "network.kcp_socket"
+
+        -- listen和connect都要能解析 "ip%scope"，scope可以是接口索引或接口名
+        kcp_ll_srv = KcpSocket()
+        assert(kcp_ll_srv:listen(ll_addr, kcp_ll_port),
+               "kcp link-local listen fail: " .. ll_addr)
+
+        local srv_peer = nil
+        kcp_ll_srv.on_connected = function(self)
+            srv_peer = self
+        end
+        kcp_ll_srv.on_message = Test.cb(function(self, ud, size)
+            self:send_pkt(ud, size)
+        end)
+
+        kcp_ll_clt = KcpSocket()
+        kcp_ll_clt.on_message = Test.cb(function(self, ud, size)
+            Test.equal(Buffer.lightud_tostring(ud, size), self.last_send)
+            -- 客户端到达服务端时又会拆出一条独立连接，说明accept也走通了
+            Test.assert(srv_peer, "kcp link-local server peer not established")
+
+            Test.done()
+        end)
+        assert(kcp_ll_clt:connect(ll_addr, kcp_ll_port),
+               "kcp link-local connect fail: " .. ll_addr)
+
+        -- 超过mtu(1400)的包，验证kcp分片后每个分片都带着正确的scope发出去
+        local msg = string.rep("linklocal-", 200) .. math.random(10000, 1000000)
+        kcp_ll_clt.last_send = msg
+        kcp_ll_clt:send_pkt(msg, #msg)
+
+        Test.wait(3000)
+    end)
+
     Test.after(function()
         if sc_clt then sc_clt:close() end
         if sc_srv then sc_srv:close() end
@@ -460,6 +551,9 @@ Test.describe("socket test", function()
         if kcp_clt2 then kcp_clt2:close() end
         -- 关监听会把名下的对端一起回收
         if kcp_srv then kcp_srv:close() end
+
+        if kcp_ll_clt then kcp_ll_clt:close() end
+        if kcp_ll_srv then kcp_ll_srv:close() end
 
         _G.pingpong_b = nil
     end)
