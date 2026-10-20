@@ -62,75 +62,82 @@ int32_t UdpPacket::unpack(lua_State *L, Buffer &buffer)
     return 4; // code, addr_key, ud, size
 }
 
-int32_t UdpPacket::pack_clt(lua_State *L, int32_t index)
+int32_t UdpPacket::send(lua_State *L, int32_t index)
 {
-    return pack_srv(L, index);
-}
+    // index    : addr_key，24字节二进制串；nil表示已connect的socket发往默认对端
+    // index + 1: data，lua string或者lightuserdata
+    // index + 2: data_len，data为lightuserdata时必填
+    // index + 3/4: header / header_len，udp没有业务头，传nil即可
+    //
+    // 注意 addr 槽必须占位（可以是nil），否则data会被当成addr解析
+    size_t addr_len      = 0;
+    const char *addr_key = nullptr;
 
-int32_t UdpPacket::pack_srv(lua_State *L, int32_t index)
-{
-    // index    : addr_key，24字节二进制串
-    // index + 1: payload，lua string或者lightuserdata
-    // index + 2: size，payload为lightuserdata时必填
-    size_t addr_len = 0;
-    const char *addr_key = lua_tolstring(L, index, &addr_len);
+    if (!lua_isnoneornil(L, index))
+    {
+        if (LUA_TSTRING != lua_type(L, index))
+        {
+            return luaL_error(L, "udp addr must be a string");
+        }
+
+        addr_key = lua_tolstring(L, index, &addr_len);
+        if (addr_len != sizeof(UdpAddr))
+        {
+            return luaL_error(L, "invalid udp addr length: %d",
+                              (int32_t)addr_len);
+        }
+    }
+
+    net::SendBuf b;
+    net::read_send_args(L, index + 1, b);
+
+    if (b.dlen + b.hlen > UDP_MAX_DGRAM)
+    {
+        return luaL_error(L, "udp packet size invalid: %d", b.dlen + b.hlen);
+    }
+
     if (!addr_key)
     {
         // 已connect的udp socket，只能发到connect时的对端，发到其他地址是无效的
         const static UdpAddr ua;
 
-        addr_len = sizeof(UdpAddr);
         addr_key = reinterpret_cast<const char *>(&ua);
     }
-    else if (addr_len != sizeof(UdpAddr))
-    {
-        return luaL_error(L, "invalid udp addr length: %d", (int32_t)addr_len);
-    }
 
-    const char *payload = nullptr;
-    int32_t len         = 0;
-    if (lua_islightuserdata(L, index + 1))
-    {
-        payload = (const char *)lua_touserdata(L, index + 1);
-        len     = (int32_t)luaL_checkinteger(L, index + 2);
-    }
-    else
-    {
-        size_t str_len = 0;
-        payload        = luaL_checklstring(L, index + 1, &str_len);
-        len            = (int32_t)str_len;
-    }
-
-    if (len < 0 || len > UDP_MAX_DGRAM)
-    {
-        return luaL_error(L, "udp packet size invalid: %d", len);
-    }
-
-    uint32_t size = (uint32_t)(UDP_FRAME_HEAD + len);
+    const int32_t payload = b.hlen + b.dlen;
+    const uint32_t size   = (uint32_t)(UDP_FRAME_HEAD + payload);
 
     // 小包组合成完整的一帧后一次append，避免中间态
-    if (len <= INLINE_PAYLOAD)
+    if (payload <= INLINE_PAYLOAD)
     {
         char frame[UDP_FRAME_HEAD + INLINE_PAYLOAD];
 
         memcpy(frame, &size, sizeof(size));
         memcpy(frame + sizeof(size), addr_key, sizeof(UdpAddr));
-        if (len > 0) memcpy(frame + UDP_FRAME_HEAD, payload, len);
+        if (b.hlen > 0)
+        {
+            memcpy(frame + UDP_FRAME_HEAD, b.hdr, (size_t)b.hlen);
+        }
+        if (b.dlen > 0)
+        {
+            memcpy(frame + UDP_FRAME_HEAD + b.hlen, b.data, (size_t)b.dlen);
+        }
 
         socket_->send(frame, (size_t)size); // append + flush
 
-        return len;
+        return 0;
     }
 
-    // 大包分两次append也不会发出半帧：size写全后值才正确，
+    // 大包分次append也不会发出半帧：size写全后值才正确，
     // 长度不足时UdpIO::send会返回EV_NONE等下次
     char head[UDP_FRAME_HEAD];
     memcpy(head, &size, sizeof(size));
     memcpy(head + sizeof(size), addr_key, sizeof(UdpAddr));
 
     socket_->append(head, sizeof(head));
-    socket_->append(payload, len);
+    if (b.hlen > 0) socket_->append(b.hdr, (size_t)b.hlen);
+    if (b.dlen > 0) socket_->append(b.data, (size_t)b.dlen);
     socket_->flush();
 
-    return len;
+    return 0;
 }

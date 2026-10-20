@@ -103,8 +103,9 @@ function UdpSocket:send_pkt(ud, size)
 
     -- 服务器的对端要复用主socket。注意 __init 里才是给自己建 socket 的，
     -- 这里必须先判断 main_socket
+    -- addr槽必须占位（nil表示已connect的对端），否则ud会被当成addr解析
     local sock = self.main_socket or self.s
-    return sock:send_clt(self.addr, ud, size)
+    return sock:send_pkt(self.addr, ud, size)
 end
 
 return UdpSocket

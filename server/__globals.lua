@@ -1,4 +1,4 @@
--- auto export by lua-tags 205 symbols
+-- auto export by lua-tags 206 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -83,6 +83,7 @@ return {
 "MoneyType", -- src/modules/player/money.lua
 "Mongo", -- engine/__mongo.lua
 "MySql", -- engine/__mysql.lua
+"NetHeader", -- engine/__netheader.lua
 "NetMsg", -- src/message/net_msg.lua
 "PCall", -- src/rpc/rpc_proxy.lua
 "PP", -- src/modules/player/property.lua

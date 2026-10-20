@@ -113,8 +113,8 @@ function KcpSocket:send_pkt(ud, size)
                      ", max=" .. self.MAX_MSG)
     end
 
-    -- 走 send_srv（复用Packet机制），不给Socket加新方法
-    return self.s:send_srv(ud, size)
+    -- 走统一的 send_pkt（经过 KcpPacket 加长度前缀）
+    return self.s:send_pkt(ud, size)
 end
 
 return KcpSocket

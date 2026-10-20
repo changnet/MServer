@@ -152,41 +152,39 @@ void WebsocketPacket::pack_frame(Buffer& buffer, websocket_flags flags,
         { websocket_append_frame(wptr, flags, mask, wdata, space, &mask_offset); });
 }
 
-int32_t WebsocketPacket::pack_any(lua_State *L, int32_t index)
+int32_t WebsocketPacket::send(lua_State *L, int32_t index)
 {
-    // 允许握手未完成就发数据，自己保证顺序
-    // if ( !is_upgrade_ ) return http_packet::pack_clt( L,index );
-
+    // index    : flag，如 WS_OP_BINARY | WS_FINAL_FRAME
+    // index + 1: data[, data_len]
+    // index + 3: header[, header_len]，websocket本身没有业务头，仅 sc/cs 用
     websocket_flags flags =
         static_cast<websocket_flags>(luaL_checkinteger(L, index));
 
-    size_t size     = 0;
-    const char *ctx = luaL_optlstring(L, index + 1, nullptr, &size);
-    // if ( !data ) return 0; // 允许发送空包
+    net::SendBuf b;
+    net::read_send_args(L, index + 1, b);
 
     char mask[4] = {0}; /* 服务器发往客户端并不需要mask */
     if (flags & WS_HAS_MASK) new_masking_key(mask);
 
     Buffer &buffer = socket_->get_send_buffer();
 
-    pack_header(buffer, flags, mask, ctx, size);
+    // 帧头里的长度是 header + data，必须一次算对
+    pack_header(buffer, flags, mask, nullptr, (size_t)(b.hlen + b.dlen));
 
+    // ★ 两次pack_frame必须共用同一个mask_offset，否则带mask的包解码错位
     uint8_t mask_offset = 0;
-    pack_frame(buffer, flags, mask, ctx, size, mask_offset);
+    if (b.hlen > 0)
+    {
+        pack_frame(buffer, flags, mask, b.hdr, (size_t)b.hlen, mask_offset);
+    }
+    if (b.dlen > 0)
+    {
+        pack_frame(buffer, flags, mask, b.data, (size_t)b.dlen, mask_offset);
+    }
 
     socket_->flush();
 
     return 0;
-}
-
-int32_t WebsocketPacket::pack_clt(lua_State *L, int32_t index)
-{
-    return pack_any(L, index);
-}
-
-int32_t WebsocketPacket::pack_srv(lua_State *L, int32_t index)
-{
-    return pack_any(L, index);
 }
 
 int32_t WebsocketPacket::pack_ctrl(lua_State *L, int32_t index)
@@ -195,8 +193,10 @@ int32_t WebsocketPacket::pack_ctrl(lua_State *L, int32_t index)
      * 控制帧可以包含数据。但这个数据不是data-frame，即不能设置OP_TEXT、OP_BINARY
      * 标识的应用数据。这个数据是用来说明当前控制帧的。比如close帧后面包含status
      * code，及 关闭原因，pong数据包则必须原封不动返回ping数据包中的数据
+     *
+     * 参数与send完全一致：(flag, data[, len])，所以直接复用
      */
-    return pack_any(L, index);
+    return send(L, index);
 }
 
 int64_t WebsocketPacket::buffer_process(bool &term,
@@ -358,10 +358,12 @@ int32_t WebsocketPacket::on_frame_end()
     size_t size         = 0;
     const char *payload = make_payload(size);
 
+    // 零拷贝：直接把接收缓冲区里的指针交给lua，转不转string由lua的类决定
     lua_pushinteger(L_, PC_DATA);
-    lua_pushlstring(L_, payload, size);
+    lua_pushlightuserdata(L_, (void *)payload);
+    lua_pushinteger(L_, (lua_Integer)size);
 
-    return 2;
+    return 3;
 }
 
 int32_t WebsocketPacket::on_ctrl_end()
@@ -369,17 +371,13 @@ int32_t WebsocketPacket::on_ctrl_end()
     size_t size         = 0;
     const char *payload = make_payload(size);
 
+    // 空的控制帧（如不带body的ping）也返回 (ud, size)，保证回调参数固定
     lua_pushinteger(L_, PC_CTRL);
     lua_pushinteger(L_, parser_->flags);
+    lua_pushlightuserdata(L_, (void *)payload);
+    lua_pushinteger(L_, (lua_Integer)size);
 
-    int32_t argc = 2; // 控制帧也是可以包含数据的
-    if (size > 0)
-    {
-        argc++;
-        lua_pushlstring(L_, payload, size);
-    }
-
-    return argc;
+    return 4;
 }
 
 void WebsocketPacket::new_masking_key(char mask[4])

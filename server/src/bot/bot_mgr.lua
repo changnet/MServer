@@ -1,6 +1,8 @@
 -- 机器人管理
 BotMgr = {}
 
+local NetHeader = require "message.net_header"
+
 
 -- 机器人不考虑热更，随便写
 local bots = {}
@@ -22,14 +24,20 @@ function BotMgr.get_bots()
     return bots
 end
 
-function BotMgr.on_message(socket, msg_id, buffer, size)
+-- 收到服务器下发的数据
+-- @param ud 载荷指针(业务头+数据)，只在本次回调内有效
+-- @param size 载荷长度
+function BotMgr.on_message(socket, ud, size)
+    local msg_id, buffer, bsize = NetHeader.decode("ws", ud, size)
+    if not msg_id then return socket:close() end
+
     local c = all_cmd[msg_id]
     if not c then
         eprint("bot message not found", msg_id)
         return
     end
 
-    local pkt = Pbc.decode(c.s, buffer, size)
+    local pkt = Pbc.decode(c.s, buffer, bsize)
 
     local entity = socket.entity
     if entity.msg_dbg then

@@ -271,25 +271,16 @@ int32_t HttpPacket::unpack_header(lua_State *L) const
 
 /* http的GET、POST都由上层处理好再传入底层
  */
-int32_t HttpPacket::pack_any(lua_State *L, int32_t index)
+int32_t HttpPacket::send(lua_State *L, int32_t index)
 {
-    size_t size     = 0;
-    const char *ctx = luaL_checklstring(L, index, &size);
-    if (!ctx) return 0;
+    net::SendBuf b;
+    net::read_send_args(L, index, b);
 
-    socket_->send(ctx, size);
+    // http只有裸数据，没有业务头
+    if (b.hlen > 0) return luaL_error(L, "http packet has no business header");
+    if (b.dlen > 0) socket_->send(b.data, (size_t)b.dlen);
 
     return 0;
-}
-
-int32_t HttpPacket::pack_clt(lua_State *L, int32_t index)
-{
-    return pack_any(L, index);
-}
-
-int32_t HttpPacket::pack_srv(lua_State *L, int32_t index)
-{
-    return pack_any(L, index);
 }
 
 int32_t HttpPacket::unpack_on_closed(lua_State *L)

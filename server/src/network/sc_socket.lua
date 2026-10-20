@@ -1,18 +1,18 @@
 local WebSocket = require "network.websocket"
 local EngineSocket = require "engine.Socket"
+local NetHeader = require "message.net_header"
 
 -- 服务器与客户端的连接
 local ScSocket = oo.class("ScSocket", WebSocket)
 
 ScSocket.default_param = {
-    pkt = EngineSocket.PT_WSSTREAM, -- 打包类型
+    pkt = EngineSocket.PT_WEBSOCKET, -- 打包类型
     action = 1, -- over_action，1 表示缓冲区溢出后断开
     send_byte_max = 1024 * 1024, -- 发送缓冲区数量
     recv_byte_max = 1024 * 1024 -- 接收缓冲区数
 }
 
 local MASK = ScSocket.WS_OP_BINARY | ScSocket.WS_FINAL_FRAME
-local send_srv = EngineSocket.send_srv
 
 function ScSocket:__init(socket_id)
     WebSocket.__init(self)
@@ -27,9 +27,12 @@ function ScSocket:set_option()
 end
 
 -- 发送数据包
+-- @param msg_id 协议号（业务头）
+-- @param buffer string或者lightuserdata
+-- @param size buffer的长度，buffer为lightuserdata时必填
 function ScSocket:send_pkt(msg_id, buffer, size)
-    -- self.s:send_srv(MASK, msg_id, buffer, size) -- 这个要访问元表慢一些
-    return send_srv(self.s, MASK, msg_id, buffer, size)
+    local hp, hl = NetHeader.encode("ws", msg_id)
+    return self.s:send_pkt(MASK, buffer, size, hp, hl)
 end
 
 -- 认证成功
@@ -43,8 +46,13 @@ function ScSocket:on_disconnected()
 end
 
 -- 消息回调
-function ScSocket:on_message(cmd, buffer, size)
-    return NetMsg.dispatch(self, cmd, buffer, size)
+-- @param ud 载荷指针，只在本次回调内有效
+-- @param size 载荷长度
+function ScSocket:on_message(ud, size)
+    local cmd, buffer, bsize = NetHeader.decode("ws", ud, size)
+    if not cmd then return self:close() end
+
+    return NetMsg.dispatch(self, cmd, buffer, bsize)
 end
 
 -- 接受新客户端连接

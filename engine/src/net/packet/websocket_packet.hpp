@@ -18,15 +18,10 @@ public:
     }
 
     /**
-     * 打包服务器发往客户端数据包
+     * 打包数据并发送，参数为 flag, data[, data_len], header[, header_len]
      * @return <0 error;>=0 success
      */
-    virtual int32_t pack_clt(lua_State *L, int32_t index) override;
-    /**
-     * 打包客户端发往服务器数据包
-     * @return <0 error;>=0 success
-     */
-    virtual int32_t pack_srv(lua_State *L, int32_t index) override;
+    virtual int32_t send(lua_State *L, int32_t index) override;
 
     /**
      * 数据解包，把结果放到Lua堆栈
@@ -59,7 +54,6 @@ protected:
                     const char *data, size_t data_len, uint8_t &mask_offset);
 
 private:
-    int32_t pack_any(lua_State *L, int32_t index);
     virtual int32_t on_upgrade(lua_State *L) override;
     int64_t buffer_process(bool &term, const websocket_parser_settings *settings,
                            const char *data, int64_t len);

@@ -2,10 +2,47 @@
 
 #include "lua.hpp"
 #include "net/buffer.hpp"
+#include "net/lua_buffer.hpp"
 #include "global/global.hpp"
 
 class Socket;
 
+namespace net
+{
+
+/// 一次发送的两段缓冲：业务头 + 业务数据
+struct SendBuf
+{
+    const char *hdr  = nullptr;
+    int32_t hlen     = 0;
+    const char *data = nullptr;
+    int32_t dlen     = 0;
+};
+
+/*
+ * 读 (data, data_len, header, header_len)：从 index 开始，尾部参数可以缺省
+ * 参数规则见 net::read_buf
+ */
+inline void read_send_args(lua_State *L, int32_t index, SendBuf &out)
+{
+    out.data = read_buf(L, index, index + 1, out.dlen);
+    out.hdr  = read_buf(L, index + 2, index + 3, out.hlen);
+}
+
+} // namespace net
+
+/*
+ * 传输层打包基类
+ *
+ * 这里只负责「帧」：长度前缀、websocket 帧头、udp 对端地址等。
+ * 协议里的业务字段（src/dst/type/cmd…）不在这里出现，由 NetHeader 编码后
+ * 作为一段不透明字节传进来，由各 Packet 原样拼在 payload 前面。
+ *
+ * 发送参数统一为：
+ *      data, data_len, header, header_len
+ * 其中 data/header 可以是 lua string（长度可省）或 lightuserdata（必须紧跟长度）。
+ * websocket 在最前面多一个 flag，udp 在最前面多一个 addr。
+ */
 class Packet
 {
 public:
@@ -13,12 +50,10 @@ public:
     {
         PT_NONE      = 0, // 协议打包类型，无效值
         PT_HTTP      = 1, // 协议打包类型，HTTP方式
-        PT_SSSTREAM  = 2, // 协议打包类型，服务器之间二进制流通信
+        PT_STREAM    = 2, // 协议打包类型，二进制流：[u32 size][header][payload]
         PT_WEBSOCKET = 3, // 协议打包类型，标准websocket方式
-        PT_WSSTREAM  = 4, // 协议打包类型，websocket + 二进制流
-        PT_SCSTREAM  = 5, // 协议打包类型，服务器与客户端二进制流通信
-        PT_UDPSTREAM = 6, // 协议打包类型，udp二进制流通信
-        PT_KCPSTREAM = 7, // 协议打包类型，kcp二进制流通信
+        PT_UDPSTREAM = 4, // 协议打包类型，udp二进制流通信
+        PT_KCPSTREAM = 5, // 协议打包类型，kcp二进制流通信
 
         PKT_MAX ///< 协议打包类型最大值
     } PacketType;
@@ -32,6 +67,9 @@ public:
         PC_CTRL    = 5, // websocket的ctrl包
     };
 
+    /// payload 小于这个值时，在栈上拼成完整的一帧，只 append 一次
+    static constexpr int32_t INLINE_PAYLOAD = 2048;
+
 public:
     virtual ~Packet() {}
     Packet(class Socket *sk) : socket_(sk) {}
@@ -42,15 +80,12 @@ public:
     virtual PacketType type() const = 0;
 
     /**
-     * 打包服务器发往客户端数据包
+     * 打包并发送数据
+     * @param L lua_State
+     * @param index 第一个参数在栈上的位置（1是self）
      * @return <0 error;>=0 success
      */
-    virtual int32_t pack_clt(lua_State *L, int32_t index) = 0;
-    /**
-     * 打包客户端发往服务器数据包
-     * @return <0 error;>=0 success
-     */
-    virtual int32_t pack_srv(lua_State *L, int32_t index) = 0;
+    virtual int32_t send(lua_State *L, int32_t index) = 0;
 
     /**
      * 数据解包，解析成功数据以平铺在堆栈的形式返回，PacketCode，数据1，数据2，数据3，...

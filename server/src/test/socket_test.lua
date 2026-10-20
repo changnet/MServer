@@ -3,6 +3,7 @@
 local ScSocket = require "network.sc_socket"
 local CsSocket = require "network.cs_socket"
 local SsSocket = require "network.ss_socket"
+local NetHeader = require "message.net_header"
 
 local sc_param = table.copy(ScSocket.default_param)
 local cs_param = table.copy(CsSocket.default_param)
@@ -190,7 +191,9 @@ Test.describe("socket test", function()
     Test.it("client socket test", function()
         -- TODO 其实不用protobuf测试也行，只是这里想模拟一下整个cs通信流程的延迟
         local msg_id = math.random(1, 65535)
-        sc_srv.on_message = function(self, recv_msg_id, buffer, size)
+        sc_srv.on_message = function(self, ud, len)
+            -- websocket收包是零拷贝的，业务头自己解
+            local recv_msg_id, buffer, size = NetHeader.decode("ws", ud, len)
             Test.equal(recv_msg_id, msg_id)
 
             local pkt = codec:decode_from_buffer("system.TestBase", buffer, size)
@@ -198,7 +201,8 @@ Test.describe("socket test", function()
 
             self:send_pkt(msg_id, buffer, size)
         end
-        sc_clt.on_message = function(self, recv_msg_id, buffer, size)
+        sc_clt.on_message = function(self, ud, len)
+            local recv_msg_id, buffer, size = NetHeader.decode("ws", ud, len)
             Test.equal(recv_msg_id, msg_id)
 
             local pkt = codec:decode_from_buffer("system.TestBase", buffer, size)
@@ -219,13 +223,15 @@ Test.describe("socket test", function()
         local count = 0
         local msg_id = math.random(1, 65535)
 
-        sc_srv.on_message = Test.cb(function(self, recv_msg_id, buffer, size)
+        sc_srv.on_message = Test.cb(function(self, ud, len)
+            local recv_msg_id, buffer, size = NetHeader.decode("ws", ud, len)
             Test.equal(recv_msg_id, msg_id)
             Test.equal(size, pingpong_size)
 
             self:send_pkt(msg_id, pingpong_ud, pingpong_size)
         end)
-        sc_clt.on_message = Test.cb(function(self, recv_msg_id, buffer, size)
+        sc_clt.on_message = Test.cb(function(self, ud, len)
+            local recv_msg_id, buffer, size = NetHeader.decode("ws", ud, len)
             Test.equal(recv_msg_id, msg_id)
             Test.equal(size, pingpong_size)
             count = count + 1
@@ -261,7 +267,9 @@ Test.describe("socket test", function()
 
         local srv_idx = 0
         local clt_idx = 0
-        ss_srv.on_message = function(self, rsrc, rdst, rmtype, rusize, rudata)
+        ss_srv.on_message = function(self, ud, len)
+            local rsrc, rdst, rmtype, rusize, rudata =
+                NetHeader.decode("ss", ud, len)
             Test.equal(rsrc, src)
             Test.equal(rdst, dst)
             Test.equal(rmtype, mtype)
@@ -278,7 +286,9 @@ Test.describe("socket test", function()
 
             self:send_pkt(rsrc, rdst, rmtype, rusize, rudata)
         end
-        ss_clt.on_message = function(self, rsrc, rdst, rmtype, rusize, rudata)
+        ss_clt.on_message = function(self, ud, len)
+            local rsrc, rdst, rmtype, rusize, rudata =
+                NetHeader.decode("ss", ud, len)
             Test.equal(rsrc, src)
             Test.equal(rdst, dst)
             Test.equal(rmtype, mtype)
@@ -309,12 +319,16 @@ Test.describe("socket test", function()
         local dst = math.random(1, 65535)
         local mtype = math.random(1, 65535)
 
-        ss_srv.on_message = function(self, rsrc, rdst, rmtype, rusize, rudata)
+        ss_srv.on_message = function(self, ud, len)
+            local rsrc, rdst, rmtype, rusize, rudata =
+                NetHeader.decode("ss", ud, len)
             Test.equal(rmtype, mtype)
 
             self:send_pkt(rsrc, rdst, rmtype, rusize, rudata)
         end
-        ss_clt.on_message = function(self, rsrc, rdst, rmtype, rusize, rudata)
+        ss_clt.on_message = function(self, ud, len)
+            local rsrc, rdst, rmtype, rusize, rudata =
+                NetHeader.decode("ss", ud, len)
             Test.equal(rmtype, rmtype)
 
             count = count + 1

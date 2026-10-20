@@ -29,8 +29,8 @@ public:
 
     virtual PacketType type() const override { return PT_HTTP; }
 
-    virtual int32_t pack_clt(lua_State *L, int32_t index) override;
-    virtual int32_t pack_srv(lua_State *L, int32_t index) override;
+    /// 发送裸数据（http没有业务头），参数为 data[, data_len]
+    virtual int32_t send(lua_State *L, int32_t index) override;
 
     virtual int32_t unpack(lua_State *L, Buffer &buffer) override;
 
@@ -55,7 +55,6 @@ protected:
 
 private:
     virtual int32_t on_upgrade(lua_State *L);
-    int32_t pack_any(lua_State *L, int32_t index);
 
     llhttp_t parser_;
     std::string cur_field_;

@@ -116,6 +116,19 @@ function Socket:start_event(fd, ev)
     return self.s:start(fd, LOCAL_ADDR, ev)
 end
 
+-- 新连接需要从监听socket继承的业务回调
+-- 必须用rawget，避免取到元表的函数，那样会影响热更
+-- 如果逻辑里要覆盖这几个回调，那应该在table中覆盖而不是元表
+local ACCEPT_COPY_FIELDS = {
+    "on_message",
+    "on_accepted",
+    "on_connected",
+    "on_disconnected",
+    -- websocket的业务回调（on_message是底层入口，业务一般实现这两个）
+    "on_ws_message",
+    "on_ctrl"
+}
+
 -- 接受新连接
 function Socket:on_accepting(fd)
     local mt = getmetatable(self) or self
@@ -126,13 +139,9 @@ function Socket:on_accepting(fd)
 
     socket.ssl = self.ssl
 
-    -- 新建立的socket继承监听socket的参数
-    -- 必须用rawget，避免取到元表的函数，那样会影响热更
-    -- 如果需要逻辑里要覆盖这几个回调，那应该在table中覆盖而不是元表
-    socket.on_message = rawget(self, "on_message")
-    socket.on_accepted = rawget(self, "on_accepted")
-    socket.on_connected = rawget(self, "on_connected")
-    socket.on_disconnected = rawget(self, "on_disconnected")
+    for _, key in ipairs(ACCEPT_COPY_FIELDS) do
+        socket[key] = rawget(self, key)
+    end
 
     socket.default_param = rawget(self, "default_param")
 

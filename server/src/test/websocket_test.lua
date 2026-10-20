@@ -74,7 +74,7 @@ Test.describe("websocket test", function()
             self:send_ctrl(self.WS_OP_PING)
             self:send_ctrl(self.WS_OP_PING, ping_body[2])
         end
-        conn.on_message = function(self, cmd_body)
+        conn.on_ws_message = function(self, cmd_body)
             pkt_idx = pkt_idx + 1
             Test.equal(cmd_body, pkt_body[pkt_idx])
 
@@ -126,7 +126,7 @@ Test.describe("websocket test", function()
         listen_conn.on_accepted = function(self)
             srv_conn = self
         end
-        listen_conn.on_message = function(self, cmd_body)
+        listen_conn.on_ws_message = function(self, cmd_body)
             WebSocket.send_pkt(self, cmd_body)
         end
         listen_conn.on_disconnected = function() end
@@ -141,7 +141,7 @@ Test.describe("websocket test", function()
             self:send_ctrl(self.WS_OP_PING)
             self:send_ctrl(self.WS_OP_PING, ping_body[2])
         end
-        conn.on_message = function(self, cmd_body)
+        conn.on_ws_message = function(self, cmd_body)
             pkt_idx = pkt_idx + 1
             Test.equal(cmd_body, pkt_body[pkt_idx])
 
@@ -193,7 +193,7 @@ Test.describe("websocket test", function()
         listen_conn.on_accepted = function(self)
             srv_conn = self
         end
-        listen_conn.on_message = function(self, cmd_body)
+        listen_conn.on_ws_message = function(self, cmd_body)
             WebSocket.send_pkt(self, cmd_body)
         end
         listen_conn.on_disconnected = function() end
@@ -210,7 +210,7 @@ Test.describe("websocket test", function()
             self:send_ctrl(self.WS_OP_PING)
             self:send_ctrl(self.WS_OP_PING, ping_body[2])
         end
-        conn.on_message = function(self, cmd_body)
+        conn.on_ws_message = function(self, cmd_body)
             pkt_idx = pkt_idx + 1
             Test.equal(cmd_body, pkt_body[pkt_idx])
 

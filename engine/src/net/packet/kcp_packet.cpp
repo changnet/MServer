@@ -54,42 +54,31 @@ int32_t KcpPacket::unpack(lua_State *L, Buffer &buffer)
     return 3; // code, ud, size   ★ 比 UdpPacket 少 addr
 }
 
-int32_t KcpPacket::pack_clt(lua_State *L, int32_t index)
+int32_t KcpPacket::send(lua_State *L, int32_t index)
 {
-    return pack_srv(L, index);
-}
+    // index    : data，lua string 或者 lightuserdata
+    // index + 1: data_len，data 为 lightuserdata 时必填
+    // index + 2/3: header / header_len，kcp 目前没有业务头，传 nil 即可
+    net::SendBuf b;
+    net::read_send_args(L, index, b);
 
-int32_t KcpPacket::pack_srv(lua_State *L, int32_t index)
-{
-    // index    : payload，lua string 或者 lightuserdata
-    // index + 1: size，payload为lightuserdata时必填
-    const char *payload = nullptr;
-    int32_t len         = 0;
-    if (lua_islightuserdata(L, index))
-    {
-        payload = (const char *)lua_touserdata(L, index);
-        len     = (int32_t)luaL_checkinteger(L, index + 1);
-    }
-    else
-    {
-        size_t str_len = 0;
-        payload        = luaL_checklstring(L, index, &str_len);
-        len            = (int32_t)str_len;
-    }
-
-    uint32_t size = (uint32_t)(sizeof(uint32_t) + len);
+    const uint32_t size = (uint32_t)(sizeof(uint32_t) + b.hlen + b.dlen);
 
     // 小包组合成完整的一帧后一次append，避免中间态
-    if (len <= INLINE_PAYLOAD)
+    if (b.hlen + b.dlen <= INLINE_PAYLOAD)
     {
         char frame[sizeof(uint32_t) + INLINE_PAYLOAD];
 
         memcpy(frame, &size, sizeof(size));
-        if (len > 0) memcpy(frame + sizeof(size), payload, len);
+        if (b.hlen > 0) memcpy(frame + sizeof(size), b.hdr, (size_t)b.hlen);
+        if (b.dlen > 0)
+        {
+            memcpy(frame + sizeof(size) + b.hlen, b.data, (size_t)b.dlen);
+        }
 
         socket_->send(frame, (size_t)size); // append + flush
 
-        return len;
+        return 0;
     }
 
     // 大包分两次append也不会发出半帧：size写全后值才正确，
@@ -98,10 +87,11 @@ int32_t KcpPacket::pack_srv(lua_State *L, int32_t index)
     memcpy(head, &size, sizeof(size));
 
     socket_->append(head, sizeof(head));
-    socket_->append(payload, len);
+    if (b.hlen > 0) socket_->append(b.hdr, (size_t)b.hlen);
+    if (b.dlen > 0) socket_->append(b.data, (size_t)b.dlen);
     socket_->flush();
 
-    return len;
+    return 0;
 }
 
 #endif

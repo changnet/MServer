@@ -219,8 +219,16 @@ public:
     // 初始化io
     int32_t io_init_connect();
 
-    // 发送原始数据
+    // 打包并发送数据（经过当前socket的Packet）
     int32_t send_pkt(lua_State *L);
+
+    /**
+     * @brief 裸发：原样写入发送缓冲区，不经过Packet
+     * 用于http响应、websocket握手这类已经自行组好完整报文的场景
+     * @param 2 数据，string或者lightuserdata
+     * @param 3 数据长度，lightuserdata时必填
+     */
+    int32_t send(lua_State *L);
 
     /**
      * @brief 把unpack返回的24字节地址解析成ip和port（link-local的ip带%scope）
@@ -228,11 +236,7 @@ public:
      */
     static int32_t get_udp_addr(lua_State *L);
 
-    // 打包前端发往后端的数据
-    int32_t send_clt(lua_State *L);
-    // 打包后端发往前端的数据
-    int32_t send_srv(lua_State *L);
-    // 发送控制帧
+    // 发送控制帧（websocket专用）
     int32_t send_ctrl(lua_State *L);
     /**
      * 验证connect是否成功

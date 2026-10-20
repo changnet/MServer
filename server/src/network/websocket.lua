@@ -1,5 +1,6 @@
 local util = require "engine.util"
 local EngineSocket = require "engine.Socket"
+local Buffer = require "engine.Buffer"
 local Socket = require "network.socket"
 local HttpSocket = require "http.http_socket"
 
@@ -77,7 +78,8 @@ function WebSocket:on_handshake(sec_websocket_key, sec_websocket_accept)
 
         local sha1 = util.sha1_raw(sec_websocket_key, ws_magic)
         local base64 = util.base64(sha1)
-        self.s:send_pkt(string.format(handshake_srv, base64))
+        -- 握手是裸http报文，不能经过websocket封帧
+        self.s:send(string.format(handshake_srv, base64))
     else
         -- 客户端收到服务器返回的握手请求
         local sha1 = util.sha1_raw(self.ws_key, ws_magic)
@@ -112,7 +114,8 @@ function WebSocket:send_handshake(url)
 
     self.ws_key = ws_key
     local host = HttpSocket:fmt_host(self.host, self.port, self.ssl)
-    return self.s:send_pkt(string.format(
+    -- 握手是裸http报文，不能经过websocket封帧
+    return self.s:send(string.format(
         handshake_clt, url or default_url, host, ws_key))
 end
 
@@ -130,19 +133,23 @@ end
 -- 发送原生数据包
 -- @param body 要发送的文字
 function WebSocket:send_pkt(body)
+    local flag = WS_OP_TEXT
     if self.ws_key then
-        return self.s:send_clt(WS_OP_TEXT | CLT_MASK, body)
+        flag = flag | CLT_MASK
     else
-        return self.s:send_srv(WS_OP_TEXT | SRV_MASK, body)
+        flag = flag | SRV_MASK
     end
+
+    return self.s:send_pkt(flag, body)
 end
 
 -- 发送控制包
 -- @param flag 控制包掩码，按位表示，如 WS_OP_PONG | WS_FINAL_FRAME
--- @param body 控制包的数据，可以为nil
-function WebSocket:send_ctrl(flag, body)
+-- @param body 控制包的数据，可以是string或者lightuserdata
+-- @param size body的长度，body为lightuserdata时必填
+function WebSocket:send_ctrl(flag, body, size)
     local mask = self.ws_key and CLT_MASK or SRV_MASK
-    return self.s:send_ctrl(flag | mask, body)
+    return self.s:send_ctrl(flag | mask, body, size)
 end
 
 function WebSocket:ws_close()
@@ -154,10 +161,33 @@ function WebSocket:ws_close()
     self:send_ctrl(WS_OP_CLOSE)
 end
 
+-- 收到数据帧
+-- 注意：ud指向接收缓冲区，只在本次回调内有效，跨yield要用Buffer.lightud_tostring拷走
+-- 纯文本ws用这个默认实现（转成string再交给on_ws_message），
+-- 需要零拷贝的类（如ScSocket/CsSocket）自己覆盖on_message解业务头
+function WebSocket:on_message(ud, size)
+    -- 空帧的ud是空指针(lightuserdata在lua里恒为真)，必须用size判断
+    local body = ""
+    if size > 0 then body = Buffer.lightud_tostring(ud, size) end
+
+    return self:on_ws_message(body)
+end
+
+-- 业务回调，body是string
+function WebSocket:on_ws_message(body)
+end
+
 -- 处理控制包
-function WebSocket:on_ctrl_message(flag, body)
+-- @param flag 控制帧的flags
+-- @param ud 数据指针，只在本次回调内有效
+-- @param size 数据长度
+function WebSocket:on_ctrl_message(flag, ud, size)
     -- 控制帧只在前4位，先去掉WS_HAS_MASK
     flag = flag & 0x0F
+
+    -- 控制帧的数据一般很小，这里默认转成string给业务；空帧ud是空指针，用size判断
+    local body
+    if size > 0 then body = Buffer.lightud_tostring(ud, size) end
     if self.on_ctrl then self:on_ctrl(flag, body) end
 
     if flag == WS_OP_CLOSE then
@@ -178,8 +208,9 @@ function WebSocket:on_ctrl_message(flag, body)
         return
     elseif flag == WS_OP_PING then
         -- 返回pong时，如果对方ping时发了body，一定要原封不动返回
+        -- 直接透传lightuserdata，连拷贝都省了
         local mask = self.ws_key and CLT_MASK or SRV_MASK
-        return self.s:send_ctrl(WS_OP_PONG | mask, body)
+        return self.s:send_ctrl(WS_OP_PONG | mask, ud, size)
     elseif flag == WS_OP_PONG then
         -- TODO: 这里更新心跳
         return

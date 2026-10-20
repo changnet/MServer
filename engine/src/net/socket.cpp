@@ -8,10 +8,9 @@
 #include "io/kcp_io.hpp"
 #include "packet/kcp_packet.hpp"
 #include "packet/http_packet.hpp"
-#include "packet/ss_stream_packet.hpp"
+#include "packet/stream_packet.hpp"
 #include "packet/udp_packet.hpp"
 #include "packet/websocket_packet.hpp"
-#include "packet/ws_stream_packet.hpp"
 #include "system/static_global.hpp"
 #include "lpp/lcpp.hpp"
 
@@ -87,11 +86,27 @@ int32_t Socket::stop(lua_State *L)
 
 int32_t Socket::send_pkt(lua_State *L)
 {
-    size_t size      = 0;
-    const char *data = lua_tolstring(L, 2, &size);
-    if (0 == size) return 0;
+    if (unlikely(!packet_)) return luaL_error(L, "send_pkt: no packet");
 
-    send(data, size);
+    // 参数由各packet自己读：udp第一参是addr、websocket第一参是flag
+    int32_t r = packet_->send(L, 2);
+    if (r < 0) return r;
+
+    check_send_overflow();
+
+    return 0;
+}
+
+int32_t Socket::send(lua_State *L)
+{
+    // 裸发：原样追加到发送缓冲区，不经过任何Packet
+    // 只用于 http 响应、websocket 握手这类自己已经组好完整报文的场景
+    int32_t len   = 0;
+    const char *p = net::read_buf(L, 2, 3, len);
+    if (p && len > 0) send(p, (size_t)len);
+
+    check_send_overflow();
+
     return 0;
 }
 
@@ -857,9 +872,8 @@ int32_t Socket::set_packet(int32_t packet_type)
     switch (packet_type)
     {
     case Packet::PT_HTTP: packet_ = new HttpPacket(this); break;
-    case Packet::PT_SSSTREAM: packet_ = new SsStreamPacket(this); break;
+    case Packet::PT_STREAM: packet_ = new StreamPacket(this); break;
     case Packet::PT_WEBSOCKET: packet_ = new WebsocketPacket(this); break;
-    case Packet::PT_WSSTREAM: packet_ = new WSStreamPacket(this); break;
     case Packet::PT_UDPSTREAM: packet_ = new UdpPacket(this); break;
 #if defined(ENABLE_KCP)
     case Packet::PT_KCPSTREAM: packet_ = new KcpPacket(this); break;
@@ -900,30 +914,16 @@ int32_t Socket::io_init_connect()
     return 0;
 }
 
-int32_t Socket::send_clt(lua_State *L)
-{
-    // 1是socket本身，数据从2开始
-    packet_->pack_clt(L, 2);
-
-    check_send_overflow();
-
-    return 0;
-}
-
-int32_t Socket::send_srv(lua_State *L)
-{
-    // 1是socket本身，数据从2开始
-    packet_->pack_srv(L, 2);
-
-    check_send_overflow();
-
-    return 0;
-}
-
 int32_t Socket::send_ctrl(lua_State *L)
 {
+    if (unlikely(!packet_)) return luaL_error(L, "send_ctrl: no packet");
+
     // 1是socket本身，数据从2开始
-    packet_->pack_ctrl(L, 2);
+    int32_t r = packet_->pack_ctrl(L, 2);
+    if (r < 0) return r;
+
+    check_send_overflow();
+
     return 0;
 }
 

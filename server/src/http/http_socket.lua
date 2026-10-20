@@ -47,9 +47,9 @@ function HttpSocket:on_disconnected()
     end
 end
 
--- 发送数据包
+-- 发送数据包（http没有业务头，整段报文原样发出）
 function HttpSocket:send_pkt(pkt)
-    return self.s:send_pkt(pkt)
+    return self.s:send(pkt)
 end
 
 -- 格式化HOST字段

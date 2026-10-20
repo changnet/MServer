@@ -13,6 +13,7 @@
 #include "system/profile.hpp"
 
 #include "net/socket.hpp"
+#include "net/header/net_header.hpp"
 #include "net/io/tls_ctx.hpp"
 #include "net/codec/lua_codec.hpp"
 #include "net/codec/pbc_codec.hpp"
@@ -209,10 +210,10 @@ static void luaopen_socket(lua_State *L)
     lc.def<&Socket::io_init_accept>("io_init_accept");
     lc.def<&Socket::io_init_connect>("io_init_connect");
     lc.def<&Socket::send_pkt>("send_pkt");
+    // Socket已有一个 bool send(const void*, size_t)，重载集无法推导，必须显式指定
+    lc.def<static_cast<int32_t (Socket::*)(lua_State *)>(&Socket::send)>("send");
     lc.def<&Socket::get_udp_addr>("get_udp_addr");
     lc.def<&Socket::set_io_option>("set_io_option");
-    lc.def<&Socket::send_clt>("send_clt");
-    lc.def<&Socket::send_srv>("send_srv");
     lc.def<&Socket::send_ctrl>("send_ctrl");
     lc.def<&Socket::address>("address");
     lc.def<&Socket::get_http_header>("get_http_header");
@@ -227,9 +228,8 @@ static void luaopen_socket(lua_State *L)
     lc.def<&Socket::set_af_type>("set_af_type");
 
     lc.set(Packet::PT_HTTP, "PT_HTTP");
-    lc.set(Packet::PT_SSSTREAM, "PT_SSSTREAM");
+    lc.set(Packet::PT_STREAM, "PT_STREAM");
     lc.set(Packet::PT_WEBSOCKET, "PT_WEBSOCKET");
-    lc.set(Packet::PT_WSSTREAM, "PT_WSSTREAM");
     lc.set(Packet::PT_UDPSTREAM, "PT_UDPSTREAM");
     lc.set(Packet::PT_KCPSTREAM, "PT_KCPSTREAM");
     lc.set(IO::IOT_TCP, "IOT_TCP");
@@ -251,6 +251,17 @@ static void luaopen_lua_codec(lua_State *L)
     lc.def<&LuaCodec::decode>("decode");
     lc.def<&LuaCodec::decode_from_buffer>("decode_from_buffer");
     lc.def<&LuaCodec::encode_to_buffer>("encode_to_buffer");
+}
+
+static void luaopen_net_header(lua_State *L)
+{
+    lcpp::Class<NetHeader> lc(L, "engine.NetHeader");
+
+    lc.def<&NetHeader::define>("define");
+    lc.def<&NetHeader::size>("size");
+    lc.def<&NetHeader::encode>("encode");
+    lc.def<&NetHeader::decode>("decode");
+    lc.def<&NetHeader::format>("format");
 }
 
 static void luaopen_pbc_codec(lua_State *L)
@@ -498,6 +509,7 @@ void open_cpp(lua_State *L)
     luaopen_worker_thread(L);
     luaopen_tls(L);
     luaopen_socket(L);
+    luaopen_net_header(L);
     luaopen_lua_codec(L);
     luaopen_pbc_codec(L);
     luaopen_mysql(L);

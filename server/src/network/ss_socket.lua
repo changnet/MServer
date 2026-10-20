@@ -1,18 +1,17 @@
 
 local Socket = require "network.socket"
 local EngineSocket = require "engine.Socket"
+local NetHeader = require "message.net_header"
 
 -- 服务器之间的链接
 local SsSocket = oo.class("SsSocket", Socket)
 
 SsSocket.default_param = {
-    pkt = EngineSocket.PT_SSSTREAM, -- 打包类型
+    pkt = EngineSocket.PT_STREAM, -- 打包类型
     action = 2, -- over_action，2 表示缓冲区满后进入自旋来发送数据
     send_byte_max = 96 * 1024 * 1024, -- 发送缓冲区chunk数量，单个chunk8k，见C++ buffer.h定义
     recv_byte_max = 96 * 1024 * 1024 -- 接收缓冲区chunk数量
 }
-
-local send_srv = EngineSocket.send_srv
 
 function SsSocket:__init()
     Socket.__init(self)
@@ -27,8 +26,14 @@ function SsSocket:set_option()
 end
 
 -- 发送数据包
+-- @param src 来源地址
+-- @param dst 目标地址
+-- @param mtype 消息类型
+-- @param usize udata的长度；没有udata时它是自定义数据(与ThreadMessage一致)
+-- @param udata string或者lightuserdata，可以为nil（心跳等无载荷消息）
 function SsSocket:send_pkt(src, dst, mtype, usize, udata)
-    return send_srv(self.s, src, dst, mtype, usize, udata)
+    local hp, hl = NetHeader.encode("ss", src, dst, mtype, usize)
+    return self.s:send_pkt(udata, usize, hp, hl)
 end
 
 -- 认证成功
@@ -71,7 +76,9 @@ function SsSocket:on_disconnected()
 end
 
 -- 服务器之间消息回调
-function SsSocket:on_message(src, dst, mtype, usize, udata)
+-- @param ud 整帧载荷(业务头+数据)，业务头由子类自己用NetHeader解
+-- @param size 载荷长度
+function SsSocket:on_message(ud, size)
     -- return Cmd.dispatch_srv(self, cmd, pkt)
 end
 

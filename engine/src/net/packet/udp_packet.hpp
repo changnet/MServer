@@ -24,17 +24,13 @@ public:
     PacketType type() const override { return PT_UDPSTREAM; }
 
     /**
-     * 打包数据，参数为 addr_key, payload[, size]
-     * payload可以是lua string，也可以是lightuserdata + size
+     * 打包数据，参数为 addr_key, data[, data_len], header[, header_len]
+     * data可以是lua string，也可以是lightuserdata + 显式长度
+     * addr_key 槽必须占位，可以是nil
      */
-    virtual int32_t pack_clt(lua_State *L, int32_t index) override;
-    virtual int32_t pack_srv(lua_State *L, int32_t index) override;
+    virtual int32_t send(lua_State *L, int32_t index) override;
 
     int32_t unpack(lua_State *L, Buffer &buffer) override;
-
-private:
-    /// payload小于这个值时，直接在栈上组合成完整的一帧，只append一次
-    static constexpr int32_t INLINE_PAYLOAD = 2048;
 
 private:
     uint32_t to_remove_; // 已解析完，待删除的buffer

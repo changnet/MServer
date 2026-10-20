@@ -3,10 +3,10 @@
 -- 导出类: Socket
 Socket = {}
 Socket.PT_HTTP = 1
-Socket.PT_SSSTREAM = 2
+Socket.PT_STREAM = 2
 Socket.PT_WEBSOCKET = 3
-Socket.PT_WSSTREAM = 4
-Socket.PT_UDPSTREAM = 6
+Socket.PT_UDPSTREAM = 4
+Socket.PT_KCPSTREAM = 5
 
 function Socket:fd()
 end
@@ -90,13 +90,16 @@ end
 function Socket:io_init_connect()
 end
 
---- 发送原始数据
+--- 打包并发送数据（经过当前socket的Packet）
+--- 参数由各Packet自己读：stream/kcp为(data[,len],header[,hlen])，
+--- websocket为(flag,data[,len],header[,hlen])，udp为(addr,data[,len],header[,hlen])
 function Socket:send_pkt()
 end
 
----@brief 发送一个udp数据包，参数为 addr_key, payload[, size]
----@return true
-function Socket:send_udp()
+--- 裸发：原样写入发送缓冲区，不经过Packet（http响应、websocket握手）
+---@param data string或者lightuserdata
+---@param size data的长度，lightuserdata时必填
+function Socket:send(data, size)
 end
 
 ---@brief 把unpack返回的24字节地址解析成ip和port（link-local的ip会带%scope后缀）
@@ -104,15 +107,7 @@ end
 function Socket:get_udp_addr()
 end
 
---- 打包前端发往后端的数据
-function Socket:send_clt()
-end
-
---- 打包后端发往前端的数据
-function Socket:send_srv()
-end
-
---- 发送控制帧
+--- 发送控制帧（websocket专用）
 function Socket:send_ctrl()
 end
 

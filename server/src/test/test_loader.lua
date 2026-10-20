@@ -6,6 +6,7 @@ require "global.test"
 
 require "test.misc_test"
 require "test.misc_test2"
+require "test.net_header_test"
 require "test.heap_test"
 require "test.mt_test"
 require "test.timer_test"

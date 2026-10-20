@@ -1,4 +1,5 @@
 local SsSocket = require "network.ss_socket"
+local NetHeader = require "message.net_header"
 
 -- 把远程集群节点伪装成本地worker，统一调用接口
 local ClusterWorker = oo.class("ClusterWorker", SsSocket)
@@ -89,15 +90,22 @@ function ClusterWorker:do_authenticate(addr, name, signData)
 end
 
 -- 服务器之间消息回调
-function ClusterWorker:on_message(src, dst, mtype, usize, udata)
+-- @param ud 整帧载荷(业务头+数据)，只在本次回调内有效
+-- @param size 载荷长度
+function ClusterWorker:on_message(ud, size)
+    local src, dst, mtype, usize, body, bsize = NetHeader.decode("ss", ud, size)
+
+    -- 帧损坏（连一个头都不够），无法恢复，直接断开重连
+    if not src then return self:close() end
+
     -- 未经过认证的连接，禁止直接将消息派发到其他模块
     if 0x2 == self.ready then
-        return cluster_message_dispatch(src, dst, mtype, udata, usize)
+        return cluster_message_dispatch(src, dst, mtype, body, bsize)
     else
         -- todo 0x1表示认证完成，但未握手, 0x2是握手完成，可以发送业务逻辑了
         assert(-1 == mtype)
         return self:do_authenticate(
-            src, g_lcodec:decode_from_buffer(udata, usize))
+            src, g_lcodec:decode_from_buffer(body, bsize))
     end
 end
 
