@@ -16,6 +16,8 @@ if "%1" == "" (
 ) else (
     REM 这种单独起服的，一般都是特殊测试，不需要start来起独立console
     REM win下参数带等号的，需要用双引号，如win_start.bat test "--filter abc"
+    REM %* passes all args through, so --filter/--skip both work:
+    REM   win_start.bat test1 --filter kcp --skip udp
 
-    %BIN% --node %1 %2 %3
+    %BIN% --node %*
 )
