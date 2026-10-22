@@ -271,7 +271,7 @@ int32_t HttpPacket::unpack_header(lua_State *L) const
 
 /* http的GET、POST都由上层处理好再传入底层
  */
-int32_t HttpPacket::send(lua_State *L, int32_t index)
+int32_t HttpPacket::pack(lua_State *L, int32_t index)
 {
     net::SendBuf b;
     net::read_send_args(L, index, b);

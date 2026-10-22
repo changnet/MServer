@@ -4,6 +4,10 @@
 
 local NetHeader = require "message.net_header"
 local Buffer = require "engine.Buffer"
+local EngineNetHeader = require "engine.NetHeader"
+
+-- debug 构建才做 encode 范围校验（release 按低位截断）
+local IS_DEBUG = g_sharedata and g_sharedata:get("__DEBUG__") == "true"
 
 Test.describe("net header test", function()
     Test.it("header size", function()
@@ -92,5 +96,84 @@ Test.describe("net header test", function()
         Test.assert(not pcall(NetHeader.encode, "ss", 1, 2, 3, 4, 5))
         Test.assert(not pcall(NetHeader.encode, "none", 1))
 
+    end)
+
+    -- 描述符按 string.pack 语义：i/I 的宽度由数字后缀决定，
+    -- 其它 token 的后缀必须等于固有宽度，否则就是下一个"静默错位"
+    Test.it("descriptor suffix", function()
+        local h = EngineNetHeader()
+
+        Test.equal(h:size(h:define("i")), 4)
+        Test.equal(h:size(h:define("i4")), 4)
+        Test.equal(h:size(h:define("i8")), 8)
+        Test.equal(h:size(h:define("i4i8")), 12)
+        Test.equal(h:size(h:define("I1")), 1)
+        Test.equal(h:size(h:define("H2")), 2)
+        Test.equal(h:size(h:define("q8")), 8)
+        Test.equal(h:size(h:define("q")), 8)
+        Test.equal(h:size(h:define("<i2i2")), 4)
+
+        -- H4 只占2字节、b2 只占1字节、i 的宽度越界，都必须报错
+        Test.assert(not pcall(h.define, h, "H4"))
+        Test.assert(not pcall(h.define, h, "b2"))
+        Test.assert(not pcall(h.define, h, "i0"))
+        Test.assert(not pcall(h.define, h, "i9"))
+        Test.assert(not pcall(h.define, h, "iZ"))
+
+        -- string.pack 里支持但我们没实现的，报错要说清是"不支持"
+        Test.assert(not pcall(h.define, h, "s2"))
+        Test.assert(not pcall(h.define, h, "d"))
+    end)
+
+    -- i8 真的占 8 字节（老实现会把 i8 当成 i4），顺便验证补码
+    Test.it("i8 roundtrip", function()
+        local h = EngineNetHeader()
+        local id = h:define("i8")
+        local b = Buffer()
+
+        local p, len = h:encode(id, -1)
+        Test.equal(len, 8)
+        Test.equal(Buffer.lightud_tostring(p, len), string.rep("\255", 8))
+
+        local ud = b:fromstring(Buffer.lightud_tostring(p, len))
+        Test.equal(h:decode(id, ud, len), -1)
+
+        local p2, len2 = h:encode(id, math.maxinteger)
+        local ud2 = b:fromstring(Buffer.lightud_tostring(p2, len2))
+        Test.equal(h:decode(id, ud2, len2), math.maxinteger)
+    end)
+
+    -- debug 下超范围直接报错（70000 进 H2 若静默截断会变成 4464）
+    Test.it("encode range", function()
+        local h = EngineNetHeader()
+        local id = h:define("H2")
+
+        if IS_DEBUG then
+            Test.assert(not pcall(h.encode, h, id, 70000))
+            Test.assert(not pcall(h.encode, h, id, -1))
+            Test.assert(not pcall(h.encode, h, id, 65536))
+        else
+            local p, len = h:encode(id, 70000)
+            Test.equal(Buffer.lightud_tostring(p, len), string.char(0x70, 0x11))
+        end
+
+        -- 边界值始终合法
+        Test.assert(pcall(h.encode, h, id, 65535))
+        Test.assert(pcall(h.encode, h, id, 0))
+
+        -- 8 字节不校验：I8 传 -1 合法（同 string.pack）
+        local id8 = h:define("I8")
+        Test.assert(pcall(h.encode, h, id8, -1))
+    end)
+
+    -- decode 与 encode 对称：只收 lightuserdata，误传 string 必须报错，
+    -- 不能退化成"帧太短 → 返回 nil → 上层关连接"这种莫名断线
+    Test.it("decode needs lightuserdata", function()
+        local h = EngineNetHeader()
+        local id = h:define("H2")
+
+        Test.assert(not pcall(h.decode, h, id, "ab", 2))
+        Test.assert(not pcall(h.decode, h, id, nil, 2))
+        Test.assert(not pcall(h.decode, h, id, 12, 2))
     end)
 end)

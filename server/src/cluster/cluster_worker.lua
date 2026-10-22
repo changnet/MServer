@@ -93,10 +93,7 @@ end
 -- @param ud 整帧载荷(业务头+数据)，只在本次回调内有效
 -- @param size 载荷长度
 function ClusterWorker:on_message(ud, size)
-    local src, dst, mtype, usize, body, bsize = NetHeader.decode("ss", ud, size)
-
-    -- 帧损坏（连一个头都不够），无法恢复，直接断开重连
-    if not src then return self:close() end
+    local src, dst, mtype, _, body, bsize = NetHeader.decode("ss", ud, size)
 
     -- 未经过认证的连接，禁止直接将消息派发到其他模块
     if 0x2 == self.ready then

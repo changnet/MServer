@@ -50,7 +50,10 @@ end
 -- @param size 载荷长度
 function ScSocket:on_message(ud, size)
     local cmd, buffer, bsize = NetHeader.decode("ws", ud, size)
-    if not cmd then return self:close() end
+    if not cmd then
+        printf("ScSocket:on_message: decode failed, size=%d", size)
+        return self:close()
+    end
 
     return NetMsg.dispatch(self, cmd, buffer, bsize)
 end

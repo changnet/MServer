@@ -1,5 +1,4 @@
 #include "net/header/net_header.hpp"
-#include "net/lua_buffer.hpp"
 
 /*
  * 端序无关的写/读字节
@@ -37,6 +36,43 @@ static inline uint64_t get_value(const char *p, int32_t width, bool be)
     return v;
 }
 
+#ifndef NDEBUG
+/*
+ * 范围校验（只在 debug 构建）：超范围写进去是静默截断，比如 70000 塞进
+ * H2 变成 4464，两端都一致所以永远不报错 —— 这种错最难查。
+ * 与 string.pack 一致：只在 width < 8 时检查，8 字节允许任意 64 位位型
+ * （I8 传 -1 合法，按补码写）。
+ */
+static inline void check_range(lua_State *L, lua_Integer v, int32_t width,
+                               bool is_signed, int32_t idx)
+{
+    if (width >= 8) return;
+
+    const int32_t bits = width * 8;
+
+    if (is_signed)
+    {
+        const lua_Integer lim = (lua_Integer)((uint64_t)1 << (bits - 1));
+        if (v < -lim || v >= lim)
+        {
+            luaL_error(L, "net header arg %d overflow: " LUA_INTEGER_FMT
+                          " not fit in signed %d byte",
+                       idx, (lua_Integer)v, width);
+        }
+    }
+    else
+    {
+        const lua_Integer lim = (lua_Integer)((uint64_t)1 << bits);
+        if (v < 0 || v >= lim)
+        {
+            luaL_error(L, "net header arg %d overflow: " LUA_INTEGER_FMT
+                          " not fit in unsigned %d byte",
+                       idx, (lua_Integer)v, width);
+        }
+    }
+}
+#endif
+
 NetHeader::NetHeader() : desc_count_(0)
 {
     memset(descs_, 0, sizeof(descs_));
@@ -53,10 +89,10 @@ int32_t NetHeader::define(lua_State *L)
         return luaL_error(L, "too many net header defines, max=%d", MAX_DESC);
     }
 
-    Desc &desc        = descs_[desc_count_];
-    desc.count        = 0;
-    desc.total        = 0;
-    desc.big_endian   = false;
+    Desc &desc      = descs_[desc_count_];
+    desc.count      = 0;
+    desc.total      = 0;
+    desc.big_endian = false;
 
     const char *p   = fmt;
     const char *end = fmt + len;
@@ -75,8 +111,17 @@ int32_t NetHeader::define(lua_State *L)
         // 允许空格分隔，纯粹为了可读性
         if (' ' == c || '\t' == c) continue;
 
-        // 数字后缀（i4 / H2）只影响可读性，宽度由字母决定
-        while (p < end && *p >= '0' && *p <= '9') ++p;
+        // 数字后缀，规则同 string.pack：i/I 的宽度由它决定，
+        // 其它 token 必须与固有宽度一致
+        int32_t suffix     = 0;
+        bool has_suffix    = false;
+        while (p < end && *p >= '0' && *p <= '9')
+        {
+            has_suffix = true;
+            // 钳一下，反正超过 8 就是非法宽度，避免长数字溢出
+            suffix = (suffix > 99) ? 100 : suffix * 10 + (*p - '0');
+            ++p;
+        }
 
         int32_t width = 0;
         bool sign     = false;
@@ -95,6 +140,25 @@ int32_t NetHeader::define(lua_State *L)
                               fmt);
         }
 
+        if ('i' == c || 'I' == c)
+        {
+            // 同 string.pack：i 的宽度由后缀决定，省略时为 sizeof(int) == 4
+            if (has_suffix) width = suffix;
+
+            if (width < 1 || width > 8)
+            {
+                return luaL_error(L, "net header \"%s\": %c%d width must be 1~8",
+                                  fmt, c, suffix);
+            }
+        }
+        else if (has_suffix && suffix != width)
+        {
+            // 写了 H4 却只占 2 字节，就是下一个"静默错位"的来源，必须报错
+            return luaL_error(L, "net header \"%s\": '%c' is %d byte, suffix "
+                              "says %d",
+                              fmt, c, width, suffix);
+        }
+
         if (desc.count >= MAX_FIELD)
         {
             return luaL_error(L, "too many fields in net header \"%s\", max=%d",
@@ -106,9 +170,9 @@ int32_t NetHeader::define(lua_State *L)
                               fmt, MAX_HEAD);
         }
 
-        Field &field  = desc.fields[desc.count];
-        field.offset  = (uint8_t)offset;
-        field.width   = (uint8_t)width;
+        Field &field    = desc.fields[desc.count];
+        field.offset    = (uint8_t)offset;
+        field.width     = (uint8_t)width;
         field.is_signed = sign;
 
         ++desc.count;
@@ -137,8 +201,8 @@ const NetHeader::Desc *NetHeader::get_desc(lua_State *L, int32_t &id) const
 
 int32_t NetHeader::size(lua_State *L) const
 {
-    int32_t id           = 0;
-    const Desc *desc     = get_desc(L, id);
+    int32_t id       = 0;
+    const Desc *desc = get_desc(L, id);
 
     lua_pushinteger(L, (lua_Integer)desc->total);
     return 1;
@@ -162,9 +226,13 @@ int32_t NetHeader::encode(lua_State *L)
     for (int32_t i = 0; i < (int32_t)desc->count; i++)
     {
         const Field &field = desc->fields[i];
-        const uint64_t v   = (uint64_t)luaL_checkinteger(L, 3 + i);
+        const lua_Integer v = luaL_checkinteger(L, 3 + i);
 
-        p = put_value(p, v, field.width, desc->big_endian);
+#ifndef NDEBUG
+        check_range(L, v, field.width, field.is_signed, 3 + i);
+#endif
+
+        p = put_value(p, (uint64_t)v, field.width, desc->big_endian);
     }
 
     // 指针在实例的 scratch_ 上，下一次 encode 前有效（与 pbc 的契约一致）
@@ -179,10 +247,27 @@ int32_t NetHeader::decode(lua_State *L)
     int32_t id       = 0;
     const Desc *desc = get_desc(L, id);
 
-    // 参数：1 self, 2 id, 3 数据(string或lightuserdata), 4 长度(lightuserdata时必须给)
-    int32_t len = 0;
-    const char *p = net::read_buf(L, 3, 4, len);
+    if (LUA_TLIGHTUSERDATA != lua_type(L, 3))
+    {
+        return luaL_error(L, "net header decode expects lightuserdata at arg 3,"
+                          " got %s",
+                          luaL_typename(L, 3));
+    }
 
+    const char *p = (const char *)lua_touserdata(L, 3);
+    if (!p)
+    {
+        // decode 至少要读满一个头，NULL 一定是调用方传错了
+        return luaL_error(L, "net header decode got nullptr at arg 3");
+    }
+
+    const lua_Integer n = luaL_checkinteger(L, 4);
+    if (n < 0 || n > 0x7FFFFFFF)
+    {
+        return luaL_error(L, "invalid data length at arg 4: " LUA_INTEGER_FMT, n);
+    }
+
+    const int32_t len = (int32_t)n;
     if (len < (int32_t)desc->total)
     {
         // 帧损坏，不猜，也不吞错：返回nil让调用方关连接

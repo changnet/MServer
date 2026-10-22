@@ -20,7 +20,7 @@ public:
     PacketType type() const override { return PT_STREAM; }
 
     /// 打包数据，参数为 data[, data_len], header[, header_len]
-    virtual int32_t send(lua_State *L, int32_t index) override;
+    virtual int32_t pack(lua_State *L, int32_t index) override;
 
     int32_t unpack(lua_State *L, Buffer &buffer) override;
 

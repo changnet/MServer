@@ -10,7 +10,7 @@ StreamPacket::~StreamPacket()
 {
 }
 
-int32_t StreamPacket::send(lua_State *L, int32_t index)
+int32_t StreamPacket::pack(lua_State *L, int32_t index)
 {
     net::SendBuf b;
     net::read_send_args(L, index, b);

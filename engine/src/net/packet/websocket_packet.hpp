@@ -21,7 +21,7 @@ public:
      * 打包数据并发送，参数为 flag, data[, data_len], header[, header_len]
      * @return <0 error;>=0 success
      */
-    virtual int32_t send(lua_State *L, int32_t index) override;
+    virtual int32_t pack(lua_State *L, int32_t index) override;
 
     /**
      * 数据解包，把结果放到Lua堆栈

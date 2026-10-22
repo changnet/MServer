@@ -62,7 +62,7 @@ int32_t UdpPacket::unpack(lua_State *L, Buffer &buffer)
     return 4; // code, addr_key, ud, size
 }
 
-int32_t UdpPacket::send(lua_State *L, int32_t index)
+int32_t UdpPacket::pack(lua_State *L, int32_t index)
 {
     // index    : addr_key，24字节二进制串；nil表示已connect的socket发往默认对端
     // index + 1: data，lua string或者lightuserdata

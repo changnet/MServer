@@ -28,7 +28,7 @@ public:
      * data可以是lua string，也可以是lightuserdata + 显式长度
      * addr_key 槽必须占位，可以是nil
      */
-    virtual int32_t send(lua_State *L, int32_t index) override;
+    virtual int32_t pack(lua_State *L, int32_t index) override;
 
     int32_t unpack(lua_State *L, Buffer &buffer) override;
 

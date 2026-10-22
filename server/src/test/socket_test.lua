@@ -224,14 +224,14 @@ Test.describe("socket test", function()
         local msg_id = math.random(1, 65535)
 
         sc_srv.on_message = Test.cb(function(self, ud, len)
-            local recv_msg_id, buffer, size = NetHeader.decode("ws", ud, len)
+            local recv_msg_id, _, size = NetHeader.decode("ws", ud, len)
             Test.equal(recv_msg_id, msg_id)
             Test.equal(size, pingpong_size)
 
             self:send_pkt(msg_id, pingpong_ud, pingpong_size)
         end)
         sc_clt.on_message = Test.cb(function(self, ud, len)
-            local recv_msg_id, buffer, size = NetHeader.decode("ws", ud, len)
+            local recv_msg_id, _, size = NetHeader.decode("ws", ud, len)
             Test.equal(recv_msg_id, msg_id)
             Test.equal(size, pingpong_size)
             count = count + 1
@@ -327,7 +327,7 @@ Test.describe("socket test", function()
             self:send_pkt(rsrc, rdst, rmtype, rusize, rudata)
         end
         ss_clt.on_message = function(self, ud, len)
-            local rsrc, rdst, rmtype, rusize, rudata =
+            local _, _, rmtype =
                 NetHeader.decode("ss", ud, len)
             Test.equal(rmtype, rmtype)
 

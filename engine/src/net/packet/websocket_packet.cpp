@@ -152,7 +152,7 @@ void WebsocketPacket::pack_frame(Buffer& buffer, websocket_flags flags,
         { websocket_append_frame(wptr, flags, mask, wdata, space, &mask_offset); });
 }
 
-int32_t WebsocketPacket::send(lua_State *L, int32_t index)
+int32_t WebsocketPacket::pack(lua_State *L, int32_t index)
 {
     // index    : flag，如 WS_OP_BINARY | WS_FINAL_FRAME
     // index + 1: data[, data_len]
@@ -196,7 +196,7 @@ int32_t WebsocketPacket::pack_ctrl(lua_State *L, int32_t index)
      *
      * 参数与send完全一致：(flag, data[, len])，所以直接复用
      */
-    return send(L, index);
+    return pack(L, index);
 }
 
 int64_t WebsocketPacket::buffer_process(bool &term,

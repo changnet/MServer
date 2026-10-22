@@ -89,7 +89,7 @@ int32_t Socket::send_pkt(lua_State *L)
     if (unlikely(!packet_)) return luaL_error(L, "send_pkt: no packet");
 
     // 参数由各packet自己读：udp第一参是addr、websocket第一参是flag
-    int32_t r = packet_->send(L, 2);
+    int32_t r = packet_->pack(L, 2);
     if (r < 0) return r;
 
     check_send_overflow();

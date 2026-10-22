@@ -54,7 +54,7 @@ int32_t KcpPacket::unpack(lua_State *L, Buffer &buffer)
     return 3; // code, ud, size   ★ 比 UdpPacket 少 addr
 }
 
-int32_t KcpPacket::send(lua_State *L, int32_t index)
+int32_t KcpPacket::pack(lua_State *L, int32_t index)
 {
     // index    : data，lua string 或者 lightuserdata
     // index + 1: data_len，data 为 lightuserdata 时必填

@@ -30,7 +30,7 @@ public:
     virtual PacketType type() const override { return PT_HTTP; }
 
     /// 发送裸数据（http没有业务头），参数为 data[, data_len]
-    virtual int32_t send(lua_State *L, int32_t index) override;
+    virtual int32_t pack(lua_State *L, int32_t index) override;
 
     virtual int32_t unpack(lua_State *L, Buffer &buffer) override;
 

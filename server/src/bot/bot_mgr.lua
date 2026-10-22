@@ -29,7 +29,6 @@ end
 -- @param size 载荷长度
 function BotMgr.on_message(socket, ud, size)
     local msg_id, buffer, bsize = NetHeader.decode("ws", ud, size)
-    if not msg_id then return socket:close() end
 
     local c = all_cmd[msg_id]
     if not c then
