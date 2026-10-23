@@ -83,9 +83,8 @@ struct UdpSockAddr
     };
     socklen_t len; // sizeof(v4) / sizeof(v6)，0 表示地址无效
 
-    UdpSockAddr()
+    UdpSockAddr() : v6{}, len(0)
     {
-        memset(this, 0, sizeof(*this));
     }
 };
 

@@ -154,6 +154,10 @@ int32_t TlsCtx::init(const char *cert_file, const char *key_file,
         goto FAIL;
     }
 
+    // ctx已经通过校验，由this接管。必须在下面提前返回前赋值，
+    // 否则不需要证书的客户端ctx_一直是空，SSL_new必然失败
+    ctx_ = ctx;
+
     // 没有证书时，默认使用DEFAULT_FILE作名字，仅客户端连接可以没有证书，服务端必须有
 
     /* 建立ssl时，客户端的证书是在握手阶段由服务器发给客户端的
@@ -205,10 +209,11 @@ int32_t TlsCtx::init(const char *cert_file, const char *key_file,
         goto FAIL;
     }
 
-    ctx_ = ctx;
     return 0;
 
 FAIL:
+    // 证书加载失败时ctx_已经接管了ctx，先解除再释放，避免析构时二次释放
+    if (ctx_ == ctx) ctx_ = nullptr;
     SSL_CTX_free(ctx);
 
     return -1;

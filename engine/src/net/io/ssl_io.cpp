@@ -27,7 +27,18 @@ int32_t SSLIO::set_option(lua_State *L)
     {
         assert(!ssl_);
         TlsCtx **tls_ctx = (TlsCtx **)luaL_checkudata(L, 3, "engine.TlsCtx");
-        ssl_ = SSL_new((*tls_ctx)->get());
+
+        // ctx为空说明TlsCtx没有init()或者init失败，此时SSL_new只会返回空，
+        // 错误会拖到握手阶段才暴露，所以必须在这里就报出来
+        SSL_CTX *ctx = (*tls_ctx)->get();
+        if (!ctx) return luaL_error(L, "ssl option: TlsCtx not inited");
+
+        ssl_ = SSL_new(ctx);
+        if (!ssl_)
+        {
+            TlsCtx::dump_error("ssl io set ssl");
+            return luaL_error(L, "ssl option: SSL_new fail");
+        }
     }
     else if (0 == std::strcmp(key, "ssl_alpn"))
     {
@@ -261,7 +272,7 @@ int32_t SSLIO::init_ssl_ctx(int32_t fd)
 {
     if (!ssl_)
     {
-        ELOG("ssl io init ssl SSL_new fail");
+        ELOG("ssl io init ssl not set, fd = %d", fd);
         return -1;
     }
 

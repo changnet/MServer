@@ -113,7 +113,7 @@ namespace netcompat
  * 原本是 udp_io.cpp 里的static函数，kcp_io / kcp_acceptor_io 也要用，
  * 因此抽到这里共用
  */
-static inline bool is_icmp_unreachable(int32_t e)
+static inline bool is_icmp_unreachable(int e)
 {
 #ifdef __windows__
     return WSAECONNRESET == e || WSAENETRESET == e || WSAECONNABORTED == e;
