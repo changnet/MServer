@@ -217,13 +217,15 @@ int32_t MySql::field_to_lua(lua_State *L, int32_t type, const char *value, size_
     case MYSQL_TYPE_LONG:
     case MYSQL_TYPE_INT24:
     case MYSQL_TYPE_YEAR:
-        lua_pushinteger(L, static_cast<LUA_INTEGER>(atoi(value)));
+        lua_pushinteger(L, static_cast<LUA_INTEGER>(value ? atoi(value) : 0));
         break;
-    case MYSQL_TYPE_LONGLONG: lua_pushinteger(L, atoll(value)); break;
+    case MYSQL_TYPE_LONGLONG:
+        lua_pushinteger(L, value ? atoll(value) : 0);
+        break;
     case MYSQL_TYPE_FLOAT:
     case MYSQL_TYPE_DOUBLE:
     case MYSQL_TYPE_NEWDECIMAL:
-        lua_pushnumber(L, static_cast<LUA_NUMBER>(atof(value)));
+        lua_pushnumber(L, static_cast<LUA_NUMBER>(value ? atof(value) : 0));
         break;
     case MYSQL_TYPE_VARCHAR:
     case MYSQL_TYPE_TINY_BLOB:
@@ -235,7 +237,10 @@ int32_t MySql::field_to_lua(lua_State *L, int32_t type, const char *value, size_
     case MYSQL_TYPE_DATETIME:
     case MYSQL_TYPE_TIME:
     case MYSQL_TYPE_DATE:
-    case MYSQL_TYPE_STRING: lua_pushlstring(L, value, size); break;
+    case MYSQL_TYPE_STRING:
+        // 不能直接push空字符串""
+        value ? (void)lua_pushlstring(L, value, size) : lua_pushnil(L);
+        break;
     default:
         lua_pushnil(L);
         ELOG("unknow mysql type:%d\n", type);
