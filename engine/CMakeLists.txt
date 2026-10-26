@@ -162,7 +162,6 @@ target_include_directories(master PRIVATE
     ${SRC_ROOT_PATH}/src # 本身的源码目录添加为include，这样不同目录的文件相互引用时，不需要使用../global这种路径
     ${DEPS_PATH}/pbc
     ${DEPS_PATH}/llhttp/include
-    ${DEPS_PATH}/lua_parson
     ${DEPS_PATH}/lua_rapidxml
     ${DEPS_PATH}/aho-corasick
     ${DEPS_PATH}/websocket-parser
@@ -178,7 +177,6 @@ target_link_libraries(master PRIVATE
     pbc
     acism
     llhttp
-    lua_parson
     lua_rapidxml
     websocket_parser
 )

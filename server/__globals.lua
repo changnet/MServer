@@ -1,4 +1,4 @@
--- auto export by lua-tags 206 symbols
+-- auto export by lua-tags 205 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -176,7 +176,6 @@ return {
 "g_stat_mgr", -- src/test/flatbuffers_test.lua
 "g_stat_mgr", -- src/test/rpc_test.lua
 "graph", -- src/global/graph.lua
-"lua_parson", -- engine/__lua_parson.lua
 "lua_rapidxml", -- engine/__lua_rapidxml.lua
 "main_message_dispatch", -- src/message/thread_message.lua
 "memory", -- src/data/global_data.lua

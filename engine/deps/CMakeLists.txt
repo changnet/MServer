@@ -59,7 +59,7 @@ endif()
 
 # 第三方代码，清掉项目自己的编译参数(linux下-Wconversion -Wextra -pedantic会刷屏)
 set_target_properties(lua PROPERTIES COMPILE_OPTIONS "")
-# 头文件目录用PUBLIC，链接lua的target(lua_parson、cjson、master)自动继承
+# 头文件目录用PUBLIC，链接lua的target(cjson、master等)自动继承
 target_include_directories(lua PUBLIC ${LUA_SRC_DIR})
 
 # lua解释器，install到server/bin
@@ -68,16 +68,6 @@ set_target_properties(lua_interp PROPERTIES OUTPUT_NAME lua COMPILE_OPTIONS "")
 target_link_libraries(lua_interp PRIVATE lua)
 install(TARGETS lua_interp DESTINATION "${CMAKE_INSTALL_PREFIX}")
 # lua.dll不需要单独install，它在server/var里，会被install(CODE)的*.dll一起拷到server/bin
-
-#lua_parson
-add_library(lua_parson STATIC
-    lua_parson/lparson.c
-    lua_parson/parson/parson.c
-)
-target_include_directories(lua_parson PRIVATE
-    lua_parson/parson
-)
-target_link_libraries(lua_parson PRIVATE lua)
 
 # lua_rapidxml
 add_library(lua_rapidxml STATIC lua_rapidxml/lrapidxml.cpp)
@@ -96,6 +86,7 @@ add_library(cjson MODULE
 )
 # 模块文件必须是cjson.dll / cjson.so，不能带lib前缀
 set_target_properties(cjson PROPERTIES PREFIX "")
+# 第三方代码，清掉项目自己的编译参数(linux下-Wconversion -Wextra -pedantic会刷屏)
 set_target_properties(cjson PROPERTIES COMPILE_OPTIONS "")
 target_include_directories(cjson PRIVATE ${LUA_SRC_DIR})
 if(WINDOWS)
@@ -107,6 +98,14 @@ if(WINDOWS)
         # windows的sprintf/strtod对nan、inf的处理不一样，上游的Makefile也是关掉的
         DISABLE_INVALID_NUMBERS
     )
+    # 剩下的告警都是这份源码本身的问题，官方只按gcc的-O3 -Wall -pedantic编译，
+    # gcc的-Wall不报这类转换，所以没有对应的"官方参数"可以消除，只能逐个关掉：
+    # C4005 宏重定义：lua_objlen与lua 5.5的luaconf.h里的兼容宏重复(lua_rawlen vs luaL_len)，
+    #        strncasecmp在源码里定义了两次(72行的函数式、106行的普通宏)
+    # C4090 const限定符不一致、C4244/C4267 64位下lua_Integer、size_t转int
+    # 注意不要照搬上游CMakeLists.txt里的 -Dsnprintf=_snprintf -Dstrncasecmp=_strnicmp：
+    # 源码在_MSC_VER下已经把snprintf定义成sprintf_s了，再定义一次会多出一个C4005
+    target_compile_options(cjson PRIVATE /wd4005 /wd4090 /wd4244 /wd4267)
 endif()
 # 构建产物放server/var/c_module：既不与源码混在一起，也不会被install(CODE)的*.dll拷进server/bin
 set_target_properties(cjson PROPERTIES

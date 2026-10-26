@@ -1,7 +1,7 @@
 -- web_stat.lua http 查询服务器状态接口
 local WebStat = oo.singleton()
 
-local json = require "engine.lua_parson"
+local Json = require "util.json"
 
 local function rpc_stat()
     return stat:collect()
@@ -16,7 +16,7 @@ function WebStat:exec(conn, fields, body)
     if "" == body or body == g_app.name then
         local total_stat = g_stat.collect()
 
-        local ctx = json.encode(total_stat)
+        local ctx = Json.encode(total_stat)
 
         return HTTP.OK_NIL, ctx
     end
@@ -35,7 +35,7 @@ function WebStat:exec(conn, fields, body)
     -- TODO:这个rpc调用有问题，不能引用conn为up value的，conn可能会被客户端断开
     Rpc.proxy(function(ecode, ctx)
         return
-            g_httpd:do_return(conn, 0 == ecode, HTTP.OK_NIL, json.encode(ctx))
+            g_httpd:do_return(conn, 0 == ecode, HTTP.OK_NIL, Json.encode(ctx))
     end):call(session, rpc_stat)
 
     return HTTP.PENDING -- 阻塞等待数据返回

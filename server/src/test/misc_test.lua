@@ -1,7 +1,9 @@
 -- misc_test.lua
 -- xzc
 -- 2016-03-06
-local json = require "engine.lua_parson"
+-- cjson是server/c_module下的动态库，由engine/deps/lua-cjson的源码与当前lua一起编译，
+-- 不存在abi不匹配的问题(之前的预编译版本是按lua 5.4的abi编的，5.5下加载直接段错误)
+local cjson = require "cjson"
 local xml = require "engine.lua_rapidxml"
 local util = require "engine.util"
 
@@ -13,35 +15,28 @@ local js = [==[
 }
 ]==]
 
+
 Test.describe("json lib test", function()
     local times = 10000
     Test.it("encode decode", function()
-        local tbl = json.decode(js)
-        local str = json.encode(tbl)
-        local tbl_ex = json.decode(str)
+        local tbl = cjson.decode(js)
+        local str = cjson.encode(tbl)
+        local tbl_ex = cjson.decode(str)
         Test.equal(tbl, tbl_ex)
+    end)
 
-        local cjson = require "cjson"
-        local tbl_cj = cjson.decode(js)
-        Test.equal(tbl, tbl_cj)
+    Test.it("array and object encode decode", function()
+        -- 纯数组按数组编码，解码回来还是整数key
+        local arr = {1, 2, 3}
+        Test.equal(cjson.decode(cjson.encode(arr)), arr)
 
-        -- 测试table与json自动转换，尤其是整数key的转换
-        tbl = {1, 2, unbind = 1, }
-        str = json.encode(tbl, false, 8.6)
-        tbl_ex = json.decode(str, false, 8.6)
-        Test.equal(tbl, tbl_ex)
+        -- 数字key和字符串key混在一起时，cjson编码为object，数字key变成字符串
+        local mixed = {1, 2, unbind = 1}
+        Test.equal(cjson.decode(cjson.encode(mixed)),
+                   {["1"] = 1, ["2"] = 2, unbind = 1})
     end)
 
     Test.it("perf test", function()
-        for _ = 1, times do
-            local tbl = json.decode(js)
-            json.encode(tbl)
-        end
-    end)
-
-    Test.it("lua cjson dynamically loaded perf", function()
-        local cjson = require "cjson"
-
         for _ = 1, times do
             local tbl = cjson.decode(js)
             cjson.encode(tbl)

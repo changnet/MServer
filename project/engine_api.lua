@@ -106,7 +106,6 @@ local function parse_includes(main_file)
                     dir .. inc,
                 }
 
-                if string.match(inc, "parson") then table.insert(paths, deps_dir .. "lua_parson/" .. inc) end
                 if string.match(inc, "rapidxml") then table.insert(paths, deps_dir .. "lua_rapidxml/" .. inc) end
 
                 for _, path in ipairs(paths) do

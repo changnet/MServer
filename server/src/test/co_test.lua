@@ -6,7 +6,10 @@ Test.describe("coroutine test", function()
     Test.it("coroutine test", function()
         -- 保证传参数及返回的正确性
 
+        -- 表里有一个nil，含空洞的表在lua 5.5里#返回的长度会变(紧凑数组改了
+        -- 边界判断)，所以下面unpack都要显式指定个数
         local params = {1, 2, 3, 123.789, true, false, "foo", nil, {1, 2, 3}}
+        local param_count = 9
 
         local func = function(...)
             local p = {...}
@@ -17,21 +20,23 @@ Test.describe("coroutine test", function()
             return params
         end
 
-        local ok, session = CoPool.invoke(func, table.unpack(params))
+        local ok, session =
+            CoPool.invoke(func, table.unpack(params, 1, param_count))
         Test.assert(ok)
 
-        local rok = CoPool.resume(session, table.unpack(params))
+        local rok = CoPool.resume(session, table.unpack(params, 1, param_count))
         Test.assert(rok)
 
         -- 重新测试，保证co复用时正确性
         for _ = 1, 999999 do
             local idle_count = CoPool.idle_count()
-            ok, session = CoPool.invoke(func, table.unpack(params))
+            ok, session =
+                CoPool.invoke(func, table.unpack(params, 1, param_count))
             Test.assert(ok)
 
             -- 保证有使用池
             Test.equal(CoPool.idle_count(), idle_count - 1)
-            rok = CoPool.resume(session, table.unpack(params))
+            rok = CoPool.resume(session, table.unpack(params, 1, param_count))
             Test.assert(rok)
         end
     end)

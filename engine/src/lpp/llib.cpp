@@ -1,4 +1,3 @@
-#include <lparson.h>
 #include <lrapidxml.hpp>
 
 #include "llib.hpp"
@@ -497,7 +496,6 @@ void open_cpp(lua_State *L)
     /* ============================库方式调用=============================== */
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
     LUA_LIB_OPEN("engine.util", luaopen_util);
-    LUA_LIB_OPEN("engine.lua_parson", luaopen_lua_parson);
     LUA_LIB_OPEN("engine.lua_rapidxml", luaopen_lua_rapidxml);
     /* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< */
 

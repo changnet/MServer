@@ -4,7 +4,7 @@
 -- mongo db 测试用例
 local max_insert = 10000
 local collection = "perf_test"
-local json = require "engine.lua_parson"
+local Json = require "util.json"
 
 Test.describe("mongodb test", function()
     local MongoDB = require "mongodb.mongodb"
@@ -195,7 +195,7 @@ Test.describe("mongodb test", function()
         data.desc = "test item"
         data.op_time = Engine.time()
 
-        local jstr = json.encode(data)
+        local jstr = Json.encode(data)
         local sclock = Engine.steady_clock()
         for _ = 1, max_insert do
             mongodb:insert(collection, jstr)

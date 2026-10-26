@@ -8,7 +8,7 @@ local InsertionRank = oo.class("InsertionRank")
 -- 排行榜，人数不多，名次基本不变化，伤害高的一直在前面，但更新频繁，玩家1秒可能会打出
 -- 多次伤害
 
-local json = require "engine.lua_parson"
+local Json = require "util.json"
 
 local function comp_desc(src, dst)
     if src.f == dst.f then return 0 end
@@ -229,14 +229,14 @@ end
 -- @param path 保存的路径，不传默认存到runtime/rank/self.name
 function InsertionRank:save(path)
     if not path then path = "runtime/rank/" .. self.name end
-    json.encode_to_file(self.list, path)
+    Json.encode_to_file(self.list, path)
 end
 
 -- 从文件加载排行排行榜
 -- @param path 保存的路径，不传默认使用runtime/rank/self.name
 function InsertionRank:load(path)
     if not path then path = "runtime/rank/" .. self.name end
-    self.list = json.decode_from_file(path)
+    self.list = Json.decode_from_file(path)
 end
 
 return InsertionRank

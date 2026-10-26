@@ -312,16 +312,16 @@ end
 -- luacheck:ignore save_history
 -- 调试bug用
 local function save_history()
-    local json = require "engine.lua_parson"
+    local Json = require "util.json"
 
     printf("%d history action save !", #history)
-    json.encode_to_file(history, "orth_aoi_his.json")
+    Json.encode_to_file(history, "orth_aoi_his.json")
 end
 
 -- luacheck:ignore run_history
 local function run_history(load)
-    local json = require "engine.lua_parson"
-    if load then history = json.decode_from_file("orth_aoi_his.json") end
+    local Json = require "util.json"
+    if load then history = Json.decode_from_file("orth_aoi_his.json") end
 
     printf("%d history action load !", #history)
 

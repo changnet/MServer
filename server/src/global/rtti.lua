@@ -313,7 +313,6 @@ function Rtti.collect()
         string = true,
         coroutine = true,
         json = true,
-        lua_parson = true, -- 重命名为json了
         lua_rapidxml = true,
     }
 

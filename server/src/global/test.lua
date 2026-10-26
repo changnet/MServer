@@ -133,8 +133,10 @@ local function dump(o)
 
     local s = '{ '
     for k, v in pairs(o) do
-        if type(k) ~= 'number' then k = '"' .. tostring(k) .. '"' end
-        s = s .. '[' .. tostring(k) .. '] = ' .. dump(v) .. ','
+        -- lua 5.5起for的控制变量是只读的，不能重新赋值，取一个局部变量来转换
+        local key = type(k) == 'number' and tostring(k)
+            or '"' .. tostring(k) .. '"'
+        s = s .. '[' .. key .. '] = ' .. dump(v) .. ','
     end
     return s .. '} '
 end

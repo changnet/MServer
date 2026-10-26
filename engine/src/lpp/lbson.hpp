@@ -369,7 +369,13 @@ static int32_t encode_table(lua_State *L, int32_t index, bson_t *parent,
     }
     else
     {
-        bson_append_array_begin(parent, key, key_len, &b);
+        // bson_append_array_begin在bson 2.x中被标记deprecated，它的实现就是直接转调
+        // bson_append_array_unsafe_begin(见libbson的bson.c)，换成新接口行为完全一致。
+        // 另一个建议的bson_append_array_builder_begin需要把encode_array改成
+        // bson_array_builder_append_xxx(不带key的那套接口)，改动大，这里不做。
+        // 数组内的key由encode_array、encode_invalid_key_array按顺序写成"0"、"1"...
+        // 本来就是合法的，用unsafe版本没有问题
+        bson_append_array_unsafe_begin(parent, key, key_len, &b);
         ok = max_index > 0
                  ? encode_array(&b, L, index, (int32_t)max_index, e, opt)
                  : encode_invalid_key_array(&b, L, index, e, opt);

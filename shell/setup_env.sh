@@ -53,17 +53,6 @@ function build_library()
     auto_apt_install libpq-dev
 }
 
-function build_lua()
-{
-    cd $PKGDIR
-
-    LUAVER=5.4.7
-    tar -zxvf lua-$LUAVER.tar.gz
-    cd lua-$LUAVER
-    make PLAT=linux
-    make install
-}
-
 # https://github.com/cyrusimap/cyrus-sasl/releases
 # 注意：sasl库编译过程中需要创建软链接(ln -s)
 # 在win挂载到linux方式下是不能创建的,导致编译失败
@@ -188,7 +177,6 @@ function build_env_once()
 	    echo "env = CYGWIN"
 	fi
 
-    build_lua
     # build_sasl
     build_mongoc
     install_protoc

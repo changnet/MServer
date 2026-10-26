@@ -8,6 +8,8 @@ Test.describe("luacodec test", function()
     local codec = LuaCodec()
 
     local PERF_TIMES = 10000
+    -- params的元素个数，表里有nil，不能用#取长度
+    local PARAMS_COUNT = 10
     local params = {
         true,
         0x7FFFFFFFFFFFFFFF,
@@ -71,7 +73,9 @@ Test.describe("luacodec test", function()
         Test.equal(v1, nil)
 
         -- 各种参数及table嵌套
-        buffer = codec:encode(table.unpack(params))
+        -- params里第7个元素是nil，这种含空洞的表在lua 5.5里#返回的长度会变
+        -- (紧凑数组改了边界判断)，必须显式指定unpack的个数
+        buffer = codec:encode(table.unpack(params, 1, PARAMS_COUNT))
         local decode_params = {codec:decode(buffer)}
         Test.equal(decode_params, params)
 
