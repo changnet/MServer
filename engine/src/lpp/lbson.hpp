@@ -2,7 +2,7 @@
 
 // lua与bson的交互，这个文件暂时只有mongodb在用，所以所有逻辑都放头文件了
 
-#include <bson.h>
+#include <bson/bson.h>
 #include "ltools.hpp" // lua_isbit32
 
 namespace lbson

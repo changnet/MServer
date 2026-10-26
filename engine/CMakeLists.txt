@@ -102,6 +102,8 @@ set(DEPS_PATH "${SRC_ROOT_PATH}/deps")
 set(LIBRARY_OUTPUT_PATH "${CMAKE_CURRENT_LIST_DIR}/../server/var/libs")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_LIST_DIR}/../server/var")
 set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_LIST_DIR}/../server/bin")
+# lua的c模块(如cjson)安装到这里，对应startup.lua里package.cpath的c_module/?.so
+set(C_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../server/c_module")
 
 string(LENGTH "${CMAKE_SOURCE_DIR}/" SRC_PATH_SIZE)
 add_definitions("-DSRC_PATH_SIZE=${SRC_PATH_SIZE}")
@@ -126,9 +128,6 @@ elseif(LINUX)
 endif()
 
 find_package(OpenSSL REQUIRED)
-find_package(Lua 5.4 REQUIRED)
-# mongo-c-driver 2.x 起，vcpkg的包名从 mongoc-1.0 改为 mongoc，
-# target 也从 mongo::mongoc_shared 改为 mongoc::shared
 find_package(mongoc CONFIG REQUIRED)
 
 add_subdirectory(deps)
@@ -199,7 +198,7 @@ if(WINDOWS)
         Dbghelp # MiniDumpWriteDump
         Winmm # timeBeginPeriod，提升系统定时器精度到1ms
         iphlpapi # if_nametoindex，解析 "fe80::1%eth0" 里的接口名
-        ${LUA_LIBRARIES}
+        lua
         OpenSSL::SSL OpenSSL::Crypto
         unofficial::libmariadb
         mongoc::shared
@@ -211,7 +210,7 @@ elseif(UNIX)
         /usr/include/mariadb
     )
     target_link_libraries(master PRIVATE
-        lua.a
+        lua
         uuid.a
         mariadbclient.a
         mongoc::static
