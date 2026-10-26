@@ -12,11 +12,15 @@ elseif(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Linux")
     set(VCPKG_PATH "vcpkg_linux_x64")
 endif()
 
+# vcpkg导出的目录名是带时间戳的(vcpkg-export-20261026-164856)，没有参数可以去掉，
+# 因此shell/vcpkg.bat导出后统一重命名为vcpkg-export，这里写死一个稳定的名字即可
+set(VCPKG_EXPORT_NAME "vcpkg-export")
+
 # EXISTS需要绝对路径
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${VCPKG_PATH})
     message(STATUS "using vcpkg root ${VCPKG_PATH}")
     set(CMAKE_TOOLCHAIN_FILE
-        ${CMAKE_CURRENT_SOURCE_DIR}/${VCPKG_PATH}/vcpkg-export-20250514-100442/scripts/buildsystems/vcpkg.cmake
+        ${CMAKE_CURRENT_SOURCE_DIR}/${VCPKG_PATH}/${VCPKG_EXPORT_NAME}/scripts/buildsystems/vcpkg.cmake
         CACHE STRING "Vcpkg toolchain file")
     set(VCPKG_TARGET_TRIPLET "x64-windows" CACHE STRING "")
 endif()
@@ -104,6 +108,18 @@ add_definitions("-DSRC_PATH_SIZE=${SRC_PATH_SIZE}")
 
 if(WINDOWS)
     find_package(unofficial-libmariadb CONFIG REQUIRED)
+    # libmariadb的头文件，apt(debian)装在/usr/include/mariadb，vcpkg装在include/mysql
+    # 源码统一按apt的方式写#include <mariadb/mysql.h>，而vcpkg的unofficial::libmariadb
+    # 这个target声明的include目录正好也是include/mariadb，只是vcpkg并没有真的建这个目录，
+    # 所以导出后需要把include/mysql复制为include/mariadb(见shell/vcpkg.bat的export命令)。
+    # 没有这一步，cmake会报target包含不存在的路径，编译也找不到头文件
+    get_target_property(MARIADB_INCLUDE unofficial::libmariadb INTERFACE_INCLUDE_DIRECTORIES)
+    if(NOT EXISTS "${MARIADB_INCLUDE}")
+        message(FATAL_ERROR
+            "libmariadb的头文件目录不存在: ${MARIADB_INCLUDE}\n"
+            "进入${VCPKG_PATH}/${VCPKG_EXPORT_NAME}，把installed/${VCPKG_TARGET_TRIPLET}/include/mysql"
+            "复制为mariadb，或者重新执行 shell\\vcpkg.bat export")
+    endif()
 elseif(LINUX)
     # 通过apt安装暂时没有通过find_package查找mariadb的方式
     # find_package(libmariadb REQUIRED)
@@ -111,7 +127,9 @@ endif()
 
 find_package(OpenSSL REQUIRED)
 find_package(Lua 5.4 REQUIRED)
-find_package(mongoc-1.0 CONFIG REQUIRED)
+# mongo-c-driver 2.x 起，vcpkg的包名从 mongoc-1.0 改为 mongoc，
+# target 也从 mongo::mongoc_shared 改为 mongoc::shared
+find_package(mongoc CONFIG REQUIRED)
 
 add_subdirectory(deps)
 
@@ -184,7 +202,7 @@ if(WINDOWS)
         ${LUA_LIBRARIES}
         OpenSSL::SSL OpenSSL::Crypto
         unofficial::libmariadb
-        mongo::mongoc_shared
+        mongoc::shared
         # "C:\\Program Files (x86)\\Visual Leak Detector\\lib\\Win64\\vld.lib"
     )
 elseif(UNIX)
@@ -196,7 +214,7 @@ elseif(UNIX)
         lua.a
         uuid.a
         mariadbclient.a
-        mongo::mongoc_static
+        mongoc::static
 
         # sasl2.a # mongodb使用LDAP认证才需要sasl2，暂时不使用
 

@@ -1,14 +1,15 @@
 {
-    "name": "mserver",
-    "version": "0.0.1",
-    "description": "Mini Distributed Game Server, a lightweight game engine",
-    "homepage": "https://github.com/changnet/MServer",
-    "supports": "x64",
-	"builtin-baseline": "a974a0a2065457eff982554127637cade92c358e",
-    "dependencies": [
-        {"name": "lua","version>=": "5.4.7"},
-        {"name": "openssl","version>=": "3.5.0"},
-        {"name": "mongo-c-driver","version>=": "1.30.3"},
-        {"name": "libmariadb","version>=": "3.4.5"}
-    ]
+  "name": "mserver",
+  "version": "0.0.1",
+  "description": "Mini Distributed Game Server, a lightweight game engine",
+  "homepage": "https://github.com/changnet/MServer",
+  "supports": "x64",
+  "builtin-baseline": "817892b0ecbc6af994dd6df999c73faf795adbf2",
+  "dependencies": [
+    {"name": "lua",            "version>=": "5.5.1"},
+    {"name": "openssl",        "version>=": "3.6.5"},
+    {"name": "mongo-c-driver", "version>=": "2.5.7"},
+    {"name": "libmariadb",     "version>=": "3.4.11"},
+    {"name": "libpq",          "version>=": "18.4"}
+  ]
 }

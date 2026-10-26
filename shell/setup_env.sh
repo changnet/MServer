@@ -48,6 +48,9 @@ function build_library()
     # 见https://packages.debian.org/buster/libmariadbclient-dev
     # 因此直接安装libmariadb-dev
     auto_apt_install libmariadb-dev
+    # postgresql 的客户端库 libpq（提供 libpq-fe.h 及 libpq.so / libpq.a）
+    # 只需要客户端，不用装 postgresql-server，数据库的安装见 ./postgresql.sh
+    auto_apt_install libpq-dev
 }
 
 function build_lua()
