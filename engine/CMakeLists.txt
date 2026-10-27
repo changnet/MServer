@@ -129,6 +129,11 @@ endif()
 
 find_package(OpenSSL REQUIRED)
 find_package(mongoc CONFIG REQUIRED)
+# libpq。windows 下 vcpkg 的 libpq 端口自带 share/postgresql/vcpkg-cmake-wrapper.cmake，
+# 会把 PostgreSQL_LIBRARY_RELEASE 指向导出目录里的 libpq.lib 再转给内置的
+# FindPostgreSQL，因此两边拿到的都是 PostgreSQL::PostgreSQL 这个 target，
+# 源码统一写 #include <libpq-fe.h> 即可
+find_package(PostgreSQL REQUIRED)
 
 add_subdirectory(deps)
 
@@ -199,6 +204,7 @@ if(WINDOWS)
         lua
         OpenSSL::SSL OpenSSL::Crypto
         unofficial::libmariadb
+        PostgreSQL::PostgreSQL
         mongoc::shared
         # "C:\\Program Files (x86)\\Visual Leak Detector\\lib\\Win64\\vld.lib"
     )
@@ -206,11 +212,13 @@ elseif(UNIX)
     # 用system指定这些目录为系统目录，去除bson中的一些编译警告
     target_include_directories(master SYSTEM PRIVATE
         /usr/include/mariadb
+        ${PostgreSQL_INCLUDE_DIRS}   # debian 下是 /usr/include/postgresql
     )
     target_link_libraries(master PRIVATE
         lua
         uuid.a
         mariadbclient.a
+        PostgreSQL::PostgreSQL
         mongoc::static
 
         # sasl2.a # mongodb使用LDAP认证才需要sasl2，暂时不使用

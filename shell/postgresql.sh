@@ -8,8 +8,10 @@
 # 服务状态：systemctl status postgresql@15-main
 
 # Debian 的包默认只监听本地：/etc/postgresql/<ver>/main/postgresql.conf 里的
+# /etc/postgresql/15/main/postgresql.conf
 #   listen_addresses = 'localhost'
 # 开发机（windows）要连虚拟机里的库，必须改成 '*'（或指定网卡ip），并且在
+# /etc/postgresql/15/main/pg_hba.conf
 #   /etc/postgresql/<ver>/main/pg_hba.conf
 # 里加一条允许内网访问的规则，然后重启服务。
 # 如果连不上，按这个顺序排查：

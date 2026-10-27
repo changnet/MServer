@@ -20,6 +20,7 @@
 #include "system/signal.hpp"
 #include "thread/worker_thread.hpp"
 #include "mysql/mysql.hpp"
+#include "postgresql/postgresql.hpp"
 #include "mongo/mongo.hpp"
 #include "ev/time.hpp"
 #include "lbuffer.hpp"
@@ -298,6 +299,31 @@ static void luaopen_mysql(lua_State *L)
     lc.def<&MySql::stmt_clear>("stmt_clear");
 }
 
+static void luaopen_postgresql(lua_State *L)
+{
+    lcpp::Class<PostgreSQL> lc(L, "engine.PostgreSQL");
+
+    lc.def<&PostgreSQL::ping>("ping");
+    lc.def<&PostgreSQL::exec>("exec");
+    lc.def<&PostgreSQL::query>("query");
+    lc.def<&PostgreSQL::error>("error");
+    lc.def<&PostgreSQL::escape>("escape");
+    lc.def<&PostgreSQL::escape_literal>("escape_literal");
+    lc.def<&PostgreSQL::escape_identifier>("escape_identifier");
+    lc.def<&PostgreSQL::escape_bytea>("escape_bytea");
+    lc.def<&PostgreSQL::unescape_bytea>("unescape_bytea");
+    lc.def<&PostgreSQL::affected_rows>("affected_rows");
+    lc.def<&PostgreSQL::set_notice_log>("set_notice_log");
+    lc.def<&PostgreSQL::connect>("connect");
+    lc.def<&PostgreSQL::connect_uri>("connect_uri");
+    lc.def<&PostgreSQL::disconnect>("disconnect");
+
+    lc.def<&PostgreSQL::stmt_str>("stmt_str");
+    lc.def<&PostgreSQL::stmt_exec>("stmt_exec");
+    lc.def<&PostgreSQL::stmt_value>("stmt_value");
+    lc.def<&PostgreSQL::stmt_clear>("stmt_clear");
+}
+
 static void luaopen_mongo(lua_State *L)
 {
     lcpp::Class<Mongo> lc(L, "engine.Mongo");
@@ -511,6 +537,7 @@ void open_cpp(lua_State *L)
     luaopen_lua_codec(L);
     luaopen_pbc_codec(L);
     luaopen_mysql(L);
+    luaopen_postgresql(L);
     luaopen_log(L);
     luaopen_map(L);
     luaopen_astar(L);

@@ -22,6 +22,16 @@ return
         db   = "test_999",
     },
 
+    -- test_999需要先建库：createdb -O test test_999
+    postgresql =
+    {
+        ip   = "127.0.0.1";
+        port = 5432,
+        user = "test",
+        pwd  = "test",
+        db   = "test_999",
+    },
+
     debug = 1, -- 是否启用调试日志
     daemon = false, -- 是否以守护进程方式运行
     source = "../", -- 默认在var目录的上一级，即server目录

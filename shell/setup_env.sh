@@ -6,7 +6,11 @@
 # UPDATE to Debian 12 at 2019-05
 
 BUILD_ENV_LOG=./build_env_log.txt
-RAWPKTDIR=../engine/package
+
+# 以脚本所在目录定位源码包，这样单独执行 install_protoc、build_mongoc 之类的函数时，
+# 不依赖当前工作目录
+SCRIPTDIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+RAWPKTDIR=$SCRIPTDIR/../engine/package
 PKGDIR=/tmp/mserver_package
 
 # "set -e" will cause bash to exit with an error on any simple command.
@@ -14,6 +18,38 @@ PKGDIR=/tmp/mserver_package
 #  in a pipeline as well.
 set -e
 set -o pipefail
+
+# 确保指定的源码包已经在 $PKGDIR 中，没有则从 $RAWPKTDIR 复制
+# 单独执行(如 bash setup_env.sh install_protoc)时不会经过 build_env_once 的复制步骤，
+# 因此需要在这里补上
+# $* 需要检查的包文件名，相对于 $RAWPKTDIR 和 $PKGDIR
+function ensure_package()
+{
+    local pkt missing=0
+
+    mkdir -p $PKGDIR
+
+    for pkt in "$@"; do
+        if [[ -f "$PKGDIR/$pkt" ]]; then
+            continue
+        fi
+
+        if [[ ! -f "$RAWPKTDIR/$pkt" ]]; then
+            echo "package $pkt not found in $RAWPKTDIR"
+            return 1
+        fi
+
+        echo "copy $RAWPKTDIR/$pkt to $PKGDIR"
+        cp "$RAWPKTDIR/$pkt" "$PKGDIR/"
+        missing=1
+    done
+
+    if [[ $missing -eq 0 ]]; then
+        echo "package already in $PKGDIR, skip copy"
+    fi
+
+    return 0
+}
 
 function auto_apt_install()
 {
@@ -64,10 +100,12 @@ function build_sasl()
     # have static Krb5 libraries; the GSSAPI plugin should link these libraries in
     # on platforms that support it (Solaris and Linux among them) but it does not
 
-    cd $PKGDIR
-
     SASLVER=2.1.27
     SASL=cyrus-sasl-$SASLVER
+
+    ensure_package $SASL.tar.gz || return 1
+
+    cd $PKGDIR
     tar -zxvf $SASL.tar.gz
     cd $SASL
     ./configure --enable-static=yes
@@ -93,9 +131,11 @@ function build_mongoc()
     # 则修改以下两个文件的am__api_version='1.15'，然后重新./configure
     # mongo-c-driver-1.2.1\configure
     # mongo-c-driver-1.2.1\src\libbson\configure
-    cd $PKGDIR
+    MONGOCVER=2.5.7
 
-    MONGOCVER=1.30.4
+    ensure_package mongo-c-driver-$MONGOCVER.tar.gz || return 1
+
+    cd $PKGDIR
     tar -zxvf mongo-c-driver-$MONGOCVER.tar.gz
     cd mongo-c-driver-$MONGOCVER
     mkdir -p cmake-build
@@ -129,8 +169,10 @@ function build_mongoc()
 # https://github.com/google/protobuf/releases
 function build_protoc()
 {
-    cd $PKGDIR
     PROTOBUF_VER=3.3.0
+    ensure_package protobuf-$PROTOBUF_VER.tar.gz || return 1
+
+    cd $PKGDIR
     tar -xzvf protobuf-$PROTOBUF_VER.tar.gz
 
     #
@@ -147,9 +189,10 @@ function build_protoc()
 # https://github.com/google/protobuf/releases
 function install_protoc()
 {
-    cd $PKGDIR
-
     PROTOC_ZIP=protoc-3.9.0-linux-x86_64.zip
+    ensure_package $PROTOC_ZIP || return 1
+
+    cd $PKGDIR
     # curl -OL https://github.com/google/protobuf/releases/download/v3.9.0/$PROTOC_ZIP
     unzip -o $PROTOC_ZIP -d /usr/local bin/protoc
     unzip -o $PROTOC_ZIP -d /usr/local include/*

@@ -18,6 +18,9 @@ local json = cjson.encode({
 }
 
 更多的看官方文档即可
+
+另一个备选库是https://github.com/xpol/lua-rapidjson，
+支持int64并且也支持指定一个table编码为array或者object
 ]]
 
 local cjson = require "cjson"
