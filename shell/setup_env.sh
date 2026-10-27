@@ -127,10 +127,9 @@ function build_sasl()
 # http://mongoc.org/libmongoc/current/installing.html
 function build_mongoc()
 {
-    # 如果出现aclocal-1.14: command not found,安装automake，版本不对
-    # 则修改以下两个文件的am__api_version='1.15'，然后重新./configure
-    # mongo-c-driver-1.2.1\configure
-    # mongo-c-driver-1.2.1\src\libbson\configure
+    # 如果要移除
+    # 1.0版本：sh /usr/local/share/mongo-c-driver/uninstall.sh
+    # 2.0版本：sh /usr/local/share/mongo-c-driver/2.5.7/uninstall.sh
     MONGOCVER=2.5.7
 
     ensure_package mongo-c-driver-$MONGOCVER.tar.gz || return 1

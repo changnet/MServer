@@ -28,4 +28,5 @@ setting.lua
 
 server/bin
 server/var
+server/c_module/*
 

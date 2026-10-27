@@ -110,7 +110,12 @@ stop_proc() {
             taskkill //F //T //PID "$p" >/dev/null 2>&1 && echo "[test] 已结束进程 pid=$p"
         done
     else
-        kill -15 "$JPID" 2>/dev/null
+        # start.sh 是 sh 脚本，master 是它的子进程，只 kill JPID(启动它的子 shell)杀不掉 master。
+        # 残留的 master 一直跑事件循环，还会让下次 install 报 "Text file busy"，所以按命令行匹配
+        pids=$(pgrep -f "bin/master --node $NODE([[:space:]]|$)" 2>/dev/null)
+        for p in $pids; do
+            kill -15 "$p" 2>/dev/null && echo "[test] 已结束进程 pid=$p"
+        done
     fi
 }
 

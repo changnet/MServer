@@ -69,8 +69,9 @@ if(WINDOWS)
     # 拷贝clang_rt.asan_dbg_dynamic-x86_64.dll and clang_rt.asan_dynamic-x86_64.dll到bin目录
     # add_compile_options($<$<CONFIG:Debug>:/fsanitize=address>)
 elseif(LINUX)
-    # 优先查找.a类型的静态库
-    set(CMAKE_FIND_LIBRARY_SUFFIXES .a .so)
+    # 库的查找后缀保持 cmake 默认(.so .a)，即优先动态链接。不要反过来设成 .a 优先：
+    # debian 的 libpq.a 不是自包含的(缺 libpgport 的 pg_strcasecmp 和 openldap 的 ldap_*)，
+    # 一旦被 FindPostgreSQL 选中就会报一堆 undefined reference
     # 这里的参数宽松一些，编译第三方库太多警告，下面编译自己的代码会多加一些警告
     add_compile_options(-pipe -Wall -Wodr -flto=auto -pedantic)
     # -fsanitize=address -static-libasan -g
@@ -131,8 +132,8 @@ find_package(OpenSSL REQUIRED)
 find_package(mongoc CONFIG REQUIRED)
 # libpq。windows 下 vcpkg 的 libpq 端口自带 share/postgresql/vcpkg-cmake-wrapper.cmake，
 # 会把 PostgreSQL_LIBRARY_RELEASE 指向导出目录里的 libpq.lib 再转给内置的
-# FindPostgreSQL，因此两边拿到的都是 PostgreSQL::PostgreSQL 这个 target，
-# 源码统一写 #include <libpq-fe.h> 即可
+# FindPostgreSQL；debian 下找到的是 libpq.so。两边拿到的都是 PostgreSQL::PostgreSQL 这个
+# target，源码统一写 #include <libpq-fe.h> 即可
 find_package(PostgreSQL REQUIRED)
 
 add_subdirectory(deps)
@@ -173,9 +174,9 @@ target_include_directories(master PRIVATE
 )
 
 # 库文件，必须 在add_executable之后
-# 默认情况下，加.a后缀的是static链接，其他是dynamic链接
-# 静态链接是为了方便部署，运维安装完系统后，不用额外安装的库静态链接，如 pthread、rt
-# 其他的需要静态链接
+# 自己编译的库(deps 里的那几个)天然是静态的；系统安装的第三方库(mariadb、libpq、mongoc、
+# ssl)统一动态链接，省得处理 debian 静态库不自包含的问题(libpq.a 缺 libpgport 和 ldap)。
+# 部署机上要装对应的运行时包：libmariadb3、libpq5、libmongoc2
 target_link_libraries(master PRIVATE
     # 需要编译的库，可以写成acism或者acism.a。前者与上面的add_library同名，cmake会
     # 自动解决依赖关系，后者表示静态链接，但不会产生依赖关系
@@ -217,11 +218,11 @@ elseif(UNIX)
     target_link_libraries(master PRIVATE
         lua
         uuid.a
-        mariadbclient.a
+        mariadb      # libmariadb.so，与 libpq、mongoc 一样统一动态链接
         PostgreSQL::PostgreSQL
-        mongoc::static
+        mongoc::shared
 
-        # sasl2.a # mongodb使用LDAP认证才需要sasl2，暂时不使用
+        # sasl2 # mongodb使用LDAP认证才需要sasl2，暂时不使用
 
         ssl crypto dl rt pthread resolv z stdc++fs
     )
