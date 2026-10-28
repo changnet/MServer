@@ -13,7 +13,7 @@ struct lua_State;
  * @brief stmt_value 的类型参数，逻辑类型，与数据库的 oid 解耦。
  * 业务只需要关心这个值该按什么方式转义，不需要知道具体的数据库类型
  */
-enum class SqlValueType
+enum class PostgreSQLValueType
 {
     INT      = 1, ///< smallint、integer、bigint
     FLOAT    = 2, ///< real、double precision、numeric
@@ -27,7 +27,7 @@ enum class SqlValueType
  * @brief 错误码。0 表示成功，非 0 表示失败，lua 侧统一用 if 0 ~= e 判断。
  * 执行相关的错误码直接取 ExecStatusType（正值），本地错误用负值避免混淆
  */
-enum PostgreECode
+enum PostgreSQLECode
 {
     PE_OK        = 0,  ///< 成功
     PE_CONNECT   = -1, ///< 连接失败
@@ -146,7 +146,7 @@ public:
     int32_t stmt_str(lua_State *L);
     /**
      * @brief 追加数据库的值到sql，会进行转义
-     * @param type 逻辑类型，见 SqlValueType
+     * @param type 逻辑类型，见 PostgreSQLValueType
      * @param value 字段值，nil 表示写入 NULL
      */
     int32_t stmt_value(lua_State *L);

@@ -251,8 +251,8 @@ PGresult *PostgreSQL::real_query(const char *stmt)
         set_error(PE_NO_RESULT, PQerrorMessage(conn_));
     }
 
-    // 出错的 sql 可能是批量插入的超长语句，只打印前一段
-    ELOG("postgresql exec fail(%d): %s\n%.512s", ecode_, errmsg_.c_str(), stmt);
+    // 出错的 sql 可能是批量插入的超长语句，只打印前一段(底层不打印，由上层逻辑处理)
+    // ELOG("postgresql exec fail(%d): %s\n%.512s", ecode_, errmsg_.c_str(), stmt);
 
     return nullptr;
 }
@@ -302,7 +302,7 @@ int32_t PostgreSQL::query(lua_State *L)
     {
         // 不是结果集，比如把 insert 传给了 query
         set_error((int32_t)PQresultStatus(res), "query expect a result set");
-        ELOG("postgresql query expect a result set: %.512s", stmt);
+        // ELOG("postgresql query expect a result set: %.512s", stmt);
         PQclear(res);
 
         lua_pushinteger(L, ecode_);
@@ -574,24 +574,24 @@ int32_t PostgreSQL::stmt_value(lua_State *L)
     }
 
     int32_t type = luaL_checkinteger32(L, 2);
-    switch ((SqlValueType)type)
+    switch ((PostgreSQLValueType)type)
     {
-    case SqlValueType::INT:
+    case PostgreSQLValueType::INT:
     {
         // 数值走转义反而是错的，直接格式化
         int64_t value = luaL_checkinteger(L, index);
         stmt_fmt("%lld", value);
         break;
     }
-    case SqlValueType::FLOAT:
+    case PostgreSQLValueType::FLOAT:
     {
         // 17 位有效数字可以无损还原 double
         double value = luaL_checknumber(L, index);
         stmt_fmt("%.17g", value);
         break;
     }
-    case SqlValueType::STRING:
-    case SqlValueType::DATETIME:
+    case PostgreSQLValueType::STRING:
+    case PostgreSQLValueType::DATETIME:
     {
         size_t size     = 0;
         const char *str = luaL_checklstring(L, index, &size);
@@ -606,7 +606,7 @@ int32_t PostgreSQL::stmt_value(lua_State *L)
         PQfreemem(out);
         break;
     }
-    case SqlValueType::BLOB:
+    case PostgreSQLValueType::BLOB:
     {
         size_t size     = 0;
         const char *str = luaL_checklstring(L, index, &size);
@@ -625,7 +625,7 @@ int32_t PostgreSQL::stmt_value(lua_State *L)
         PQfreemem(out);
         break;
     }
-    case SqlValueType::BOOL:
+    case PostgreSQLValueType::BOOL:
     {
         luaL_checktype(L, index, LUA_TBOOLEAN);
         if (lua_toboolean(L, index))

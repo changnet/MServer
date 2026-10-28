@@ -337,6 +337,7 @@ Test.describe("postgresql test", function()
         local e1, msg = db:error()
         Test.assert(0 ~= e1)
         Test.assert(msg and #msg > 0)
+        Test.print(msg)
 
         -- 出错后连接仍然可用
         Test.equal(db:ping(), 0)
