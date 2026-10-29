@@ -1,8 +1,13 @@
 #include "static_global.hpp"
 
 #include "lpp/llib.hpp"
-#include "mongo/mongo.hpp"
-#include "mysql/mysql.hpp"
+// 三个数据库模块由 CMake 的开关控制，关闭时需要连它们的头文件一起排除
+#ifdef ENABLE_MONGODB
+    #include "mongo/mongo.hpp"
+#endif
+#ifdef ENABLE_MARIADB
+    #include "mysql/mysql.hpp"
+#endif
 #include "net/io/tls_ctx.hpp"
 #include "net/socket.hpp"
 #include "net/codec/pbc_codec.hpp"
@@ -30,15 +35,23 @@ StaticGlobal::initializer::initializer()
     std::set_new_handler(on_new_fail);
 
     TlsCtx::library_init();
+#ifdef ENABLE_MARIADB
     MySql::library_init();
+#endif
+#ifdef ENABLE_MONGODB
     Mongo::init();
+#endif
     Socket::library_init();
 }
 
 StaticGlobal::initializer::~initializer()
 {
+#ifdef ENABLE_MARIADB
     MySql::library_end();
+#endif
+#ifdef ENABLE_MONGODB
     Mongo::cleanup();
+#endif
     TlsCtx::library_end();
     Socket::library_end();
 }

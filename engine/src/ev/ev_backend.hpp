@@ -4,10 +4,7 @@
 #include <thread>
 #include "ev_watcher.hpp"
 #include "thread/thread_context.hpp"
-
-#if defined(ENABLE_KCP)
-    #include "net/kcp_mgr.hpp"
-#endif
+#include "net/kcp_mgr.hpp"
 
 /**
  * @brief 用于执行io操作的后台基类，统一epoll、poll等不同内核接口。该io操作在一个独立的线程
@@ -55,13 +52,12 @@ public:
      */
     bool remove_watcher(EVIO *w, int32_t fd);
 
-#if defined(ENABLE_KCP)
     // kcp会话管理器，只有backend线程能操作
+    // 注意：ENABLE_KCP=OFF 时主循环不再驱动它(见 ev_backend.cpp)，里面的表永远是空的
     KcpMgr &kcp_mgr()
     {
         return kcp_mgr_;
     }
-#endif
     /**
      * @brief 往backend给指定watcher追加一个事件，该事件和已有事件堆叠
      * 主要解决socket频繁发送数据，需要不断追加EV_WRITE事件的问题
@@ -172,8 +168,6 @@ protected:
     std::mutex mutex_;
     WatcherMgr fd_mgr_; // 管理epoll中的所有fd
 
-#if defined(ENABLE_KCP)
     KcpMgr kcp_mgr_; // kcp会话管理器，backend独占
-#endif
 };
 

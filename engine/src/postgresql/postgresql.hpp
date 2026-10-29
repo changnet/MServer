@@ -1,5 +1,9 @@
 #pragma once
 
+// PostgreSQL 由 CMake 的 ENABLE_POSTGRESQL 开关控制，关闭时整个文件不参与编译。
+// 这样编译机不需要装 libpq 的开发包，部署机不需要装 libpq 运行库
+#ifdef ENABLE_POSTGRESQL
+
 #include <string>
 #include <unordered_set>
 
@@ -201,3 +205,5 @@ protected:
     int32_t stmt_len_;
     int32_t stmt_idx_;
 };
+
+#endif /* ENABLE_POSTGRESQL */

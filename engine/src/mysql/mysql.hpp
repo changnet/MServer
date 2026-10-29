@@ -1,5 +1,9 @@
 #pragma once
 
+// MariaDB 由 CMake 的 ENABLE_MARIADB 开关控制，关闭时整个文件不参与编译。
+// 这样编译机不需要装 mariadb 的开发包，部署机不需要装 libmariadb 运行库
+#ifdef ENABLE_MARIADB
+
 #include <mariadb/mysql.h>
 #include "global/global.hpp"
 
@@ -126,3 +130,5 @@ protected:
     int32_t stmt_len_;
     int32_t stmt_idx_;
 };
+
+#endif /* ENABLE_MARIADB */

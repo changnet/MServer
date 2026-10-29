@@ -1,5 +1,9 @@
 #pragma once
 
+// MongoDB 由 CMake 的 ENABLE_MONGODB 开关控制，关闭时整个文件不参与编译。
+// 这样编译机不需要装 mongoc 的开发包，部署机不需要装 mongoc2/bson2 运行库
+#ifdef ENABLE_MONGODB
+
 #include <bson/bson.h>
 #include <mongoc/mongoc.h>
 
@@ -153,3 +157,5 @@ private:
     mongoc_database_t *database_;
     std::unordered_map<std::string, mongoc_collection_t *> collection_;
 };
+
+#endif /* ENABLE_MONGODB */

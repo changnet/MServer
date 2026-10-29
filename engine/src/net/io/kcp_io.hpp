@@ -2,8 +2,6 @@
 
 #include "global/global.hpp"
 
-#if defined(ENABLE_KCP)
-
 #include "ikcp.h"
 #include "io.hpp"
 #include "net/udp_addr.hpp"
@@ -134,5 +132,3 @@ private:
     struct IKCPCB *kcp_    = nullptr;
     AcceptContext *accept_ = nullptr; // 监听socket的accept上下文
 };
-
-#endif

@@ -7,8 +7,6 @@
 #include "net/udp_addr.hpp"
 #include "thread/thread_context.hpp"
 
-#if defined(ENABLE_KCP)
-
 class EVIO;
 class KcpIO;
 
@@ -61,5 +59,3 @@ private:
 
     int64_t next_accept_timeout_ = 0; // 下一次扫描accept超时的时间戳(ms)
 };
-
-#endif

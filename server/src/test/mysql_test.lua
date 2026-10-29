@@ -2,6 +2,12 @@
 -- 2016-03-08
 -- xzc
 -- mysql测试用例
+
+if g_sharedata:get("__ENABLE_MYSQL__") ~= "true" then
+    print("ENABLE_MYSQL not enable, mysql_test skipped")
+    return
+end
+
 local MySQL = require "mysql.mysql"
 
 local max_insert = 10000

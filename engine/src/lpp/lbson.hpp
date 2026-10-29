@@ -1,6 +1,9 @@
 #pragma once
 
 // lua与bson的交互，这个文件暂时只有mongodb在用，所以所有逻辑都放头文件了
+//
+// 依赖 <bson/bson.h>，因此整个文件跟着 ENABLE_MONGODB 一起开关
+#ifdef ENABLE_MONGODB
 
 #include <bson/bson.h>
 #include "ltools.hpp" // lua_isbit32
@@ -785,3 +788,5 @@ bson_t *checkbson(lua_State *L, int32_t index, double opt, Args... destroy_list)
 }
 
 } // namespace lbson
+
+#endif /* ENABLE_MONGODB */

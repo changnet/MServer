@@ -1,7 +1,5 @@
 #include "kcp_mgr.hpp"
 
-#if defined(ENABLE_KCP)
-
 #include "ev/time.hpp"
 #include "ev/ev_watcher.hpp"
 #include "net/io/kcp_io.hpp"
@@ -204,5 +202,3 @@ void KcpMgr::clear()
     for (auto &x : listeners_) x.second->on_kcpmgr_remove();
     listeners_.clear();
 }
-
-#endif

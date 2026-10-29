@@ -1,3 +1,6 @@
+// PostgreSQL 由 CMake 的 ENABLE_POSTGRESQL 开关控制，关闭时整个文件不参与编译
+#ifdef ENABLE_POSTGRESQL
+
 #include "postgresql.hpp"
 
 #include <cstdlib>
@@ -680,3 +683,5 @@ int32_t PostgreSQL::stmt_exec(lua_State *L)
     if (get_result) lua_pushnil(L);
     return get_result ? 2 : 1;
 }
+
+#endif /* ENABLE_POSTGRESQL */

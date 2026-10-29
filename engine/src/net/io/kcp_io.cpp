@@ -1,7 +1,5 @@
 #include "kcp_io.hpp"
 
-#if defined(ENABLE_KCP)
-
 #include <lua.hpp>
 #include <vector>
 
@@ -589,4 +587,3 @@ void KcpIO::remove_accept_timeout(int64_t now)
         it = accepting.erase(it);
     }
 }
-#endif

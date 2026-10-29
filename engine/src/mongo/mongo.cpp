@@ -1,3 +1,6 @@
+// MongoDB 由 CMake 的 ENABLE_MONGODB 开关控制，关闭时整个文件不参与编译
+#ifdef ENABLE_MONGODB
+
 #include "mongo.hpp"
 
 #include "lpp/lbson.hpp"
@@ -474,3 +477,5 @@ int32_t Mongo::aggregate(lua_State *L)
     lua_insert(L, -2); // insert error code before table
     return 2;
 }
+
+#endif /* ENABLE_MONGODB */

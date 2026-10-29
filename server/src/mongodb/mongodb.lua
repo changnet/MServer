@@ -1,4 +1,8 @@
 -- MongoDB读写
+
+-- cmake 的 ENABLE_MONGODB 关闭时，C++ 侧不会注册 engine.Mongo，require 会直接报错
+if g_sharedata:get("__ENABLE_MONGODB__") ~= "true" then return end
+
 local MongoDB = oo.class("MongoDB")
 
 local Mongo = require "engine.Mongo"

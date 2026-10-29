@@ -1,3 +1,6 @@
+// MariaDB 由 CMake 的 ENABLE_MARIADB 开关控制，关闭时整个文件不参与编译
+#ifdef ENABLE_MARIADB
+
 #include "mysql.hpp"
 
 #include "lpp/ltools.hpp"
@@ -425,3 +428,5 @@ void MySql::clear_result()
     MYSQL_RES *res = mysql_store_result(mysql_);
     if (res) mysql_free_result(res);
 }
+
+#endif /* ENABLE_MARIADB */

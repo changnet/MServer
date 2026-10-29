@@ -33,11 +33,9 @@ EVBackend::EVBackend()
 
 EVBackend::~EVBackend()
 {
-#if defined(ENABLE_KCP)
     // 必须在清fd引用之前：fd_mgr_.iter会销毁EVIO（连带io_），
     // 而kcp的表里存的是这些EVIO的指针
     kcp_mgr_.clear();
-#endif
 
     fd_mgr_.iter([](EVIO *w) { w->del_ref(EVIO::M_REF_BACKEND); });
     fd_mgr_.clear();
@@ -76,10 +74,8 @@ void EVBackend::do_thread_message()
 
         switch (m.type_)
         {
-#if defined(ENABLE_KCP)
         case ThreadMessage::KCP_ADD: kcp_mgr_.do_add_message(&m); break;
         case ThreadMessage::KCP_DEL: kcp_mgr_.do_del_message(&m); break;
-#endif
         case ThreadMessage::WATCHER_EV: do_watcher_message(&m); break;
         default:
             ELOG("backend unknow message type: %d", m.type_);

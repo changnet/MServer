@@ -18,6 +18,10 @@ postgresql数据存储处理
    且必须指定冲突目标（主键或者唯一约束的列），PG没有自动匹配任意唯一键的写法
 ]]
 
+-- cmake 的 ENABLE_POSTGRESQL 关闭时，C++ 侧不会注册 engine.PostgreSQL，
+-- require 会直接报错，所以这个判断必须放在 require 之前
+if g_sharedata:get("__ENABLE_POSTGRESQL__") ~= "true" then return end
+
 -- C++底层绑定(engine.PostgreSQL)
 local PostgreSQLBase = require "engine.PostgreSQL"
 

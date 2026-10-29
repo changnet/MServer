@@ -28,8 +28,15 @@ endif()
 
 project(MServer)
 
-# 是否编译kcp支持。关闭时 kcp 相关的四个源文件整体被编译期剔除
+# ===================== 可选模块开关 =====================
+# KCP：关闭后 backend 主循环不再每轮 update kcp 会话、不再收紧 wait 超时（省性能）。
+#      kcp 的源码仍然参与编译（ikcp 是自己的静态库，不产生部署依赖）
+# MariaDB / MongoDB / PostgreSQL：关闭后不 find_package、不链接，既不要求编译机装对应的
+#      开发包，也不要求部署机装运行库。源码保留在仓库里，只是整体被编译期剔除
 option(ENABLE_KCP "Enable Kcp" ON)
+option(ENABLE_MARIADB "Enable MariaDB" ON)
+option(ENABLE_MONGODB "Enable MongoDB" ON)
+option(ENABLE_POSTGRESQL "Enable PostgreSQL" ON)
 
 if(NOT CMAKE_BUILD_TYPE)
    set(CMAKE_BUILD_TYPE Debug )
@@ -109,32 +116,41 @@ set(C_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../server/c_module")
 string(LENGTH "${CMAKE_SOURCE_DIR}/" SRC_PATH_SIZE)
 add_definitions("-DSRC_PATH_SIZE=${SRC_PATH_SIZE}")
 
-if(WINDOWS)
-    find_package(unofficial-libmariadb CONFIG REQUIRED)
-    # libmariadb的头文件，apt(debian)装在/usr/include/mariadb，vcpkg装在include/mysql
-    # 源码统一按apt的方式写#include <mariadb/mysql.h>，而vcpkg的unofficial::libmariadb
-    # 这个target声明的include目录正好也是include/mariadb，只是vcpkg并没有真的建这个目录，
-    # 所以导出后需要把include/mysql复制为include/mariadb(见shell/vcpkg.bat的export命令)。
-    # 没有这一步，cmake会报target包含不存在的路径，编译也找不到头文件
-    get_target_property(MARIADB_INCLUDE unofficial::libmariadb INTERFACE_INCLUDE_DIRECTORIES)
-    if(NOT EXISTS "${MARIADB_INCLUDE}")
-        message(FATAL_ERROR
-            "libmariadb的头文件目录不存在: ${MARIADB_INCLUDE}\n"
-            "进入${VCPKG_PATH}/${VCPKG_EXPORT_NAME}，把installed/${VCPKG_TARGET_TRIPLET}/include/mysql"
-            "复制为mariadb，或者重新执行 shell\\vcpkg.bat export")
+if(ENABLE_MARIADB)
+    if(WINDOWS)
+        find_package(unofficial-libmariadb CONFIG REQUIRED)
+        # libmariadb的头文件，apt(debian)装在/usr/include/mariadb，vcpkg装在include/mysql
+        # 源码统一按apt的方式写#include <mariadb/mysql.h>，而vcpkg的unofficial::libmariadb
+        # 这个target声明的include目录正好也是include/mariadb，只是vcpkg并没有真的建这个目录，
+        # 所以导出后需要把include/mysql复制为include/mariadb(见shell/vcpkg.bat的export命令)。
+        # 没有这一步，cmake会报target包含不存在的路径，编译也找不到头文件
+        get_target_property(MARIADB_INCLUDE unofficial::libmariadb INTERFACE_INCLUDE_DIRECTORIES)
+        if(NOT EXISTS "${MARIADB_INCLUDE}")
+            message(FATAL_ERROR
+                "libmariadb的头文件目录不存在: ${MARIADB_INCLUDE}\n"
+                "进入${VCPKG_PATH}/${VCPKG_EXPORT_NAME}，把installed/${VCPKG_TARGET_TRIPLET}/include/mysql"
+                "复制为mariadb，或者重新执行 shell\\vcpkg.bat export")
+        endif()
+    elseif(LINUX)
+        # 通过apt安装暂时没有通过find_package查找mariadb的方式
+        # find_package(libmariadb REQUIRED)
     endif()
-elseif(LINUX)
-    # 通过apt安装暂时没有通过find_package查找mariadb的方式
-    # find_package(libmariadb REQUIRED)
 endif()
 
+# openssl是ssl_io用的，不随任何一个DB开关关闭
 find_package(OpenSSL REQUIRED)
-find_package(mongoc CONFIG REQUIRED)
-# libpq。windows 下 vcpkg 的 libpq 端口自带 share/postgresql/vcpkg-cmake-wrapper.cmake，
-# 会把 PostgreSQL_LIBRARY_RELEASE 指向导出目录里的 libpq.lib 再转给内置的
-# FindPostgreSQL；debian 下找到的是 libpq.so。两边拿到的都是 PostgreSQL::PostgreSQL 这个
-# target，源码统一写 #include <libpq-fe.h> 即可
-find_package(PostgreSQL REQUIRED)
+
+if(ENABLE_MONGODB)
+    find_package(mongoc CONFIG REQUIRED)
+endif()
+
+if(ENABLE_POSTGRESQL)
+    # libpq。windows 下 vcpkg 的 libpq 端口自带 share/postgresql/vcpkg-cmake-wrapper.cmake，
+    # 会把 PostgreSQL_LIBRARY_RELEASE 指向导出目录里的 libpq.lib 再转给内置的
+    # FindPostgreSQL；debian 下找到的是 libpq.so。两边拿到的都是 PostgreSQL::PostgreSQL 这个
+    # target，源码统一写 #include <libpq-fe.h> 即可
+    find_package(PostgreSQL REQUIRED)
+endif()
 
 add_subdirectory(deps)
 
@@ -187,11 +203,20 @@ target_link_libraries(master PRIVATE
     websocket_parser
 )
 
-# kcp：开关和常量都要让源码可见，所以要加编译定义
-if(ENABLE_KCP)
-    target_compile_definitions(master PRIVATE ENABLE_KCP=1)
-    target_link_libraries(master PRIVATE kcp)
-endif()
+# ===================== 可选模块的编译宏 =====================
+# 宏统一为 开启时=1、关闭时不定义，源码里一律用 #ifdef XXX
+foreach(MOD_OPT ENABLE_KCP ENABLE_MARIADB ENABLE_MONGODB ENABLE_POSTGRESQL)
+    if(${MOD_OPT})
+        target_compile_definitions(master PRIVATE ${MOD_OPT}=1)
+        message(STATUS "module enabled : ${MOD_OPT}")
+    else()
+        message(STATUS "module disabled: ${MOD_OPT}")
+    endif()
+endforeach()
+
+# ikcp 无条件链接。ENABLE_KCP=OFF 时 kcp 的源码(kcp_io/kcp_mgr/kcp_packet)仍然在编译，
+# 仍然要用 ikcp.h；它是在 deps 里从源码编的静态库，不会产生部署依赖
+target_link_libraries(master PRIVATE kcp)
 
 if(WINDOWS)
     target_include_directories(master PRIVATE
@@ -204,28 +229,43 @@ if(WINDOWS)
         iphlpapi # if_nametoindex，解析 "fe80::1%eth0" 里的接口名
         lua
         OpenSSL::SSL OpenSSL::Crypto
-        unofficial::libmariadb
-        PostgreSQL::PostgreSQL
-        mongoc::shared
+        # winsock 必须自己声明：以前是靠 libmariadb/mongoc 的 INTERFACE 依赖顺带传进来的，
+        # 三个 DB 一关，accept/bind/connect/WSAStartup 这些符号就没人提供了
+        ws2_32
         # "C:\\Program Files (x86)\\Visual Leak Detector\\lib\\Win64\\vld.lib"
     )
+    # 关掉的库不链接，vcpkg 的 applocal 就不会把对应 dll 拷进 bin —— 部署依赖就是这样消失的
+    if(ENABLE_MARIADB)
+        target_link_libraries(master PRIVATE unofficial::libmariadb)
+    endif()
+    if(ENABLE_POSTGRESQL)
+        target_link_libraries(master PRIVATE PostgreSQL::PostgreSQL)
+    endif()
+    if(ENABLE_MONGODB)
+        target_link_libraries(master PRIVATE mongoc::shared)
+    endif()
 elseif(UNIX)
-    # 用system指定这些目录为系统目录，去除bson中的一些编译警告
-    target_include_directories(master SYSTEM PRIVATE
-        /usr/include/mariadb
-        ${PostgreSQL_INCLUDE_DIRS}   # debian 下是 /usr/include/postgresql
-    )
     target_link_libraries(master PRIVATE
         lua
         uuid.a
-        mariadb      # libmariadb.so，与 libpq、mongoc 一样统一动态链接
-        PostgreSQL::PostgreSQL
-        mongoc::shared
 
         # sasl2 # mongodb使用LDAP认证才需要sasl2，暂时不使用
 
         ssl crypto dl rt pthread resolv z stdc++fs
     )
+    if(ENABLE_MARIADB)
+        # apt 装在 /usr/include/mariadb，没有对应的 find_package
+        target_include_directories(master SYSTEM PRIVATE /usr/include/mariadb)
+        target_link_libraries(master PRIVATE mariadb) # libmariadb.so，动态链接
+    endif()
+    if(ENABLE_POSTGRESQL)
+        # debian 下是 /usr/include/postgresql
+        target_include_directories(master SYSTEM PRIVATE ${PostgreSQL_INCLUDE_DIRS})
+        target_link_libraries(master PRIVATE PostgreSQL::PostgreSQL)
+    endif()
+    if(ENABLE_MONGODB)
+        target_link_libraries(master PRIVATE mongoc::shared)
+    endif()
 endif()
 
 install(TARGETS master DESTINATION "${CMAKE_INSTALL_PREFIX}")

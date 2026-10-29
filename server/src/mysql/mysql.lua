@@ -11,6 +11,10 @@ mysql数据存储处理
     由于包含二进制数据，也是不能用strlen之类的函数判断
 ]]
 
+-- cmake 的 ENABLE_MARIADB 关闭时，C++ 侧不会注册 engine.MySql，
+-- require 会直接报错，所以这个判断必须放在 require 之前
+if g_sharedata:get("__ENABLE_MYSQL__") ~= "true" then return end
+
 local MySql = require "engine.MySql"
 
 local MySQL = oo.class("MySQL")

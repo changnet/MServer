@@ -2,6 +2,12 @@
 -- 2016-03-07
 -- xzc
 -- mongo db 测试用例
+
+if g_sharedata:get("__ENABLE_MONGODB__") ~= "true" then
+    print("ENABLE_MONGODB not enable, mongodb_test skipped")
+    return
+end
+
 local max_insert = 10000
 local collection = "perf_test"
 local Json = require "util.json"

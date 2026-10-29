@@ -1,7 +1,5 @@
 #include "kcp_packet.hpp"
 
-#if defined(ENABLE_KCP)
-
 #include "net/socket.hpp"
 
 KcpPacket::KcpPacket(class Socket *sk) : Packet(sk)
@@ -93,5 +91,3 @@ int32_t KcpPacket::pack(lua_State *L, int32_t index)
 
     return 0;
 }
-
-#endif

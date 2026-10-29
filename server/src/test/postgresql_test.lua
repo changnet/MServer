@@ -2,6 +2,12 @@
 -- 2026-10-27
 -- xzc
 -- postgresql测试用例
+
+if g_sharedata:get("__ENABLE_POSTGRESQL__") ~= "true" then
+    print("ENABLE_POSTGRESQL not enable, postgresql_test skipped")
+    return
+end
+
 local PostgreSQL = require "postgresql.postgresql"
 local Json = require "util.json"
 

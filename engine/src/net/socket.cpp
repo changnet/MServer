@@ -845,9 +845,7 @@ void *Socket::set_io(int32_t io_type)
     case IO::IOT_TCP: io = new TcpIO(); break;
     case IO::IOT_SSL:io = new SSLIO();break;
     case IO::IOT_UDP: io = new UdpIO(); break;
-#if defined(ENABLE_KCP)
     case IO::IOT_KCP: io = new KcpIO(); break;
-#endif
     default: return nullptr;
     }
 
@@ -875,9 +873,7 @@ int32_t Socket::set_packet(int32_t packet_type)
     case Packet::PT_STREAM: packet_ = new StreamPacket(this); break;
     case Packet::PT_WEBSOCKET: packet_ = new WebsocketPacket(this); break;
     case Packet::PT_UDPSTREAM: packet_ = new UdpPacket(this); break;
-#if defined(ENABLE_KCP)
     case Packet::PT_KCPSTREAM: packet_ = new KcpPacket(this); break;
-#endif
     default: return -1;
     }
     return 0;

@@ -19,9 +19,17 @@
 #include "system/static_global.hpp"
 #include "system/signal.hpp"
 #include "thread/worker_thread.hpp"
-#include "mysql/mysql.hpp"
-#include "postgresql/postgresql.hpp"
-#include "mongo/mongo.hpp"
+// 三个数据库模块由 CMake 的开关控制。关闭时不 include 其头文件，
+// 这样编译机不需要装对应的开发包（它们会 include <mariadb/mysql.h> 等）
+#ifdef ENABLE_MARIADB
+    #include "mysql/mysql.hpp"
+#endif
+#ifdef ENABLE_POSTGRESQL
+    #include "postgresql/postgresql.hpp"
+#endif
+#ifdef ENABLE_MONGODB
+    #include "mongo/mongo.hpp"
+#endif
 #include "ev/time.hpp"
 #include "lbuffer.hpp"
 #include "system/util.hpp"
@@ -278,6 +286,7 @@ static void luaopen_pbc_codec(lua_State *L)
 }
 
 
+#ifdef ENABLE_MARIADB
 static void luaopen_mysql(lua_State *L)
 {
     lcpp::Class<MySql> lc(L, "engine.MySql");
@@ -298,7 +307,9 @@ static void luaopen_mysql(lua_State *L)
     lc.def<&MySql::stmt_value>("stmt_value");
     lc.def<&MySql::stmt_clear>("stmt_clear");
 }
+#endif /* ENABLE_MARIADB */
 
+#ifdef ENABLE_POSTGRESQL
 static void luaopen_postgresql(lua_State *L)
 {
     lcpp::Class<PostgreSQL> lc(L, "engine.PostgreSQL");
@@ -323,7 +334,9 @@ static void luaopen_postgresql(lua_State *L)
     lc.def<&PostgreSQL::stmt_value>("stmt_value");
     lc.def<&PostgreSQL::stmt_clear>("stmt_clear");
 }
+#endif /* ENABLE_POSTGRESQL */
 
+#ifdef ENABLE_MONGODB
 static void luaopen_mongo(lua_State *L)
 {
     lcpp::Class<Mongo> lc(L, "engine.Mongo");
@@ -345,6 +358,7 @@ static void luaopen_mongo(lua_State *L)
     lc.def<&Mongo::aggregate>("aggregate");
     lc.def<&Mongo::insert_many>("insert_many");
 }
+#endif /* ENABLE_MONGODB */
 
 static void luaopen_log(lua_State *L)
 {
@@ -495,6 +509,30 @@ void init_env(const char *source)
 #ifndef NDEBUG
     S->set_kv("__DEBUG__", "true");
 #endif
+
+    // 可选模块的编译开关（对应 CMake 的 option），值统一是 "true" / "false" 字符串。
+    // 一定要写 "false" 而不是不设置：lua 侧只需要一次比较就能跳过。
+    //   if g_sharedata:get("__ENABLE_MYSQL__") ~= "true" then return end
+#ifdef ENABLE_KCP
+    S->set_kv("__ENABLE_KCP__", "true");
+#else
+    S->set_kv("__ENABLE_KCP__", "false");
+#endif
+#ifdef ENABLE_MARIADB
+    S->set_kv("__ENABLE_MYSQL__", "true");
+#else
+    S->set_kv("__ENABLE_MYSQL__", "false");
+#endif
+#ifdef ENABLE_MONGODB
+    S->set_kv("__ENABLE_MONGODB__", "true");
+#else
+    S->set_kv("__ENABLE_MONGODB__", "false");
+#endif
+#ifdef ENABLE_POSTGRESQL
+    S->set_kv("__ENABLE_POSTGRESQL__", "true");
+#else
+    S->set_kv("__ENABLE_POSTGRESQL__", "false");
+#endif
 }
 
 void open_env(lua_State *L)
@@ -536,12 +574,18 @@ void open_cpp(lua_State *L)
     luaopen_net_header(L);
     luaopen_lua_codec(L);
     luaopen_pbc_codec(L);
+#ifdef ENABLE_MARIADB
     luaopen_mysql(L);
+#endif
+#ifdef ENABLE_POSTGRESQL
     luaopen_postgresql(L);
+#endif
     luaopen_log(L);
     luaopen_map(L);
     luaopen_astar(L);
+#ifdef ENABLE_MONGODB
     luaopen_mongo(L);
+#endif
     luaopen_grid_aoi(L);
     luaopen_orth_list_aoi(L);
     luaopen_skip_list_aoi(L);

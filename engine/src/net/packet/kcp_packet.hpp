@@ -2,8 +2,6 @@
 
 #include "packet.hpp"
 
-#if defined(ENABLE_KCP)
-
 /*
  * kcp的数据打包
  *
@@ -29,5 +27,3 @@ public:
 private:
     uint32_t to_remove_; // 已解析完，待删除的buffer
 };
-
-#endif
