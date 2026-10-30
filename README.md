@@ -6,6 +6,16 @@
 - **稳定性**：游戏业务逻辑采用 Lua 脚本进行开发，降低崩溃宕机的概率，保持极高的开发效率高。
 - **扩展性**：可以在多线程、多进程、集群模式中切换，根据需求扩展线程节点数量。
 
+## CI 状态
+
+每周一自动执行，也可以在 Actions 页面手动触发。作业覆盖 **windows-2022 / ubuntu-24.04** 两个系统，每个系统按**模块全开、模块全关**两种配置各编一次，测试跑的是 json 相关用例（用来验证 `server/c_module` 下的 lua C 模块能被正确加载）。
+
+[![CI](https://github.com/changnet/MServer/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/changnet/MServer/actions/workflows/ci.yml)
+[![windows ci](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fchangnet%2FMServer%2Fbadges%2Fci-windows.json)](https://github.com/changnet/MServer/actions/workflows/ci.yml)
+[![linux ci](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fchangnet%2FMServer%2Fbadges%2Fci-linux.json)](https://github.com/changnet/MServer/actions/workflows/ci.yml)
+
+后两个徽章显示的是**最近一次运行的日期和结果**，数据由 `badges` 分支上的 `ci-windows.json` / `ci-linux.json` 提供（首次 CI 运行后才有内容）。
+
 ## 核心功能
 - Lua热更新
 - Lua面向对象编程（可选）

@@ -1,0 +1,228 @@
+# CI 双平台构建 + 冒烟测试
+#
+# 触发方式：手动(workflow_dispatch) 或每周一次定时。不跟随每次 push，
+# 因为 windows 侧 vcpkg 依赖是源码编译，冷启动要 30~40 分钟。
+#
+# 作业编排：
+#   windows-deps  只做 vcpkg install/export，产物按 vcpkg.json 的 hash 缓存
+#   windows       modules ON / OFF 两份配置，都依赖上面的缓存，不重复编译
+#   linux         modules ON / OFF 两份配置，依赖用 shell/setup_env.sh 安装
+#   badge         汇总结果，写 shields.io 的 json 到 badges 分支
+#
+# 测试只跑 json 相关用例(--filter json)：它 require 了 server/c_module 下的
+# cjson 动态库，能验证 lua c 模块(本地带来的 abi、加载路径、符号解析)是否正常。
+# 其余用例依赖外网服务或数据库，不在 CI 里跑。
+
+name: CI
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 每周一 03:17 UTC。GitHub 的 cron 是尽力而为，整点前后可能被延后
+    - cron: '17 3 * * 1'
+
+permissions:
+  contents: read
+
+# 允许同一分支上多个运行并存，但新的定时任务不打断正在跑的
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ------------------------------------------------------------------
+  # windows 的依赖是唯一的重活：openssl、mongo-c-driver、libmariadb、libpq
+  # 全部从源码编。编完后 export 出来的树(~150M)按 project/vcpkg.json 的
+  # hash 缓存：命中时后续作业只要解压一次，未命中才付出编译时间。
+  # 单独成一个作业是为了让 modules ON/OFF 两个配置共用一次编译。
+  # ------------------------------------------------------------------
+  windows-deps:
+    name: windows deps
+    runs-on: windows-2022
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: restore vcpkg export
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: engine/vcpkg_win_x64/vcpkg-export
+          key: vcpkg-win-x64-${{ hashFiles('project/vcpkg.json') }}
+
+      # vcpkg.bat 内部会 cd 到项目根并按固定名字工作，第二个参数(vcpkg 根目录)
+      # 省略表示用 PATH 里的 vcpkg，也不去 pull vcpkg 自身的仓库
+      - name: vcpkg install
+        if: steps.cache.outputs.cache-hit != 'true'
+        shell: cmd
+        run: shell\vcpkg.bat install
+
+      - name: vcpkg export
+        if: steps.cache.outputs.cache-hit != 'true'
+        shell: cmd
+        run: shell\vcpkg.bat export
+
+  windows:
+    name: windows (modules ${{ matrix.modules }})
+    needs: windows-deps
+    runs-on: windows-2022
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        modules: [ON, OFF]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: restore vcpkg export
+        uses: actions/cache/restore@v4
+        with:
+          path: engine/vcpkg_win_x64/vcpkg-export
+          key: vcpkg-win-x64-${{ hashFiles('project/vcpkg.json') }}
+          fail-on-cache-miss: true
+
+      # 这里没有直接调用 shell\win_build.bat：它找不到 vswhere 时会回退到
+      # 作者本机的 D:\Program Files\... 路径，在 runner 上不存在。
+      # 其余参数(代码页 65001、 Ninja、install)与该脚本保持一致。
+      - name: build
+        shell: cmd
+        run: |
+          set "VS_DIR="
+          if exist "%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" (
+            for /f "usebackq delims=" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath"`) do set "VS_DIR=%%i"
+          )
+          if not defined VS_DIR set "VS_DIR=%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise"
+          if not exist "%VS_DIR%\VC\Auxiliary\Build\vcvars64.bat" (
+            echo vcvars64.bat not found under %VS_DIR%
+            exit /b 1
+          )
+          call "%VS_DIR%\VC\Auxiliary\Build\vcvars64.bat"
+          chcp 65001
+          cmake -S engine -B server\var\win-x64 -G Ninja ^
+            -DCMAKE_BUILD_TYPE=Release ^
+            -DENABLE_MARIADB=${{ matrix.modules }} ^
+            -DENABLE_MONGODB=${{ matrix.modules }} ^
+            -DENABLE_POSTGRESQL=${{ matrix.modules }}
+          cmake --build server\var\win-x64
+          cmake --install server\var\win-x64
+
+      # setting.lua 和 server/var 都不在版本库里(startup.lua 从工作目录读它)，
+      # 这里用样本配置补上；log 目录是 run_test.sh 读解析结果的地方
+      - name: prepare runtime
+        shell: bash
+        run: |
+          mkdir -p server/var/log
+          cp server/setting/setting_default.lua server/var/setting.lua
+
+      - name: test
+        shell: bash
+        run: bash .agents/skills/build-test/scripts/run_test.sh test1 --filter json --timeout 300
+
+      - name: upload log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: log-windows-${{ matrix.modules }}
+          path: server/var/log
+
+  linux:
+    name: linux (modules ${{ matrix.modules }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        modules: [ON, OFF]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # 编译工具链 + uuid/ssl/mariadb/libpq 走 apt，mongo-c-driver 用仓库自带的
+      # mongo-c-driver-2.5.7.tar.gz 源码编(debian/ubuntu 的 libmongoc-dev 版本对
+      # 不上 mongoc 2.x 的 mongoc::shared 和 <bson/bson.h>)
+      - name: dependencies
+        run: sudo bash shell/setup_env.sh
+
+      # 构建目录沿用 build.sh 的 server/var/linux-x64。这里没有调用 build.sh，
+      # 因为它不接受额外的 cmake 参数，而 CI 要按矩阵切换模块开关
+      - name: build
+        run: |
+          mkdir -p server/var/linux-x64
+          cd server/var/linux-x64
+          cmake ../../../engine \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DENABLE_MARIADB=${{ matrix.modules }} \
+            -DENABLE_MONGODB=${{ matrix.modules }} \
+            -DENABLE_POSTGRESQL=${{ matrix.modules }}
+          make -j$(nproc) install
+
+      - name: prepare runtime
+        run: |
+          mkdir -p server/var/log
+          cp server/setting/setting_default.lua server/var/setting.lua
+
+      - name: test
+        run: bash .agents/skills/build-test/scripts/run_test.sh test1 --filter json --timeout 300
+
+      - name: upload log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: log-linux-${{ matrix.modules }}
+          path: server/var/log
+
+  # ------------------------------------------------------------------
+  # 把结果写成 shields.io 的 endpoint json 推到 badges 分支(独立孤儿分支，
+  # 不在 master 上留每次自动提交的噪音)。README 用 img.shields.io/endpoint 引用。
+  # ------------------------------------------------------------------
+  badge:
+    name: badge
+    needs: [windows, linux]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      WIN_RESULT: ${{ needs.windows.result }}
+      LNX_RESULT: ${{ needs.linux.result }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: update badge branch
+        run: |
+          set -e
+
+          write_badge() {
+            local file="$1" label="$2" result="$3"
+            local color="red" text="failing"
+            if [ "$result" = "success" ]; then
+              color="brightgreen"
+              text="passing"
+            fi
+            printf '{"schemaVersion":1,"label":"%s","message":"%s %s","color":"%s"}\n' \
+              "$label" "$(date -u +%F)" "$text" "$color" > "$work/repo/$file"
+          }
+
+          # badges 分支不存在时建一个孤儿分支，多年只用这两个 json
+          work=$(mktemp -d)
+          url="https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
+          if ! git clone --depth 1 --branch badges "$url" "$work/repo" 2>/dev/null; then
+            mkdir -p "$work/repo"
+            git -C "$work/repo" init -q
+            git -C "$work/repo" checkout -q --orphan badges
+            git -C "$work/repo" remote add origin "$url"
+          fi
+
+          write_badge ci-windows.json "windows ci" "$WIN_RESULT"
+          write_badge ci-linux.json "linux ci" "$LNX_RESULT"
+
+          cd "$work/repo"
+          git add -A
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -q -m "ci: update badge $(date -u +%F)" || echo "no badge change"
+          git push origin HEAD:badges

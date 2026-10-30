@@ -22,7 +22,9 @@ if "%2"=="" (set VCPKG=vcpkg) else (set VCPKG=%2\vcpkg.exe)
 if "%1"=="export" goto do_export
 
 :do_install
-git -C "%2" pull
+rem vcpkg root is optional on CI, the runner already ships vcpkg in PATH.
+rem update the vcpkg checkout only when a root was given
+if not "%2"=="" git -C "%2" pull
 "%VCPKG%" install --x-manifest-root=.\project --x-install-root=.\engine\vcpkg_win
 goto :eof
 
