@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint> /* uint8_t int32_t */
 #include <vector>
 #include <bitset>
 

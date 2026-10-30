@@ -85,26 +85,34 @@ jobs:
 
       # 这里没有直接调用 shell\win_build.bat：它找不到 vswhere 时会回退到
       # 作者本机的 D:\Program Files\... 路径，在 runner 上不存在。
-      # 其余参数(代码页 65001、 Ninja、install)与该脚本保持一致。
+      # 其余参数(代码页 65001、Ninja、install)与该脚本保持一致。
+      #
+      # VS 的环境单独用一个 pwsh step 设置。cmd 的每个 step 都是新进程，跨 step
+      # 不会继承变量；而且多行 run 里的 `^` 续行在 runner 上不可用(GitHub 把脚本
+      # 写成文件再 CALL，续行会报 "The syntax of the command is incorrect")。
+      # 这里在子进程里跑 vsdevcmd.bat 拿到它设置的变量，追加到 GITHUB_ENV，
+      # 后续 step 会自动继承(INCLUDE / LIB / PATH 都在里面)。
+      - name: setup msvc env
+        shell: pwsh
+        run: |
+          $vs_where = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $installation = & $vs_where -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $installation) { throw "vswhere cannot find visual studio" }
+          Write-Host "visual studio: $installation"
+          $dev_cmd = Join-Path $installation "Common7\Tools\vsdevcmd.bat"
+          & "${env:COMSPEC}" /s /c "`"$dev_cmd`" -arch=x64 -no_logo && set" | ForEach-Object {
+            $name, $value = $_ -split '=', 2
+            if ($name -and $value -and $value -notmatch "[\r\n]") {
+              Add-Content -Path $env:GITHUB_ENV -Value "$name=$value"
+            }
+          }
+
       - name: build
         shell: cmd
         run: |
-          set "VS_DIR="
-          if exist "%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" (
-            for /f "usebackq delims=" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath"`) do set "VS_DIR=%%i"
-          )
-          if not defined VS_DIR set "VS_DIR=%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise"
-          if not exist "%VS_DIR%\VC\Auxiliary\Build\vcvars64.bat" (
-            echo vcvars64.bat not found under %VS_DIR%
-            exit /b 1
-          )
-          call "%VS_DIR%\VC\Auxiliary\Build\vcvars64.bat"
+          where cl
           chcp 65001
-          cmake -S engine -B server\var\win-x64 -G Ninja ^
-            -DCMAKE_BUILD_TYPE=Release ^
-            -DENABLE_MARIADB=${{ matrix.modules }} ^
-            -DENABLE_MONGODB=${{ matrix.modules }} ^
-            -DENABLE_POSTGRESQL=${{ matrix.modules }}
+          cmake -S engine -B server\var\win-x64 -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_MARIADB=${{ matrix.modules }} -DENABLE_MONGODB=${{ matrix.modules }} -DENABLE_POSTGRESQL=${{ matrix.modules }}
           cmake --build server\var\win-x64
           cmake --install server\var\win-x64
 

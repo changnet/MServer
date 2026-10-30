@@ -33,7 +33,18 @@ const char *fmt_log_buffer(int32_t &len, Args&&... args)
     thread_local ThreadLocalBuf<size> buffer;
 
     char *pbuf = buffer.get();
-    len = snprintf(pbuf, size, std::forward<Args>(args)...);
+
+    // 只有一个参数时它是纯文本(大部分日志没有占位符)。以前这种也走snprintf，一是gcc会报
+    // -Wformat-security(参数转发后不再被识别成字面量)，二是文本里的'%'会被当成格式符
+    // 解析成乱码，比如PLOG("progress 50%")。这里固定用"%s"当格式串，文本不参与解析
+    if constexpr (sizeof...(Args) == 1)
+    {
+        len = snprintf(pbuf, size, "%s", (std::forward<Args>(args), ...));
+    }
+    else
+    {
+        len = snprintf(pbuf, size, std::forward<Args>(args)...);
+    }
     if (len >= size) len = size - 1;
 
     return pbuf;
