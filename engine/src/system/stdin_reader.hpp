@@ -1,7 +1,8 @@
 #pragma once
 
-#include <mutex>
 #include <atomic>
+#include <mutex>
+#include <string> /* std::string */
 #include <thread>
 #include "global/platform.hpp"
 

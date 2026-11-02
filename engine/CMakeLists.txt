@@ -185,7 +185,6 @@ target_include_directories(master PRIVATE
     ${DEPS_PATH}/pbc
     ${DEPS_PATH}/llhttp/include
     ${DEPS_PATH}/lua_rapidxml
-    ${DEPS_PATH}/aho-corasick
     ${DEPS_PATH}/websocket-parser
 )
 
@@ -194,10 +193,9 @@ target_include_directories(master PRIVATE
 # ssl)统一动态链接，省得处理 debian 静态库不自包含的问题(libpq.a 缺 libpgport 和 ldap)。
 # 部署机上要装对应的运行时包：libmariadb3、libpq5、libmongoc2
 target_link_libraries(master PRIVATE
-    # 需要编译的库，可以写成acism或者acism.a。前者与上面的add_library同名，cmake会
+    # 需要编译的库，可以写成pbc或者pbc.a。前者与上面的add_library同名，cmake会
     # 自动解决依赖关系，后者表示静态链接，但不会产生依赖关系
     pbc
-    acism
     llhttp
     lua_rapidxml
     websocket_parser
