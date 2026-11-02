@@ -117,7 +117,7 @@ jobs:
           cmake --install server\var\win-x64
 
       # setting.lua 和 server/var 都不在版本库里(startup.lua 从工作目录读它)，
-      # 这里用样本配置补上；log 目录是 run_test.sh 读解析结果的地方
+      # 这里用样本配置补上；log 目录是测试步骤读汇总行的地方
       - name: prepare runtime
         shell: bash
         run: |
@@ -126,7 +126,20 @@ jobs:
 
       - name: test
         shell: bash
-        run: bash .agents/skills/build-test/scripts/run_test.sh test1 --filter json --timeout 300
+        run: |
+          # 测试跑完 master 不会自己退出：后台起服，盯日志里的汇总行，拿到后结束进程。
+          # 日志由框架自己写，CI 不重定向也不清理：当前日志恒为 server/var/log/test001
+          # (节点名+三位序号，跨天才被改名成 test001YYYYMMDD)
+          ( cd shell && ./win_start.bat test1 --filter json ) &
+          PID=$!
+          for _ in $(seq 1 300); do
+            sleep 1
+            grep -qE '[0-9]+ passing, [0-9]+ failing' server/var/log/test001 2>/dev/null && break
+            kill -0 "$PID" 2>/dev/null || break
+          done
+          sed -e 's/\x1b\[[0-9;]*m//g' server/var/log/test001 | grep -E '\[  OK\]|\[FAIL\]|passing' | tail -20
+          powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \"Name='master.exe'\" | Where-Object { \$_.CommandLine -match '--node test1' } | ForEach-Object { taskkill /F /PID \$_.ProcessId }" >/dev/null 2>&1
+          grep -qE '[0-9]+ passing, 0 failing' server/var/log/test001
 
       - name: upload log
         if: failure()
@@ -152,7 +165,11 @@ jobs:
       # mongo-c-driver-2.5.7.tar.gz 源码编(debian/ubuntu 的 libmongoc-dev 版本对
       # 不上 mongoc 2.x 的 mongoc::shared 和 <bson/bson.h>)
       - name: dependencies
-        run: sudo bash shell/setup_env.sh
+        run: |
+          sudo bash shell/setup_env.sh
+          # mongoc 被 make install 到 /usr/local/lib，不刷 ld 缓存的话 master
+          # 一启动就因找不到 libmongoc2.so.2 退出(本地机器缓存早刷过，发现不了)
+          sudo ldconfig
 
       # 构建目录沿用 build.sh 的 server/var/linux-x64。这里没有调用 build.sh，
       # 因为它不接受额外的 cmake 参数，而 CI 要按矩阵切换模块开关
@@ -173,7 +190,20 @@ jobs:
           cp server/setting/setting_default.lua server/var/setting.lua
 
       - name: test
-        run: bash .agents/skills/build-test/scripts/run_test.sh test1 --filter json --timeout 300
+        run: |
+          # 测试跑完 master 不会自己退出：后台起服，盯日志里的汇总行，拿到后结束进程。
+          # 日志由框架自己写，CI 不重定向也不清理：当前日志恒为 server/var/log/test001
+          # (节点名+三位序号，跨天才被改名成 test001YYYYMMDD)
+          ( cd shell && ./start.sh test1 --filter json ) &
+          PID=$!
+          for _ in $(seq 1 300); do
+            sleep 1
+            grep -qE '[0-9]+ passing, [0-9]+ failing' server/var/log/test001 2>/dev/null && break
+            kill -0 "$PID" 2>/dev/null || break
+          done
+          sed -e 's/\x1b\[[0-9;]*m//g' server/var/log/test001 | grep -E '\[  OK\]|\[FAIL\]|passing' | tail -20
+          pgrep -f 'bin/master --node test1' | xargs -r kill -15
+          grep -qE '[0-9]+ passing, 0 failing' server/var/log/test001
 
       - name: upload log
         if: failure()
