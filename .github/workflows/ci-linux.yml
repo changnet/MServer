@@ -1,0 +1,96 @@
+# CI linux 构建 + 冒烟测试
+#
+# 触发方式：手动(workflow_dispatch) 或每周一次定时。不跟随每次 push。
+#
+# 作业编排：
+#   linux         modules ON / OFF 两份配置，依赖用 shell/setup_env.sh 安装
+#
+# 测试只跑 json 相关用例(--filter "json lib test")：它 require 了 server/c_module
+# 下的 cjson 动态库，能验证 lua c 模块(本地带来的 abi、加载路径、符号解析)是否正常。
+# 其余用例依赖外网服务或数据库，不在 CI 里跑。
+#
+# windows 侧在 ci-windows.yml，两个文件用同一个 cron 触发。concurrency group 必须
+# 分开：group 名字是仓库级共享的，同名会让两次定时运行互相排队。
+
+name: CI linux
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 每周一 03:17 UTC。GitHub 的 cron 是尽力而为，整点前后可能被延后
+    - cron: '17 3 * * 1'
+
+permissions:
+  contents: read
+
+# 允许同一分支上多个运行并存，但新的定时任务不打断正在跑的
+concurrency:
+  group: ci-linux-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  linux:
+    name: linux (modules ${{ matrix.modules }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        modules: [ON, OFF]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # 编译工具链 + uuid/ssl/mariadb/libpq 走 apt，mongo-c-driver 用仓库自带的
+      # mongo-c-driver-2.5.7.tar.gz 源码编(debian/ubuntu 的 libmongoc-dev 版本对
+      # 不上 mongoc 2.x 的 mongoc::shared 和 <bson/bson.h>)
+      - name: dependencies
+        run: |
+          sudo bash shell/setup_env.sh
+          # mongoc 被 make install 到 /usr/local/lib，不刷 ld 缓存的话 master
+          # 一启动就因找不到 libmongoc2.so.2 退出(本地机器缓存早刷过，发现不了)
+          sudo ldconfig
+
+      # 构建目录沿用 build.sh 的 server/var/linux-x64。这里没有调用 build.sh，
+      # 因为它不接受额外的 cmake 参数，而 CI 要按矩阵切换模块开关
+      - name: build
+        run: |
+          mkdir -p server/var/linux-x64
+          cd server/var/linux-x64
+          cmake ../../../engine \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DENABLE_MARIADB=${{ matrix.modules }} \
+            -DENABLE_MONGODB=${{ matrix.modules }} \
+            -DENABLE_POSTGRESQL=${{ matrix.modules }}
+          make -j$(nproc) install
+
+      - name: prepare runtime
+        run: |
+          mkdir -p server/var/log
+          cp server/setting/setting_default.lua server/var/setting.lua
+
+      - name: test
+        run: |
+          # 测试跑完 master 不会自己退出：后台起服，盯日志里的汇总行，拿到后结束进程。
+          # 日志由框架自己写，CI 不重定向也不清理：当前日志恒为 server/var/log/test001
+          # (节点名+三位序号，跨天才被改名成 test001YYYYMMDD)
+          # filter 是整词匹配，只写 json 会连 mongodb_test 里的 "mongodb json insert..."
+          # 一起带进来，所以必须写到 describe 的全名
+          ( cd shell && ./start.sh test1 --filter "json lib test" ) &
+          PID=$!
+          for _ in $(seq 1 300); do
+            sleep 1
+            grep -qE '[0-9]+ passing, [0-9]+ failing' server/var/log/test001 2>/dev/null && break
+            kill -0 "$PID" 2>/dev/null || break
+          done
+          sed -e 's/\x1b\[[0-9;]*m//g' server/var/log/test001 | grep -E '\[  OK\]|\[FAIL\]|passing' | tail -20
+          pgrep -f 'bin/master --node test1' | xargs -r kill -15
+          grep -qE '[0-9]+ passing, 0 failing' server/var/log/test001
+
+      - name: upload log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: log-linux-${{ matrix.modules }}
+          path: server/var/log
