@@ -130,7 +130,9 @@ jobs:
           # 测试跑完 master 不会自己退出：后台起服，盯日志里的汇总行，拿到后结束进程。
           # 日志由框架自己写，CI 不重定向也不清理：当前日志恒为 server/var/log/test001
           # (节点名+三位序号，跨天才被改名成 test001YYYYMMDD)
-          ( cd shell && ./win_start.bat test1 --filter json ) &
+          # filter 是整词匹配，只写 json 会连 mongodb_test 里的 "mongodb json insert..."
+          # 一起带进来，所以必须写到 describe 的全名
+          ( cd shell && ./win_start.bat test1 --filter "json lib test" ) &
           PID=$!
           for _ in $(seq 1 300); do
             sleep 1
@@ -194,7 +196,9 @@ jobs:
           # 测试跑完 master 不会自己退出：后台起服，盯日志里的汇总行，拿到后结束进程。
           # 日志由框架自己写，CI 不重定向也不清理：当前日志恒为 server/var/log/test001
           # (节点名+三位序号，跨天才被改名成 test001YYYYMMDD)
-          ( cd shell && ./start.sh test1 --filter json ) &
+          # filter 是整词匹配，只写 json 会连 mongodb_test 里的 "mongodb json insert..."
+          # 一起带进来，所以必须写到 describe 的全名
+          ( cd shell && ./start.sh test1 --filter "json lib test" ) &
           PID=$!
           for _ in $(seq 1 300); do
             sleep 1
