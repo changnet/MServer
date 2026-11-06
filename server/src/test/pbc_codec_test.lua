@@ -71,6 +71,26 @@ Test.describe("pbccodec test", function()
         }
     }
 
+    -- proto3 map：kv table 直接编解码，覆盖标量/bool/string 键、message 值、默认值 entry
+    local map_pkt = {
+        id = 42,
+        attrs = { [1] = 100, [2] = 200 },
+        extras = { hp = "999", mp = "50" },
+        flags = { [true] = 1, [false] = 0 },
+        items = { sword = { id = 7, name = "blade" } },
+        zeros = { [0] = 0 },
+    }
+
+    local function check_map(out)
+        return out and out.id == 42
+            and out.attrs and out.attrs[1] == 100 and out.attrs[2] == 200
+            and out.extras and out.extras.hp == "999" and out.extras.mp == "50"
+            and out.flags and out.flags[true] == 1 and out.flags[false] == 0
+            and out.items and out.items.sword and out.items.sword.id == 7
+            and out.items.sword.name == "blade"
+            and out.zeros and out.zeros[0] == 0
+    end
+
     Test.it("pbccodec base test", function()
         local buffer = codec:encode("system.TestBase", base_pkt)
         local v1 = codec:decode("system.TestBase", buffer)
@@ -93,6 +113,39 @@ Test.describe("pbccodec test", function()
         v1 = codec:decode("system.TestLite", buffer)
         Test.equal(v1, lite_pkt)
     end)
+    Test.it("pbccodec map test", function()
+        -- 反射糖：区分 map 字段与普通字段
+        Test.assert(codec:is_map("system.TestMap", "attrs"))
+        Test.assert(not codec:is_map("system.TestMap", "id"))
+
+        local buffer = codec:encode("system.TestMap", map_pkt)
+        local out = codec:decode("system.TestMap", buffer)
+        Test.assert(check_map(out), "map kv roundtrip")
+        Test.equal(out, map_pkt)
+
+        -- 业务实际走的是 buffer 指针路径，map 也必须一致
+        local ptr, size = codec:encode_to_buffer("system.TestMap", map_pkt)
+        local Buffer = require "engine.Buffer"
+        local b = Buffer()
+        b:set(ptr, size)
+        local new_ptr, new_size = b:get()
+        local from_buf = codec:decode_from_buffer("system.TestMap", new_ptr, new_size)
+        Test.assert(check_map(from_buf), "map via buffer")
+        Test.equal(from_buf, map_pkt)
+    end)
+
+    Test.it("pbccodec map default entry test", function()
+        -- 空 map 不产生 entry，{[0]=0} 必须产生一条 entry，wire 与语义都不同
+        local empty = codec:encode("system.TestMap", { id = 1, zeros = {} })
+        local zero = codec:encode("system.TestMap", { id = 1, zeros = { [0] = 0 } })
+        Test.assert(empty ~= zero)
+
+        local out_empty = codec:decode("system.TestMap", empty)
+        local out_zero = codec:decode("system.TestMap", zero)
+        Test.assert(not out_empty.zeros or out_empty.zeros[0] == nil)
+        Test.assert(out_zero.zeros and out_zero.zeros[0] == 0)
+    end)
+
     Test.it(string.format("pbccodec performance test %d", PERF_TIMES), function()
         local b1 = Test.clock()
         for _ = 1, PERF_TIMES do

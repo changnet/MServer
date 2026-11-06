@@ -91,6 +91,24 @@ message TestBase
     int32 index = 64; // 索引
     string context = 65; // 目前用来测试socket效率，分包等情况
 }
+
+// proto3 map 专项：wire 上是 repeated MapEntry，codec 需要还原成 kv table
+// value 为 message 时放在 map 前面定义，保证 descriptor 里的类型名可解析
+message TestMapItem
+{
+    int32 id = 1;
+    string name = 2;
+}
+
+message TestMap
+{
+    int32 id = 1; // 普通字段，用于验证 is_map 不会误判
+    map<int32, int64> attrs = 2;
+    map<string, string> extras = 3;
+    map<bool, int32> flags = 4;
+    map<string, TestMapItem> items = 5;
+    map<int32, int32> zeros = 6; // key、value 都是 proto3 默认值
+}
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 

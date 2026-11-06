@@ -1,6 +1,9 @@
 #pragma once
 
 #include <memory> // std::shared_ptr
+#include <string>
+#include <vector>
+
 #include <lua.hpp>
 #include <pbc.h>
 #include "global/global.hpp"
@@ -12,7 +15,8 @@
  * 另外它没有错误回溯机制。为了加这个机制需要一些辅助变量，也需要线程安全
  */
 
-struct DecodeCtx;
+// 解码扁平快速路径的上下文，每层 message 一个栈变量
+struct FastCtx;
 
 // 基于pbc实现的protobuf codec
 class PbcCodec final
@@ -28,6 +32,11 @@ public:
     int32_t load(lua_State *L);
     // 更新全局pbc env到当前线程
     void update();
+
+    // 反射：字段是不是 proto3 map，供上层做通用序列化与配置校验
+    bool is_map_field(const char *schema, const char *key);
+    // Lua 入口：codec:is_map(schema, field) -> boolean
+    int32_t is_map(lua_State *L);
 
     /* 解码数据包
      * @param  schema protobuf的message名
@@ -55,9 +64,15 @@ public:
      */
     int32_t encode_to_buffer(lua_State *L);
 
-    // 解码回调
-    void decode_cb(DecodeCtx *ctx, int32_t type, const char *object,
-                   union pbc_value *v, int id, const char *key);
+    /* 解码扁平快速路径：按 _message* 指针递归，内部只做 lua rawset。
+     * 声明为 public 是因为静态回调 fast_decode_cb 需要调用它。 */
+    int32_t decode_fast_message(lua_State *L, struct pbc_msg *msg,
+                                struct pbc_slice *slice);
+
+    /* 解码单个 MapEntry，在栈顶留下 key、value 两个值（缺省字段按 proto3 默认值）。
+     * 声明为 public 是因为静态回调 map_entry_cb 需要调用它。 */
+    int32_t decode_map_entry(lua_State *L, struct pbc_msg *entry,
+                             struct pbc_slice *slice);
 
 private:
     int32_t raw_decode(lua_State *L, const char *schema, const char *buffer,
@@ -68,27 +83,38 @@ private:
     void clear_last();
     // 获取出错信息
     const char *last_error();
-    // 解码一个protobuf的message
-    int32_t decode_message(lua_State *L, const char *schema,
-                           struct pbc_slice *slice);
 
-    // 解析出来的变量设置到lua
-    int32_t decode_field(lua_State *L, int type, const char *object,
-                       union pbc_value *v);
-
+    /* 编码：遍历 schema 的字段表，逐个从 Lua table 回取值。
+     * msg 是 seal 阶段预编译好的 message 指针，字段表随 env 只读。 */
     int32_t encode_message(lua_State *L, struct pbc_wmessage *wmsg,
-                       const char *schema, int32_t index);
+                           struct pbc_msg *msg, int32_t index);
 
-    int32_t encode_field_list(lua_State *L, struct pbc_wmessage *wmsg,
-                                   int32_t type, int32_t index, const char *key,
-                                   const char *schema);
-
+    // 单字段分派：子 message / 标量（含 repeated）
     int32_t encode_field(lua_State *L, struct pbc_wmessage *wmsg,
-                                       int32_t type, int32_t index,
-                                       const char *key, const char *schema);
+                         const struct pbc_ffield *ff, int32_t index);
+
+    // 子 message 字段：repeated 时逐个元素，否则单个
+    int32_t encode_sub(lua_State *L, struct pbc_wmessage *wmsg,
+                       struct pbc_wfield *field, const struct pbc_ffield *ff,
+                       int32_t index);
+
+    // proto3 map 字段：遍历 kv table，逐项写成 MapEntry 子消息
+    int32_t encode_map(lua_State *L, struct pbc_wmessage *wmsg,
+                       struct pbc_wfield *field, const struct pbc_ffield *ff,
+                       int32_t index);
+
+    // 标量字段：repeated 时按 packed / unpacked 两种形态写入
+    int32_t encode_scalar_list(lua_State *L, struct pbc_wmessage *wmsg,
+                               struct pbc_wfield *field, int32_t type,
+                               int32_t index, const char *key);
+
+    // 单个标量值
+    int32_t encode_scalar(lua_State *L, struct pbc_wmessage *wmsg,
+                          struct pbc_wfield *field, int32_t type,
+                          int32_t index, const char *key);
 
 private:
-    struct pbc_wmessage *write_msg_;
+    struct pbc_wmessage *write_msg_;      // 复用的 wmessage（每次编码 reset，不再 new/delete）
     std::string error_msg_;               // 错误信息
     std::vector<std::string> trace_back_; // 出错时，用于跟踪哪个字段有问题
     std::shared_ptr<struct pbc_env> env_; // 当前线程使用的env

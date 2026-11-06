@@ -1,5 +1,5 @@
 
-Ì
+Ð
 system.protosystem"›
 TestLite
 b1 (Rb1
@@ -70,7 +70,36 @@
 f321 (Rf321
 f322 (Rf322
 f641 (Rf641
-f642 (Rf642"X
+f642 (Rf642"1
+TestMapItem
+id (Rid
+name (	Rname"Î
+TestMap
+id (Rid0
+attrs (2.system.TestMap.AttrsEntryRattrs3
+extras (2.system.TestMap.ExtrasEntryRextras0
+flags (2.system.TestMap.FlagsEntryRflags0
+items (2.system.TestMap.ItemsEntryRitems0
+zeros (2.system.TestMap.ZerosEntryRzeros8
+
+AttrsEntry
+key (Rkey
+value (Rvalue:89
+ExtrasEntry
+key (	Rkey
+value (	Rvalue:88
+
+FlagsEntry
+key (Rkey
+value (Rvalue:8M
+
+ItemsEntry
+key (	Rkey)
+value (2.system.TestMapItemRvalue:88
+
+ZerosEntry
+key (Rkey
+value (Rvalue:8"X
 
 SSRegister
 session (Rsession
