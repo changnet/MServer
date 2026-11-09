@@ -16,7 +16,7 @@
 - 网络：Tcp、Http、Websocket（支持SSL），Udp、[Kcp](https://github.com/skywind3000/kcp)
 - RPC（支持协程、异步回调）
 - Protobuf
-- 数据库：MySQL/MariaDB、MongoDB
+- 数据库：MySQL/MariaDB、MongoDB、PostgreSQL
 - JSON、XML、AOI、AStar、关键字过滤等游戏开发常用组件
 
 ## 进程架构
