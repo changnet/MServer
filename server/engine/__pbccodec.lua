@@ -10,6 +10,10 @@ end
 function PbcCodec:load()
 end
 
+--- 全部pb文件加载成功后，把待加载的env发布到全局
+function PbcCodec:load_finish()
+end
+
 --- 更新全局pbc env到当前线程
 function PbcCodec:update()
 end

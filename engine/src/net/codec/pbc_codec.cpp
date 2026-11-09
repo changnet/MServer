@@ -1,3 +1,4 @@
+#include <atomic>
 #include <cassert>
 #include <cstdio>
 #include <vector>
@@ -217,7 +218,9 @@ void PbcCodec::uninitialize()
 {
     // 其实这里不释放没问题。g_env_在析构时会自动释放
     // 但由于它是static变量又没有放到static_global中，析构顺序无法保证会影响内存debug
-    if (g_env_) g_env_.reset();
+    // 此时所有线程已停止，但读写仍统一走原子接口
+    std::atomic_store_explicit(&g_env_,
+        std::shared_ptr<struct pbc_env>(), std::memory_order_release);
 }
 
 PbcCodec::PbcCodec()
@@ -242,7 +245,21 @@ void PbcCodec::reset()
         pbc_wmessage_delete(write_msg_);
         write_msg_ = nullptr;
     }
-    g_env_ = std::shared_ptr<struct pbc_env>(pbc_new(), pbc_deleter);
+    // 只创建待加载的env，不发布。中途加载失败时旧的g_env_仍然可用
+    load_env_ = std::shared_ptr<struct pbc_env>(pbc_new(), pbc_deleter);
+}
+
+void PbcCodec::load_finish()
+{
+    if (!load_env_)
+    {
+        ELOG("pbc load_finish: no env loading");
+        return;
+    }
+
+    // 所有pb都注册完成后一次性发布，release与worker的acquire配对
+    std::atomic_store_explicit(&g_env_, load_env_, std::memory_order_release);
+    load_env_.reset();
 }
 
 void PbcCodec::update()
@@ -252,7 +269,7 @@ void PbcCodec::update()
         pbc_wmessage_delete(write_msg_);
         write_msg_ = nullptr;
     }
-    env_ = g_env_;
+    env_ = std::atomic_load_explicit(&g_env_, std::memory_order_acquire);
 }
 
 // 按名字查一次 schema，再线性扫字段表；只在配置校验等冷路径调用
@@ -320,9 +337,15 @@ int32_t PbcCodec::load(lua_State *L)
     slice.buffer = (void *)luaL_checklstring(L, 2, &size);
     slice.len    = (int32_t)size;
 
-    if (0 != pbc_register(g_env_.get(), &slice))
+    if (!load_env_)
     {
-        ELOG("pbc register error:%s", pbc_error(g_env_.get()));
+        ELOG("pbc register: no env loading, call reset first");
+        return 0;
+    }
+
+    if (0 != pbc_register(load_env_.get(), &slice))
+    {
+        ELOG("pbc register error:%s", pbc_error(load_env_.get()));
         return 0;
     }
 

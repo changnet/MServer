@@ -146,6 +146,7 @@ Test.describe("socket test", function()
             local ok = codec:load(buffer)
             assert(ok)
         end
+        codec:load_finish()
         codec:update()
 
         -- 建立一个客户端、一个服务端连接，模拟通信

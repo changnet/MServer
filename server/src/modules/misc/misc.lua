@@ -9,8 +9,26 @@ Misc = {}
 function Misc.dummy()
 end
 
+-- 热更重入保护超时（秒）。热更异常中断时，超时后才允许强制热更
+local RELOAD_TIMEOUT = 300
+
 -- 重载脚本
 function Misc.reload()
+    -- worker由主节点广播触发，没有完成回调，因此重入判断只在主节点做
+    local is_main = LOCAL_ADDR == MAIN_ADDR
+    local now = os.time()
+    if is_main and _G.__reloading then
+        local elapsed = now - _G.__reloading
+        if elapsed < RELOAD_TIMEOUT then
+            printf("script is reloading, retry after %d seconds",
+                RELOAD_TIMEOUT - elapsed)
+            return false
+        end
+        -- 上次热更异常中断且已超时，允许强制重更
+        printf("script reload timeout, force reload")
+    end
+    _G.__reloading = now
+
     local t1 = Engine.steady_clock()
     local m1 = collectgarbage("count")
 
@@ -23,18 +41,26 @@ function Misc.reload()
     local info = {
             t = t, m1 = m1, m2 = m2, name = LOCAL_NAME,
     }
-    if LOCAL_ADDR ~= MAIN_ADDR then
+    if not is_main then
+        _G.__reloading = nil -- worker本地热更已完成
         return info
     end
 
-    local wait_size = 0
+    -- 先收集addr再发消息，避免回调在遍历过程中修改wait_size
+    local addrs = {}
+    for addr in pairs(WorkerData) do
+        addrs[#addrs + 1] = addr
+    end
+
+    local wait_size = #addrs
     local info_tbl = {info}
     local reload_finish = function(ret_info)
         wait_size = wait_size - 1
-        if wait_size > 0 then
-            table.insert(info_tbl, ret_info)
-            return
-        end
+        if ret_info then table.insert(info_tbl, ret_info) end
+        if wait_size > 0 then return end
+
+        -- 所有节点都热更完成，解除主节点的重入保护
+        _G.__reloading = nil
 
         table.sort(info_tbl, function(a, b) return a.name < b.name end)
 
@@ -51,10 +77,12 @@ function Misc.reload()
         printf("script reloaded, time %d ms\n%s",
             t2, table.concat(str_tbl, "\n"))
     end
-    for addr in pairs(WorkerData) do
-        wait_size = wait_size + 1
+    for _, addr in ipairs(addrs) do
         Callback[addr].Misc.reload().done(reload_finish)
     end
+
+    -- 没有worker时回调不会触发，本地热更完成即收尾
+    if 0 == #addrs then reload_finish() end
 end
 
 -- 执行一个文件中的函数(一般是调试用，不能用于业务逻辑)

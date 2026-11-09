@@ -53,6 +53,8 @@ function Pbc.load()
         end
     end
 
+    -- 全部pb注册成功后才发布到全局，worker的update才能拿到完整的env
+    g_pbc:load_finish()
     g_pbc:update()
     printf("pbc load %d scehma files, time %d ms",
         count, Engine.steady_clock() - tm)

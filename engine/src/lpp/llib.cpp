@@ -278,6 +278,7 @@ static void luaopen_pbc_codec(lua_State *L)
 
     lc.def<&PbcCodec::reset>("reset");
     lc.def<&PbcCodec::load>("load");
+    lc.def<&PbcCodec::load_finish>("load_finish");
     lc.def<&PbcCodec::update>("update");
     lc.def<&PbcCodec::is_map>("is_map");
     lc.def<&PbcCodec::encode>("encode");

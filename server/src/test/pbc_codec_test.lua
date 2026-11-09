@@ -16,6 +16,7 @@ Test.describe("pbccodec test", function()
         local ok = codec:load(buffer)
         assert(ok)
     end
+    codec:load_finish()
     codec:update()
 
     local PERF_TIMES = 10000

@@ -26,10 +26,12 @@ public:
     ~PbcCodec();
     static void uninitialize();
 
-    // 重置全局pbc env
+    // 创建待加载的pbc env，此时不影响全局g_env_
     void reset();
-    // 加载单个pb文件
+    // 加载单个pb文件到待加载的env
     int32_t load(lua_State *L);
+    // 全部pb加载成功后，把待加载的env发布到全局（唯一写g_env_的地方）
+    void load_finish();
     // 更新全局pbc env到当前线程
     void update();
 
@@ -114,10 +116,21 @@ private:
                           int32_t index, const char *key);
 
 private:
-    struct pbc_wmessage *write_msg_;      // 复用的 wmessage（每次编码 reset，不再 new/delete）
-    std::string error_msg_;               // 错误信息
-    std::vector<std::string> trace_back_; // 出错时，用于跟踪哪个字段有问题
-    std::shared_ptr<struct pbc_env> env_; // 当前线程使用的env
+    struct pbc_wmessage *write_msg_;          // 复用的 wmessage（每次编码 reset，不再 new/delete）
+    std::string error_msg_;                   // 错误信息
+    std::vector<std::string> trace_back_;     // 出错时，用于跟踪哪个字段有问题
+    std::shared_ptr<struct pbc_env> env_;      // 当前线程使用的env
+    std::shared_ptr<struct pbc_env> load_env_; // 正在加载的env，load_finish后发布
 
+    // 所有读写都必须走 atomic_load_explicit / atomic_store_explicit
     static inline std::shared_ptr<struct pbc_env> g_env_ = nullptr;
+
+    // C++20起shared_ptr的原子自由函数已废弃，届时改用std::atomic<std::shared_ptr<>>
+#ifdef _MSVC_LANG
+    static_assert(_MSVC_LANG < 202002L,
+        "use std::atomic<std::shared_ptr<pbc_env>> for g_env_ in C++20");
+#else
+    static_assert(__cplusplus < 202002L,
+        "use std::atomic<std::shared_ptr<pbc_env>> for g_env_ in C++20");
+#endif
 };
